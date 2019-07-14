@@ -315,6 +315,11 @@ client.on('ready', () => {
 			+ config.credentials.discord_client_id + '&permissions=8&scope=bot')}`);
 });
 
+const PORT = process.env.PORT || 3000;
+client.listen(PORT, () => {
+	console.log(`Our app is running on port ${ PORT }`);
+});
+
 client.login(config.credentials.bot_token).catch(err => {
 	console.error('');
 	console.error(chalk.redBright("Couldn't log into Discord. Wrong bot token?"));

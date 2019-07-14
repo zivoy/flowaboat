@@ -1,6 +1,8 @@
 # ignore node_modules symlink
 node_modules.nosync
 
+.idea/
+
 # Logs
 logs
 *.log
