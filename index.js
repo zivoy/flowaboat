@@ -6,7 +6,6 @@ const fs = require('fs-extra');
 const path = require('path');
 const objectPath = require("object-path");
 const chalk = require('chalk');
-const express = require('express')
 
 const osu = require('./osu.js');
 const helper = require('./helper.js');
@@ -315,16 +314,6 @@ client.on('ready', () => {
 			`Invite bot to server: ${chalk.blueBright('https://discordapp.com/api/oauth2/authorize?client_id='
 			+ config.credentials.discord_client_id + '&permissions=8&scope=bot')}`);
 });
-
-const PORT = process.env.PORT || 3000;
-express()
-	.use(express.static(path.join(__dirname, 'public')))
-	.set('views', path.join(__dirname, 'views'))
-	.set('view engine', 'ejs')
-	.get('/', (req, res) => res.render('index.html'))
-	.listen(PORT, () => {
-		console.log(`Our app is running on port ${ PORT }`);
-	});
 
 client.login(config.credentials.bot_token).catch(err => {
 	console.error('');
