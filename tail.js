@@ -7,7 +7,7 @@ const io = require('socket.io')(http);
 if (!filename)
 	return console.log("Usage: node tail.js log folder");
 
-var tail = childs.spawn("tail", ["-f", filename + '/log.log'];
+var tail = childs.spawn("tail", ["-f", filename + '/log.log']);
 console.log("start tailing");
 
 tail.stdout.setEncoding('utf8');
