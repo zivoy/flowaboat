@@ -2,7 +2,7 @@
   "prefix": "o!",
   "debug": true,
   "osu_cache_path": "/tmp/osumaps",
-  "pp_path": "/home/ziv/osu-tools/PerformanceCalculator/obj/Release/netcoreapp2.0/PerformanceCalculator.dll",
+  "pp_path": "",
   "beatmap_api": "https://osu.lea.moe",
   "credentials": {
     "bot_token": "NTk4MzUzMzIzNjczNzgwMjM2.XSjpaw.n10DX2ohlUGO6BAILHVkZimVvOc",
