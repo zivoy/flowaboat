@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-	<title>Log Viewer</title>
+	<title>Socket.IO chat</title>
 	<style>
 		* { margin: 0; padding: 0; box-sizing: border-box; }
 		body { font: 13px Helvetica, Arial; }
@@ -15,13 +15,18 @@
 </head>
 <body>
 <ul id="messages"></ul>
-</body>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
 <script>
 	$(function () {
-		const socket = io();
+		var socket = io();
 		socket.on('log output', function(msg){
 			$('#messages').prepend($('<li>').text(msg));
+			//  window.scrollTo(0, document.body.scrollHeight);
 		});
 	});
 </script>
+
+</body>
 </html>
