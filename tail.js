@@ -9,6 +9,19 @@ if (!filename)
 var tail = childs.spawn("tail", ["-f", filename]);
 console.log("start tailing");
 
+ls.stdout.on('data', function (data) {
+	console.log('stdout: ' + data.toString());
+});
+
+ls.stderr.on('data', function (data) {
+	console.log('stderr: ' + data.toString());
+});
+
+ls.on('exit', function (code) {
+	console.log('child process exited with code ' + code.toString());
+});
+
+/*
 tail.stdout.setEncoding('utf8');
 tail.stdout.on('data', function(data) {
 	console.log(data);
@@ -22,3 +35,4 @@ http.createServer(function (req, res) {
 	});
 //	res.end();
 }).listen(8000);
+*/
