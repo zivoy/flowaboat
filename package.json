@@ -9,8 +9,8 @@
         "commands": "node generate-commands-md",
         "config": "node generate-config",
         "emojis": "node upload-emojis",
-		"stop": "sh stop.sh",
-		"restart": "forever restartall"
+        "stop": "sh stop.sh",
+        "restart": "forever restartall"
     },
     "author": "LeaPhant",
     "repository": {
@@ -43,6 +43,6 @@
         "semver": "^6.2.0",
         "unzip": "^0.1.11",
         "vm2": "^3.6.10",
-		"express": "4.15.2"
+        "express": "4.15.2"
     }
 }
