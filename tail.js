@@ -16,7 +16,7 @@ tail.stdout.on('data', function(data) {
 });
 */
 
-app.get('/log', function(req, res){
+app.get('/', function(req, res){
 	res.redirect("/log");
 });
 
