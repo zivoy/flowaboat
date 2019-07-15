@@ -16,8 +16,20 @@ tail.stdout.on('data', function(data) {
 });
 */
 
-app.get('/', function(req, res){
-	res.sendFile(__dirname + '/logs/log.txt');
+app.get('/log', function(req, res){
+	res.redirect("/log");
+});
+
+app.get('/log', function(req, res){
+	res.sendFile(filename + '/log.txt');
+});
+
+app.get('/out', function(req, res){
+	res.sendFile(filename + '/out.txt');
+});
+
+app.get('/err', function(req, res){
+	res.sendFile(filename + '/err.txt');
 });
 
 http.listen(8000, function(){
