@@ -33,7 +33,7 @@ app.get('/err', function(req, res){
 });
 
 http.listen(80, function(){
-	console.log('listening on *:8000');
+	console.log('listening on *:80');
 });
 
 /*
