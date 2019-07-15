@@ -1,21 +1,27 @@
 const filename = process.argv[2];
-//const childs = require('child_process');
+const childs = require('child_process');
 const app = require('express')();
 const http = require('http').createServer(app);
+const io = require('socket.io')(http);
 
 if (!filename)
-	return console.log("Usage: node watcher.js filename");
-/*
-// Look at http://nodejs.org/api.html#_child_processes for detail.
+	return console.log("Usage: node tail.js log folder");
+
 var tail = childs.spawn("tail", ["-f", filename]);
 console.log("start tailing");
 
 tail.stdout.setEncoding('utf8');
+/*
 tail.stdout.on('data', function(data) {
 	console.log(data.toString());
-});
-*/
+});*/
 
+
+app.get('/', function(req, res){
+	res.sendFile(__dirname + '/logRender.html');
+});
+
+/*
 app.get('/', function(req, res){
 	res.redirect("/log");
 });
@@ -30,6 +36,13 @@ app.get('/out', function(req, res){
 
 app.get('/err', function(req, res){
 	res.sendFile(filename + '/err.log', {root: __dirname});
+});*/
+
+
+io.on('connection', function(){
+	tail.stdout.on('data', function(data) {
+		io.emit('log output', data);
+	});
 });
 
 http.listen(80, function(){
