@@ -21,15 +21,15 @@ app.get('/', function(req, res){
 });
 
 app.get('/log', function(req, res){
-	res.sendFile(filename + '/log.log');
+	res.sendFile(filename + '/log.log', {root: __dirname});
 });
 
 app.get('/out', function(req, res){
-	res.sendFile(filename + '/out.log');
+	res.sendFile(filename + '/out.log', {root: __dirname});
 });
 
 app.get('/err', function(req, res){
-	res.sendFile(filename + '/err.log');
+	res.sendFile(filename + '/err.log', {root: __dirname});
 });
 
 http.listen(80, function(){
