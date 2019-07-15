@@ -8,7 +8,8 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "commands": "node generate-commands-md",
         "config": "node generate-config",
-        "emojis": "node upload-emojis"
+        "emojis": "node upload-emojis",
+		"stop": "sh stop.sh"
     },
     "author": "LeaPhant",
     "repository": {
