@@ -1,13 +1,13 @@
-const filename = process.argv[2];
+const dirName = process.argv[2];
 const childs = require('child_process');
 const app = require('express')();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-if (!filename)
+if (!dirName)
 	return console.log("Usage: node tail.js log folder");
 
-var tail = childs.spawn("tail", ["-f", filename + '/log.log']);
+var tail = childs.spawn("tail", ["-f", dirName + '/log.log']);
 console.log("start tailing");
 
 tail.stdout.setEncoding('utf8');
@@ -22,21 +22,27 @@ app.get('/', function(req, res){
 });
 
 app.get('/log', function(req, res){
-	res.sendFile(filename + '/log.log', {root: __dirname});
+	res.sendFile(dirName + '/log.log', {root: __dirname});
 });
 
 app.get('/out', function(req, res){
-	res.sendFile(filename + '/out.log', {root: __dirname});
+	res.sendFile(dirName + '/out.log', {root: __dirname});
 });
 
 app.get('/err', function(req, res){
-	res.sendFile(filename + '/err.log', {root: __dirname});
+	res.sendFile(dirName + '/err.log', {root: __dirname});
 });
 
+io.on('connect', function(socket) {
+	var prev = childs.spawn("tail", [dirName + '/log.log']);
+	prev.stdout.on('data', function(data) {
+		io.to(`${socket["id"]}`).emit('log output', data.toString());
+	});
+});
 
 io.on('connection', function(socket){
 	tail.stdout.on('data', function(data) {
-		io.emit('log output', data.toString());
+		io.to(`${socket["id"]}`).emit('log output', data.toString());
 	});
 });
 
