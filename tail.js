@@ -1,23 +1,23 @@
-const sys = require('sys');
-const filename =  process.argv[0];
+const filename = process.argv[0];
 const childs = require('child_process');
+const http = require("http");
 
 if (!filename)
-  return sys.puts("Usage: node watcher.js filename");
+	return console.log("Usage: node watcher.js filename");
 
 // Look at http://nodejs.org/api.html#_child_processes for detail.
 var tail = childs.spawn("tail", ["-f", filename]);
-sys.puts("start tailing");
+console.log("start tailing");
 
 tail.addListener("output", function (data) {
-  sys.puts(data);
+	console.log(data);
 });
 
 // From nodejs.org/jsconf.pdf slide 56
-var http = require("http");
-http.createServer(function(req,res){
-  res.sendHeader(200,{"Content-Type": "text/plain"});
-  tail.addListener("output", function (data) {
-    res.sendBody(data);
-  });
+http.createServer(function (req, res) {
+	res.writeHead(200, {"Content-Type": "text/plain"});
+	tail.addListener("output", function (data) {
+		res.write(data);
+	});
+	res.end();
 }).listen(8000);
