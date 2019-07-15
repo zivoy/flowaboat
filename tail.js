@@ -32,7 +32,7 @@ app.get('/err', function(req, res){
 	res.sendFile(filename + '/err.txt');
 });
 
-http.listen(8000, function(){
+http.listen(80, function(){
 	console.log('listening on *:8000');
 });
 
