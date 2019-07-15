@@ -309,10 +309,10 @@ client.on('message', onMessage);
 
 client.on('ready', () => {
 	helper.log('flowabot is ready');
-	if(config.credentials.discord_client_id)
+/*	if(config.credentials.discord_client_id)
 		helper.log(
 			`Invite bot to server: ${chalk.blueBright('https://discordapp.com/api/oauth2/authorize?client_id='
-			+ config.credentials.discord_client_id + '&permissions=8&scope=bot')}`);
+			+ config.credentials.discord_client_id + '&permissions=8&scope=bot')}`);*/
 });
 
 client.login(config.credentials.bot_token).catch(err => {
