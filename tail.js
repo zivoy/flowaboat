@@ -11,10 +11,10 @@ var tail = childs.spawn("tail", ["-f", filename]);
 console.log("start tailing");
 
 tail.stdout.setEncoding('utf8');
-/*
+
 tail.stdout.on('data', function(data) {
 	console.log(data.toString());
-});*/
+});
 
 
 app.get('/', function(req, res){
@@ -41,7 +41,7 @@ app.get('/err', function(req, res){
 
 io.on('connection', function(){
 	tail.stdout.on('data', function(data) {
-		io.emit('log output', data);
+		io.emit('log output', data.toString());
 	});
 });
 
