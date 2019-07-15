@@ -9,16 +9,16 @@ if (!filename)
 var tail = childs.spawn("tail", ["-f", filename]);
 console.log("start tailing");
 
+tail.stdout.setEncoding('utf8');
 tail.stdout.on('data', function(data) {
-	console.log(data.toString());
+	console.log(data);
 });
 
 // From nodejs.org/jsconf.pdf slide 56
 http.createServer(function (req, res) {
 	res.writeHead(200, {"Content-Type": "text/plain"});
 	tail.stdout.on('data', function(data) {
-		res.write(data);
+		res.write(data.toString());
 	});
-
-	res.end();
+//	res.end();
 }).listen(8000);
