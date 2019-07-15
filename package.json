@@ -4,12 +4,13 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "start": "forever stopall; sh ./update.sh; ACCEPT_HIGHCHARTS_LICENSE=1 npm i && [ ! -f ./config.json ] && npm run config; forever start -l /home/ziv132/bot/logs/log.txt -o /home/ziv132/bot/logs/out.txt -e /home/ziv132/bot/logs/err.txt --minUptime 1000 --spinSleepTime 1000 index.js; forever start --minUptime 1000 --spinSleepTime 1000 tail.js ./logs",
+        "start": "npm stop; sh ./update.sh; ACCEPT_HIGHCHARTS_LICENSE=1 npm i && [ ! -f ./config.json ] && npm run config; forever start -l /home/ziv132/bot/logs/log.txt -o /home/ziv132/bot/logs/out.txt -e /home/ziv132/bot/logs/err.txt --minUptime 1000 --spinSleepTime 1000 index.js; forever start --minUptime 1000 --spinSleepTime 1000 tail.js ./logs",
         "test": "echo \"Error: no test specified\" && exit 1",
         "commands": "node generate-commands-md",
         "config": "node generate-config",
         "emojis": "node upload-emojis",
-		"stop": "sh stop.sh"
+		"stop": "sh stop.sh",
+		"restart": "forever restartall"
     },
     "author": "LeaPhant",
     "repository": {
