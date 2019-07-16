@@ -142,9 +142,12 @@ process.on('message', obj => {
 
         hitObjectsOnScreen.forEach(function(hitObject, index){
             // Check if hit object could be visible at current timestamp
-            if(time < hitObject.startTime || hitObject.objectName != "circle" && time < hitObject.endTime){
+            if(time < hitObject.startTime || hitObject.objectName != "circle" && time < hitObject.endTime + 200){
                 // Apply approach rate
                 let opacity = (time - (hitObject.startTime - beatmap.TimeFadein)) / (beatmap.TimeFadein - beatmap.TimePreempt);
+
+                if(hitObject.objectName != 'circle')
+                    opacity = 1 - (time - hitObject.endTime) / 200;
 
                 // Calculate relative approach circle size (number from 0 to 1)
                 let approachCircle = 1 - (time - (hitObject.startTime - beatmap.TimePreempt)) / beatmap.TimePreempt;
@@ -162,20 +165,30 @@ process.on('message', obj => {
                 // Draw slider
                 if(hitObject.objectName == "slider"){
                     ctx.lineWidth = 6 * scale_multiplier;
-                    ctx.strokeStyle = "white";
+                    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+
+                    let snakingStart = hitObject.startTime - beatmap.TimeFadein;
+                    let snakingFinish = hitObject.startTime - beatmap.TimePreempt;
+
+                    let snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
+
+                    let render_dots = [];
+
+                    for(let x = 0; x < Math.floor(hitObject.SliderDots.length * snakingProgress); x++)
+                        render_dots.push(hitObject.SliderDots[x]);
 
                     // Use stroke with rounded ends to "fake" a slider path
                     ctx.beginPath();
                     ctx.lineCap = "round";
-                    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
                     ctx.shadowColor = 'transparent';
                     ctx.lineJoin = "round"
 
-                    ctx.lineWidth = scale_multiplier * beatmap.Radius * 2;
+                    ctx.lineWidth = scale_multiplier * beatmap.Radius * 2
 
                     // Draw a path through all slider dots generated earlier
-                    for(let x = 0; x < hitObject.SliderDots.length; x++){
-                        let dot = hitObject.SliderDots[x];
+                    for(let x = 0; x < render_dots.length; x++){
+                        let dot = render_dots[x];
                         let position = playfieldPosition(...dot);
 
                         if(x == 0){
@@ -187,10 +200,18 @@ process.on('message', obj => {
 
                     ctx.stroke();
 
+                    ctx.lineWidth = scale_multiplier * (beatmap.Radius * 2 - 12);
+                    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+
+                    ctx.stroke();
+
+                    let currentTurn, currentOffset, currentTurnStart;
+
                     // Get slider dot corresponding to the current follow point position
                     if(time >= hitObject.startTime && time <= hitObject.endTime){
-                        let currentTurn = Math.floor((time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount));
-                        let currentOffset = (time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount) - currentTurn;
+                        currentTurn = Math.floor((time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount));
+                        currentTurnStart = hitObject.startTime + hitObject.duration / hitObject.repeatCount * currentTurn;
+                        currentOffset = (time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount) - currentTurn;
 
                         let dot_index = 0;
 
@@ -204,7 +225,46 @@ process.on('message', obj => {
                         /* Progress number from 0 to 1 to check how much relative distance to the next slider dot is left,
                            used in interpolation later to always have smooth follow points */
                         followpoint_progress = dot_index - followpoint_index;
+                    }else{
+                        if(time < hitObject.startTime){
+                            currentOffset = 0;
+                            currentTurnStart = hitObject.startTime - beatmap.TimePreempt;
+                        }else{
+                            currentOffset = 1;
+                            currentTurnStart = hitObject.endTime;
+                        }
                     }
+
+                    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                    ctx.lineWidth = 5 * scale_multiplier;
+
+                    // Reverse slider ticks depending on current slider direction
+                    let slider_ticks = [];
+
+                    if(currentTurn % 2 == 0)
+                        slider_ticks = [...hitObject.SliderTicks, hitObject.endPosition];
+                    else
+                        slider_ticks = [...hitObject.SliderTicks.slice().reverse(), hitObject.position];
+
+                    let max = Math.floor((slider_ticks.length - 1) * snakingProgress);
+                    let start_index = Math.floor(currentOffset * slider_ticks.length);
+
+                    for(let x = start_index; x < max; x++){
+                        // Fade in slider ticks
+                        if(currentTurn > 0)
+                            ctx.globalAlpha = Math.max(0, Math.min(1, (time - x * 40 - currentTurnStart) / 50));
+                        else if(time < hitObject.startTime)
+                            ctx.globalAlpha = Math.max(0, Math.min(1, (time - (max - x) * 40 - currentTurnStart) / 50));
+
+                        let tick = slider_ticks[x];
+                        let position = playfieldPosition(...tick);
+
+                        ctx.beginPath();
+                        ctx.arc(...position, scale_multiplier * beatmap.Radius / 5, 0, 2 * Math.PI, false);
+                        ctx.stroke();
+                    }
+
+                    ctx.globalAlpha = opacity;
                 }
 
                 // Draw circles or slider heads
