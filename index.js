@@ -196,7 +196,7 @@ function onMessage(msg){
     argv[0] = argv[0].substr(config.prefix.length);
 
     if(config.debug)
-        helper.log(msg.author.username, ':', msg.content);
+        helper.log(msg.author.username + "@" + msg.channel.name + ':', msg.content);
 
     commands.forEach(command => {
         let check_command = checkCommand(msg, command);
