@@ -67,8 +67,8 @@ io.on('connect', function(passph){
 
 io.on('connection', function(passph){
 	passph.on('chat message', function(msg){
-		console.log(sha1(msg));
-		if (sha1(msg) === key){
+		//console.log(sha1(msg));
+		if (msg === key){
 			passph.emit('redirect', "./liveLog");
 			var address = getClintAddr(passph);
 			auth[address] = true
