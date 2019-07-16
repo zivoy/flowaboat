@@ -35,10 +35,10 @@ app.get('/err', function(req, res){
 });
 
 io.on('connect', function(socket) {
-	fs.readFile("log.log", function(error, data) {
+	fs.readFile(dirName + '/log.log', function(error, data) {
 		if (error) { throw error; }
 		data.toString().split("\n").forEach(function(line) {
-			io.to(`${socket["id"]}`).emit('log output', data.toString());
+			io.to(`${socket["id"]}`).emit('log output', line);
 		});
 	});
 });
