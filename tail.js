@@ -3,6 +3,7 @@ const childs = require('child_process');
 const app = require('express')();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+const fs = require("fs");
 
 if (!dirName)
 	return console.log("Usage: node tail.js log folder");
@@ -34,9 +35,11 @@ app.get('/err', function(req, res){
 });
 
 io.on('connect', function(socket) {
-	var prev = childs.spawn("tail", [dirName + '/log.log']);
-	prev.stdout.on('data', function(data) {
-		io.to(`${socket["id"]}`).emit('log output', data.toString());
+	fs.readFile("log.log", function(error, data) {
+		if (error) { throw error; }
+		data.toString().split("\n").forEach(function(line) {
+			io.to(`${socket["id"]}`).emit('log output', data.toString());
+		});
 	});
 });
 
