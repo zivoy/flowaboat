@@ -16,9 +16,9 @@ console.log("start tailing");
 
 tail.stdout.setEncoding('utf8');
 
-tail.stdout.on('data', function(data) {
+/*tail.stdout.on('data', function(data) {
 	console.log(data.toString());
-});
+});*/
 
 function getClintAddr(soc){
 	try {
@@ -67,10 +67,10 @@ io.on('connect', function(passph){
 
 io.on('connection', function(passph){
 	passph.on('chat message', function(msg){
-		//console.log(sha1(msg));
-		if (msg === key){
+		var address = getClintAddr(passph);
+		console.log(address + " sent " + sha1(msg));
+		if (sha1(msg) === key){
 			passph.emit('redirect', "./liveLog");
-			var address = getClintAddr(passph);
 			auth[address] = true
 		}
 	});

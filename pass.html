@@ -22,7 +22,7 @@
 		var passph = io();
 		$('form').submit(function(e){
 			e.preventDefault(); // prevents page reloading
-			passph.emit('chat message', sha1($('#m').val()));
+			passph.emit('chat message', $('#m').val());
 			$('#m').val('');
 			return false;
 		});
