@@ -18,12 +18,13 @@ const sha1 = require('js-sha1');
 
 var auth = {};
 const key = "e31ecac48f92a2c23373214d13f54135d31105eb";
-const dirName = "./logs"
+const dirName = "./logs";
 
 const client = new Discord.Client({autoReconnect:true});
 
 const tail = childs.spawn("tail", ["-f", dirName + '/log.log']);
-console.log("start tailing");
+console.log("");
+helper.log("start tailing");
 
 tail.stdout.setEncoding('utf8');
 
@@ -352,8 +353,7 @@ client.login(config.credentials.bot_token).catch(err => {
 });
 
 app.get("/",function (req, res) {
-	//console.log(req);
-	res.sendFile(__dirname + "/pass.html")
+	res.sendFile(__dirname + "/pass.html");
 });
 
 app.get('/liveLog', function(req, res){
@@ -361,7 +361,7 @@ app.get('/liveLog', function(req, res){
 	if (auth[address]) {
 		res.sendFile(__dirname + '/logRender.html');
 	} else {
-		res.redirect("/")
+		res.redirect("/");
 	}
 });
 
@@ -373,10 +373,10 @@ io.on('connect', function(passph){
 io.on('connection', function(passph){
 	passph.on('chat message', function(msg){
 		const address = getClintAddr(passph);
-		console.log(address + " sent " + sha1(msg));
+		helper.log(address + " sent " + sha1(msg));
 		if (sha1(msg) === key){
 			passph.emit('redirect', "./liveLog");
-			auth[address] = true
+			auth[address] = true;
 		}
 	});
 });
@@ -399,5 +399,5 @@ io.on('connection', function(socket){
 });
 
 http.listen(80, function(socket){
-	console.log('listening on *:80');
+	helper.log('listening on logs.ziv.shalit.name:80');
 });
