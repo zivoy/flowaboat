@@ -4,11 +4,12 @@
     const os = require('os');
     const path = require('path');
     const chalk = require('chalk');
+	const sha1 = require('js-sha1');
 
     const Discord = require('discord.js');
     const axios = require('axios');
 
-    let config = {}, default_value, value, valid_key;
+    let config = {}, default_value, value, valid_key, encValue;
 
     if(fs.existsSync('./config.json'))
         config = require('./config.json');
@@ -95,6 +96,9 @@
 
     if(!('credentials' in config))
         config.credentials = {};
+
+	if(!('logsCredentials' in config))
+		config.logsCredentials = {};
 
 
     default_value = 'none';
@@ -273,7 +277,27 @@
 
     config.credentials.last_fm_key = value == 'none' ? "" : value;
 
-    console.log('');
+	default_value = 'none';
+
+	if(config.logsCredentials.encPassword)
+		default_value = config.logsCredentials.rawPassword;
+
+	do{
+		console.log('');
+		console.log(`The password that will be used to lock the logs`);
+		value = readline.question(`Current password: ${chalk.green(default_value)}: `);
+
+		if(!value)
+			value = default_value;
+
+		encValue = sha1(value);
+
+	}while(value != 'none');
+
+	config.logsCredentials.rawPassword = value;
+	config.logsCredentials.encPassword = encValue;
+
+	console.log('');
 
     try{
         fs.writeFileSync('./config.json', JSON.stringify(config, false, 2));

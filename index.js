@@ -17,7 +17,6 @@ const io = require('socket.io')(http);
 const sha1 = require('js-sha1');
 
 var auth = {};
-const key = "e31ecac48f92a2c23373214d13f54135d31105eb";
 const dirName = "./logs";
 
 const client = new Discord.Client({autoReconnect:true});
@@ -33,6 +32,7 @@ client.on('error', helper.error);
 const config = require('./config.json');
 
 let user_ign = {};
+const password = config.logsCredentials.encPassword;
 
 if(helper.getItem('user_ign')){
 	user_ign = JSON.parse(helper.getItem('user_ign'));
@@ -374,7 +374,7 @@ io.on('connection', function(passph){
 	passph.on('chat message', function(msg){
 		const address = getClintAddr(passph);
 		helper.log(address + " sent " + sha1(msg));
-		if (sha1(msg) === key){
+		if (sha1(msg) === password){
 			passph.emit('redirect', "./liveLog");
 			auth[address] = true;
 		}
@@ -402,6 +402,4 @@ io.on('connection', function(socket){
 	});
 });
 
-http.listen(80, function(){
-	helper.log('listening on', app.request.get('host'));
-});
+http.listen(80);
