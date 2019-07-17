@@ -292,7 +292,7 @@
 
 		encValue = sha1(value);
 
-	}while(value != 'none');
+	}while(value == 'none');
 
 	config.logsCredentials.rawPassword = value;
 	config.logsCredentials.encPassword = encValue;
