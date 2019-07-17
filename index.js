@@ -378,12 +378,12 @@ io.on('connection', function(passph){
 		if (sha1(msg) === password){
 			passph.emit('redirect', "./liveLog");
 			auth[address] = true;
+			passph.removeListener('redirect');
 		}
 	});
 	passph.on("disconnect", function() {
 		const address = getClintAddr(passph);
 		auth[address] = null;
-		passph.removeListener('redirect');
 		passph.removeListener('chat message');
 	});
 });
@@ -404,8 +404,7 @@ io.on('connection', function(socket){
 		io.to(`${socket["id"]}`).emit('log output', data.toString());
 	});
 	socket.on("disconnect", function() {
-		socket.removeListener('redirect');
-		socket.removeListener('chat message');
+		socket.removeListener('log output');
 	});
 });
 
