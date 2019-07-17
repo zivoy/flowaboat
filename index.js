@@ -10,7 +10,22 @@ const chalk = require('chalk');
 const osu = require('./osu.js');
 const helper = require('./helper.js');
 
+const childs = require('child_process');
+const app = require('express')();
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+const sha1 = require('js-sha1');
+
+var auth = {};
+const key = "e31ecac48f92a2c23373214d13f54135d31105eb";
+const dirName = "./logs"
+
 const client = new Discord.Client({autoReconnect:true});
+
+const tail = childs.spawn("tail", ["-f", dirName + '/log.log']);
+console.log("start tailing");
+
+tail.stdout.setEncoding('utf8');
 
 client.on('error', helper.error);
 
@@ -42,6 +57,19 @@ if(helper.getItem('last_message')){
 
 if(config.credentials.osu_api_key && config.credentials.osu_api_key.length > 0)
     osu.init(client, config.credentials.osu_api_key, last_beatmap);
+
+function getClintAddr(soc){
+	let address;
+	try {
+		address = soc.request.connection.remoteAddress;
+		//var port = soc.request.connection.remotePort;
+	} catch (TypeError) {
+		address = soc.ip;
+		//var port = soc.request.connection.remotePort;
+	}
+	const port = "0000";
+	return address +":"+ port
+}
 
 function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))
@@ -321,4 +349,55 @@ client.login(config.credentials.bot_token).catch(err => {
 	console.error('');
 	console.error(err);
 	process.exit();
+});
+
+app.get("/",function (req, res) {
+	//console.log(req);
+	res.sendFile(__dirname + "/pass.html")
+});
+
+app.get('/liveLog', function(req, res){
+	const address = getClintAddr(req);
+	if (auth[address]) {
+		res.sendFile(__dirname + '/logRender.html');
+	} else {
+		res.redirect("/")
+	}
+});
+
+io.on('connect', function(passph){
+	const address = getClintAddr(passph);
+	auth[address] = false;
+});
+
+io.on('connection', function(passph){
+	passph.on('chat message', function(msg){
+		const address = getClintAddr(passph);
+		console.log(address + " sent " + sha1(msg));
+		if (sha1(msg) === key){
+			passph.emit('redirect', "./liveLog");
+			auth[address] = true
+		}
+	});
+});
+
+io.on('connect', function(socket) {
+	const address = getClintAddr(socket);
+	fs.readFile(dirName + '/log.log', function(error, data) {
+		if (error) { throw error; }
+		data.toString().split("\n").forEach(function(line) {
+			io.to(`${socket["id"]}`).emit('log output', line);
+		});
+	});
+	auth[address] = false;
+});
+
+io.on('connection', function(socket){
+	tail.stdout.on('data', function(data) {
+		io.to(`${socket["id"]}`).emit('log output', data.toString());
+	});
+});
+
+http.listen(80, function(socket){
+	console.log('listening on *:80');
 });

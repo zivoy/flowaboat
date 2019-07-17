@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "start": "npm stop; sh ./update.sh; ACCEPT_HIGHCHARTS_LICENSE=1 npm i && [ ! -f ./config.json ] && npm run config; forever start -a -l /home/ziv132/bot/logs/log.log -o /home/ziv132/bot/logs/out.log -e /home/ziv132/bot/logs/err.log --minUptime 1000 --spinSleepTime 1000 index.js; forever start --minUptime 1000 --spinSleepTime 1000 tail.js ./logs; forever list",
+        "start": "npm stop; sh ./update.sh; ACCEPT_HIGHCHARTS_LICENSE=1 npm i && [ ! -f ./config.json ] && npm run config; forever start -a -l /home/ziv132/bot/logs/log.log -o /home/ziv132/bot/logs/out.log -e /home/ziv132/bot/logs/err.log --minUptime 1000 --spinSleepTime 1000 index.js; forever list",
         "test": "echo \"Error: no test specified\" && exit 1",
         "commands": "node generate-commands-md",
         "config": "node generate-config",
