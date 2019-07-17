@@ -403,7 +403,5 @@ io.on('connection', function(socket){
 });
 
 http.listen(80, function(){
-	app.get(function(req) {
-		helper.log('listening on', req.get('host'));
-	});
+	helper.log('listening on', app.request.get('host'));
 });
