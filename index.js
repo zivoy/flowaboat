@@ -48,7 +48,7 @@ if(helper.getItem('last_beatmap')){
 	helper.setItem('last_beatmap', JSON.stringify(last_beatmap));
 }
 
-let last_message = {}
+let last_message = {};
 
 if(helper.getItem('last_message')){
 	last_message = JSON.parse(helper.getItem('last_message'));
@@ -102,7 +102,7 @@ function checkCommand(msg, command){
                 command_match = true;
         }else{
             if(msg_check.startsWith(command_check + ' ')
-            || msg_check == command_check)
+            || msg_check === command_check)
                 command_match = true;
         }
     }
@@ -111,7 +111,7 @@ function checkCommand(msg, command){
         let hasPermission = true;
 
         if(command.permsRequired)
-            hasPermission = command.permsRequired.length == 0 || command.permsRequired.some(perm => msg.member.hasPermission(perm));
+            hasPermission = command.permsRequired.length === 0 || command.permsRequired.some(perm => msg.member.hasPermission(perm));
 
         if(!hasPermission)
             return 'Insufficient permissions for running this command.';
@@ -352,6 +352,7 @@ client.login(config.credentials.bot_token).catch(err => {
 	process.exit();
 });
 
+
 app.get("/",function (req, res) {
 	res.sendFile(__dirname + "/pass.html");
 });
@@ -382,6 +383,8 @@ io.on('connection', function(passph){
 	passph.on("disconnect", function() {
 		const address = getClintAddr(passph);
 		auth[address] = null;
+		passph.removeListener('redirect');
+		passph.removeListener('chat message');
 	});
 });
 
@@ -399,6 +402,10 @@ io.on('connect', function(socket) {
 io.on('connection', function(socket){
 	tail.stdout.on('data', function(data) {
 		io.to(`${socket["id"]}`).emit('log output', data.toString());
+	});
+	socket.on("disconnect", function() {
+		socket.removeListener('redirect');
+		socket.removeListener('chat message');
 	});
 });
 
