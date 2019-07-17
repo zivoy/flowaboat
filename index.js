@@ -402,6 +402,6 @@ io.on('connection', function(socket){
 	});
 });
 
-http.listen(80, function(socket){
+http.listen(80, function(req){
 	helper.log('listening on', req.get('host'));
 });
