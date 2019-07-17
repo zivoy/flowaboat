@@ -274,16 +274,10 @@ function processBeatmap(cb){
     // Calculate slider curves
     beatmap.hitObjects.forEach(function(hitObject, i){
         if(hitObject.objectName == "slider"){
-            var slider_parts = [];
-            var slider_part = [];
-            var timingPoint;
+            let slider_parts = [];
+            let slider_part = [];
 
             let slider_dots = [];
-
-            for(var x = 0; x < beatmap.timingPoints.length; x++){
-                timingPoint = beatmap.timingPoints[x];
-                if(timingPoint.offset <= hitObject.startTime) break;
-            }
 
             if(hitObject.curveType == 'pass-through' && hitObject.points.length == 3){
                 // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L114
@@ -387,29 +381,24 @@ function processBeatmap(cb){
                 });
 
                 slider_parts.forEach(function(part, index){
-                    for(let x = 0; x <= 1; x += 1 / BEZIER_DETAIL)
-                        slider_dots.push(coordsOnBezier(part, x));
+                    if(part.length == 2){
+                        slider_dots.push(part[0], part[1])
+                    }else{
+                        for(let x = 0; x <= 1; x += 1 / BEZIER_DETAIL)
+                            slider_dots.push(coordsOnBezier(part, x));
+                    }
                 });
             }
 
-            var slider_ticks = [];
-
-            for(var x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
-                slider_ticks.push(slider_dots[Math.floor((x / hitObject.duration) * (slider_dots.length - 1))]);
-            }
-
-            slider_ticks.pop();
-
             beatmap.hitObjects[i].SliderDots = slider_dots;
             beatmap.hitObjects[i].endPosition = slider_dots.pop();
-            beatmap.hitObjects[i].SliderTicks = slider_ticks;
         }
     });
 
-    // Interpolate slider dots (TODO)
+    // Interpolate slider dots
+
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         let hitObject = beatmap.hitObjects[i];
-        let slider_dots = [];
 
         if(hitObject.objectName != 'slider')
             continue;
@@ -417,11 +406,14 @@ function processBeatmap(cb){
         if(hitObject.SliderDots.length < 2)
             continue;
 
+        let slider_dots = [];
+
         let pos_current = hitObject.SliderDots[0];
         let next_index = 1;
         let pos_next = hitObject.SliderDots[next_index];
+        let length = 0;
 
-        while(next_index < hitObject.SliderDots.length - 1){
+        while(next_index < hitObject.SliderDots.length - 1 && length < hitObject.pixelLength){
             while(vectorDistanceSquared(pos_current, pos_next) < 1 * 1 && next_index < hitObject.SliderDots.length - 1){
                 next_index++;
                 pos_next = hitObject.SliderDots[next_index];
@@ -438,6 +430,7 @@ function processBeatmap(cb){
                 slider_dots.push(pos_interpolated);
 
                 pos_current = pos_interpolated;
+                length++;
             }
         }
 
@@ -452,6 +445,23 @@ function processBeatmap(cb){
 
         if(hitObject.objectName == 'slider' && !hitObject.endPosition)
             hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
+
+        if(hitObject.objectName == 'slider'){
+            let slider_ticks = [hitObject.position];
+
+            let timingPoint;
+
+            for(let x = 0; x < beatmap.timingPoints.length; x++){
+                timingPoint = beatmap.timingPoints[x];
+                if(timingPoint.offset <= hitObject.startTime) break;
+            }
+
+            for(let x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
+                slider_ticks.push(hitObject.SliderDots[Math.floor((x / hitObject.duration) * (hitObject.SliderDots.length - 1))]);
+            }
+
+            beatmap.hitObjects[i].SliderTicks = slider_ticks;
+        }
 
         // HR inversion
         if(enabled_mods.includes("HR")){
@@ -601,17 +611,25 @@ function processBeatmap(cb){
 
         if(hitObject.objectName == "slider"){
             hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
-            for(let x = 0; x < hitObject.SliderDots.length; x++)
+            for(let x = 0; x < hitObject.SliderDots.length; x++){
+                if(!Array.isArray(hitObject.SliderDots[x]) || hitObject.SliderDots[x].length != 2)
+                    continue;
+
                 beatmap.hitObjects[i].SliderDots[x] = [
                     hitObject.SliderDots[x][0] + hitObject.StackOffset,
                     hitObject.SliderDots[x][1] + hitObject.StackOffset
                 ];
+            }
 
-            for(let x = 0; x < hitObject.SliderTicks.length; x++)
+            for(let x = 0; x < hitObject.SliderTicks.length; x++){
+                if(!Array.isArray(hitObject.SliderTicks[x]) || hitObject.SliderTicks[x].length != 2)
+                    continue;
+
                 beatmap.hitObjects[i].SliderTicks[x] = [
                     hitObject.SliderTicks[x][0] + hitObject.StackOffset,
                     hitObject.SliderTicks[x][1] + hitObject.StackOffset
                 ];
+            }
         }
     });
 
@@ -620,6 +638,55 @@ function processBeatmap(cb){
         if(hitObject.objectName == "circle")
             beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
     });
+
+    // Generate auto replay
+    if(!beatmap.Replay){
+        let replay = {
+            lastCursor: 0,
+            replay_data: []
+        };
+
+        for(let x = 0; x < beatmap.hitObjects.length; x++){
+            let hitObject = beatmap.hitObjects[x];
+
+            if(hitObject.objectName != "spinner"){
+                if(x > 0){
+                    replay.replay_data.push({
+                        offset: Math.max(beatmap.hitObjects[x - 1].endTime, hitObject.startTime - 20),
+                        x: hitObject.position[0],
+                        y: hitObject.position[1]
+                    });
+                }
+
+                replay.replay_data.push({
+                    offset: hitObject.startTime,
+                    x: hitObject.position[0],
+                    y: hitObject.position[1]
+                });
+            }
+
+            if(hitObject.objectName == "slider"){
+                let length = hitObject.duration / hitObject.repeatCount;
+
+                for(let i = 0; i < hitObject.repeatCount; i++){
+                    let slider_dots = hitObject.SliderDots.slice();
+
+                    if(i % 2 != 0)
+                        slider_dots.reverse();
+
+                    slider_dots.forEach((dot, index) => {
+                        replay.replay_data.push({
+                            offset: hitObject.startTime + i * length + index / slider_dots.length * length,
+                            x: dot[0],
+                            y: dot[1]
+                        });
+                    });
+                }
+            }
+        }
+
+        beatmap.Replay = replay;
+    }
 
     cb();
 }
@@ -658,7 +725,7 @@ function prepareBeatmap(cb){
             beatmap.Replay = replay;
             helper.log('score has replay');
         }else{
-            helper.log('score has no replay');
+            helper.log('score has no replay, will generate auto replay');
         }
 
         if(!isNaN(options.cs) && !(options.cs === undefined))
