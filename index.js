@@ -393,7 +393,6 @@ io.on('connect', function(socket) {
 			io.to(`${socket["id"]}`).emit('log output', line);
 		});
 	});
-	auth[address] = false;
 	auth[address] = null;
 });
 
