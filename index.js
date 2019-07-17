@@ -403,5 +403,5 @@ io.on('connection', function(socket){
 });
 
 http.listen(80, function(socket){
-	helper.log('listening on logs.ziv.shalit.name:80');
+	helper.log('listening on', req.get('host'));
 });
