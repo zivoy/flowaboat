@@ -379,6 +379,10 @@ io.on('connection', function(passph){
 			auth[address] = true;
 		}
 	});
+	passph.on("disconnect", function() {
+		const address = getClintAddr(passph);
+		auth[address] = null;
+	});
 });
 
 io.on('connect', function(socket) {
@@ -390,11 +394,16 @@ io.on('connect', function(socket) {
 		});
 	});
 	auth[address] = false;
+	auth[address] = null;
 });
 
 io.on('connection', function(socket){
 	tail.stdout.on('data', function(data) {
 		io.to(`${socket["id"]}`).emit('log output', data.toString());
+	});
+	socket.on("disconnect", function() {
+		const address = getClintAddr(socket);
+		auth[address] = null;
 	});
 });
 
