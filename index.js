@@ -401,10 +401,6 @@ io.on('connection', function(socket){
 	tail.stdout.on('data', function(data) {
 		io.to(`${socket["id"]}`).emit('log output', data.toString());
 	});
-	socket.on("disconnect", function() {
-		const address = getClintAddr(socket);
-		auth[address] = null;
-	});
 });
 
 http.listen(80, function(socket){
