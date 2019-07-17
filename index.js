@@ -382,7 +382,8 @@ io.on('connection', function(passph){
 	});
 	passph.on("disconnect", function() {
 		const address = getClintAddr(passph);
-		auth[address] = null;/*
+		auth[address] = null;
+		passph.destroy()/*
 		passph.removeListener('chat message');*/
 	});
 });
@@ -401,9 +402,10 @@ io.on('connect', function(socket) {
 io.on('connection', function(socket){
 	tail.stdout.on('data', function(data) {
 		io.to(`${socket["id"]}`).emit('log output', data.toString());
-	});/*
+	});
 	socket.on("disconnect", function() {
-	});*/
+		socket.destroy()
+	});
 });
 
 http.listen(80);
