@@ -229,9 +229,8 @@ function onMessage(msg){
 
     commands.forEach(command => {
         let check_command = checkCommand(msg, command);
-		helper.log(msg.author.username + "@" + msg.channel.name + ':', msg.content);
         if(check_command === true){
-
+			helper.log(msg.author.username + "@" + msg.channel.name + ':', msg.content);
             if(command.call && typeof command.call === 'function'){
                 let promise = command.call({
                     msg,
