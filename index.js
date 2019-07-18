@@ -376,7 +376,6 @@ io.on('connect', function(socket) {
 		});
 	});
 	auth[address] = null;
-	io.off('connect', socket);
 });
 
 io.on('connection', function(socket){
