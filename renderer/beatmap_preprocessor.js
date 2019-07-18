@@ -10,6 +10,8 @@ let options, beatmap_path, enabled_mods, beatmap, speed_multiplier = 1;
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
 
+const MAX_RADIAN = 360 * (Math.PI / 180);
+
 const CATMULL_DETAIL = 50;
 const CIRCULAR_ARC_TOLERANCE = 0.1;
 const BEZIER_DETAIL = 100;
@@ -456,11 +458,18 @@ function processBeatmap(cb){
             }
 
             for(let x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
-                slider_ticks.push({
-                    offset: x / hitObject.repeatCount,
-                    reverseOffset: (hitObject.duration / hitObject.repeatCount) - x,
-                    position: hitObject.SliderDots[Math.floor(x / hitObject.duration * (hitObject.SliderDots.length - 1))]
-                });
+                let position = hitObject.SliderDots[Math.floor(x / hitObject.duration * (hitObject.SliderDots.length - 1))];
+
+                if(!Array.isArray(position) || position.length != 2)
+                    continue;
+
+                if(vectorDistanceSquared(position, hitObject.position) > 5 * 5
+                && vectorDistanceSquared(position, hitObject.endPosition) > 5 * 5)
+                    slider_ticks.push({
+                        offset: x / hitObject.repeatCount,
+                        reverseOffset: (hitObject.duration / hitObject.repeatCount) - x / hitObject.repeatCount,
+                        position
+                    });
             }
 
             beatmap.hitObjects[i].SliderTicks = slider_ticks;
@@ -600,10 +609,24 @@ function processBeatmap(cb){
 
     // Set combo colors and stacking offset
     beatmap.hitObjects.forEach(function(hitObject, i){
-        if(hitObject.newCombo){
-            currentCombo++;
+        if(beatmap["Combo1"] === undefined){
+            beatmap["Combo1"] = "255,192,0";
+            beatmap["Combo2"] = "0,202,0";
+            beatmap["Combo3"] = "18,124,255";
+            beatmap["Combo4"] = "242,24,57";
+        }
+
+        let maxComboColor = 1;
+
+        while(beatmap["Combo" + (maxComboColor + 1)] !== undefined)
+            maxComboColor++;
+
+        if(hitObject.newCombo || i == 0){
             currentComboNumber = 0;
-            if(currentCombo > 4) currentCombo = 1;
+            for(let x = hitObject.comboSkip; x >= 0; x--){
+                currentCombo++;
+                if(currentCombo > maxComboColor) currentCombo = 1;
+            }
         }
 
         currentComboNumber++;
@@ -636,10 +659,13 @@ function processBeatmap(cb){
         }
     });
 
-    // Set end time for circles too for easier handling
+    // Set end time for circles and duration for spinners too for easier handling
     beatmap.hitObjects.forEach(function(hitObject, i){
         if(hitObject.objectName == "circle")
-            beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
+            beatmap.hitObjects[i].endTime = hitObject.startTime;
+
+        if(hitObject.objectName == "spinner")
+            beatmap.hitObjects[i].duration = hitObject.endTime - hitObject.startTime;
     });
 
     // Generate auto replay
@@ -666,6 +692,28 @@ function processBeatmap(cb){
                     x: hitObject.position[0],
                     y: hitObject.position[1]
                 });
+            }else{
+                // 7 rotations per second
+                let rps = 7;
+                let radius = 60;
+
+                let rotations = hitObject.duration / 1000 * rps;
+
+                for(let x = 0; x < rotations; x++){
+                    let rotationLength = Math.min(1, rotations - x);
+
+                    for(let a = 0; a < rotationLength * MAX_RADIAN; a += MAX_RADIAN / (rotationLength * 100)){
+                        let offset = hitObject.startTime + x * (1000 / rps) + a / MAX_RADIAN * (1000 / rps);
+
+                        let point = {
+                            offset,
+                            x: PLAYFIELD_WIDTH / 2 + radius * Math.cos(a),
+                            y: PLAYFIELD_HEIGHT / 2 + radius * Math.sin(a)
+                        };
+
+                        replay.replay_data.push(point);
+                    }
+                }
             }
 
             if(hitObject.objectName == "slider"){

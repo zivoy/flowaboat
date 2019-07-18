@@ -47,6 +47,18 @@ process.on('message', obj => {
         let current = replay.replay_data[replay.lastCursor - 1];
         let next = replay.replay_data[replay.lastCursor];
 
+        if(current === undefined || next === undefined)
+            return {
+                current: {
+                    x: 0,
+                    y: 0
+                },
+                next: {
+                    x: 0,
+                    y: 0
+                }
+            }
+
         // Interpolate cursor position between two points for smooth motion
 
         let current_start = current.offset;
@@ -241,91 +253,94 @@ process.on('message', obj => {
                         }
                     }
 
+                    // Render slider ticks (WIP)
+                    /*
+                    if(time <= hitObject.endTime){
+                        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                        ctx.lineWidth = 5 * scale_multiplier;
 
-                    /* Slider Ticks (WIP)
-                    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-                    ctx.lineWidth = 5 * scale_multiplier;
+                        let slider_ticks = hitObject.SliderTicks.slice();
 
-                    let slider_ticks = hitObject.SliderTicks.slice();
+                        // Reverse slider ticks depending on current slider direction
+                        if(currentTurn > 0 && currentTurn % 2 != 0)
+                            slider_ticks.reverse();
 
-                    // Reverse slider ticks depending on current slider direction
-                    if(currentTurn % 2 != 0)
-                        slider_ticks.reverse();
+                        let max = Math.floor(slider_ticks.length * snakingProgress);
 
-                    let max = Math.floor(slider_ticks.length * snakingProgress);
+                        let offset = time - currentTurnStart;
 
-                    let offset = time - currentTurnStart;
+                        for(let x = 0; x < max; x++){
+                            if(currentTurn > 0)
+                                ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - x * 40 - currentTurnStart) / 50)));
+                            else if(time < hitObject.startTime)
+                                ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - (max - x) * 40 - currentTurnStart) / 50)));
 
-                    ctx.globalAlpha = 1;
+                            let tick = slider_ticks[x];
 
-                    for(let x = 0; x < max; x++){
-                        if(currentTurn > 0)
-                            ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - x * 40 - currentTurnStart) / 50)));
-                        else if(time < hitObject.startTime)
-                            ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - (max - x) * 40 - currentTurnStart) / 50)));
+                            if(currentTurn > 0 && currentTurn % 2 != 0)
+                                tick.offset = tick.reverseOffset;
 
-                        let tick = slider_ticks[x];
+                            if(followpoint_index && tick.offset < offset)
+                                continue;
 
-                        let tick_offset = currentTurn % 2 == 0 ? tick.offset : tick.reverseOffset;
+                            let position = playfieldPosition(...tick.position);
+                            ctx.beginPath();
+                            ctx.arc(...position, scale_multiplier * beatmap.Radius / 5, 0, 2 * Math.PI, false);
+                            ctx.stroke();
+                        }
 
-                        if(tick_offset < offset)
-                            continue;
-
-                        let position = playfieldPosition(...tick.position);
-                        ctx.beginPath();
-                        ctx.arc(...position, scale_multiplier * beatmap.Radius / 5, 0, 2 * Math.PI, false);
-                        ctx.stroke();
+                        ctx.globalAlpha = opacity;
                     }
-
-                    ctx.globalAlpha = opacity;*/
+                    */
                 }
 
                 // Draw circles or slider heads
                 if(hitObject.objectName != "spinner"){
-
-                    if(!options.noshadow)
-                        ctx.shadowColor = "rgba(0,0,0,0.7)";
-
                     ctx.lineWidth = 6 * scale_multiplier;
                     ctx.beginPath();
                     ctx.strokeStyle = "rgba(255,255,255,0.85)";
+                    
+                    if(time < hitObject.startTime){
+                        if(!options.noshadow)
+                            ctx.shadowColor = "rgba(0,0,0,0.7)";
 
-                    let position = playfieldPosition(...hitObject.position);
-
-                    // Fill circle with combo color instead of leaving see-through circles
-                    if(options.fill){
-                        ctx.beginPath();
-                        ctx.fillStyle = hitObject.Color;
-                        ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
-                        ctx.fill();
-                    }
-
-                    // Draw circle border
-                    ctx.beginPath();
-                    ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
-                    ctx.stroke();
-
-                    ctx.fillStyle = 'white';
-                    ctx.textBaseline = "middle";
-                    ctx.textAlign = "center";
-
-                    let fontSize = 16;
-                    fontSize += 16 * (1 - (beatmap.CircleSize / 10));
-
-                    fontSize *= scale_multiplier;
-
-                    // Draw combo number on circle
-                    ctx.font = `${fontSize}px sans-serif`;
-                    ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
-
-                    // Draw approach circle
-                    if(approachCircle > 0){
-                        ctx.strokeStyle = 'white';
-                        ctx.lineWidth = 2 * scale_multiplier;
-                        ctx.beginPath();
                         let position = playfieldPosition(...hitObject.position);
-                        ctx.arc(...position, scale_multiplier * (beatmap.Radius + approachCircle * (beatmap.Radius * 2)), 0, 2 * Math.PI, false);
+
+                        // Fill circle with combo color instead of leaving see-through circles
+                        if(options.fill){
+                            ctx.beginPath();
+                            ctx.fillStyle = hitObject.Color;
+                            ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
+                            ctx.fill();
+                        }
+
+                        // Draw circle border
+                        ctx.beginPath();
+                        ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
                         ctx.stroke();
+
+                        ctx.fillStyle = 'white';
+                        ctx.textBaseline = "middle";
+                        ctx.textAlign = "center";
+
+                        let fontSize = 16;
+                        fontSize += 16 * (1 - (beatmap.CircleSize / 10));
+
+                        fontSize *= scale_multiplier;
+
+                        // Draw combo number on circle
+                        ctx.font = `${fontSize}px sans-serif`;
+                        ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
+
+                        // Draw approach circle
+                        if(approachCircle > 0){
+                            ctx.strokeStyle = 'white';
+                            ctx.lineWidth = 2 * scale_multiplier;
+                            ctx.beginPath();
+                            let position = playfieldPosition(...hitObject.position);
+                            ctx.arc(...position, scale_multiplier * (beatmap.Radius + approachCircle * (beatmap.Radius * 2)), 0, 2 * Math.PI, false);
+                            ctx.stroke();
+                        }
                     }
 
                     // Draw follow point if there's currently one visible
@@ -381,6 +396,24 @@ process.on('message', obj => {
 
                     let position = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2);
 
+                    // Rotate spinner (WIP)
+                    /*
+                    if(beatmap.Replay && time >= hitObject.startTime){
+                        let replay_point = getCursorAt(time, beatmap.Replay);
+
+                        if(replay_point){
+                            let { current } = replay_point;
+
+                            let radians = Math.atan2(current.y - PLAYFIELD_WIDTH / 2, current.x - PLAYFIELD_HEIGHT / 2);
+
+                            position = [
+                                position[0] + 2.5 * Math.cos(radians),
+                                position[1] + 2.5 * Math.sin(radians)
+                            ];
+                        }
+                    }
+                    */
+
                     // Outer spinner circle
                     ctx.beginPath();
                     ctx.arc(...position, scale_multiplier * 240, 0, 2 * Math.PI, false);
@@ -391,11 +424,13 @@ process.on('message', obj => {
                     ctx.arc(...position, scale_multiplier * 30, 0, 2 * Math.PI, false);
                     ctx.stroke();
                 }
-            }else if(hitObject.startTime - time > -200){
+            }
+
+            if(time >= hitObject.startTime && hitObject.startTime - time > -200){
                 // Draw fading out circles
                 if(hitObject.objectName != "spinner"){
                     // Increase circle size the further it's faded out
-                    let timeSince = Math.abs(hitObject.endTime - time) / 200;
+                    let timeSince = Math.abs(hitObject.startTime - time) / 200;
                     let opacity = 1 - timeSince;
                     let sizeFactor = 1 + timeSince * 0.3;
 
