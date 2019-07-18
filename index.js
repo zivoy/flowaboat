@@ -365,28 +365,10 @@ app.get('/liveLog', function(req, res){
 	}
 });
 
-io.on('connect', function(passph){
-	const address = getClintAddr(passph);
-	auth[address] = false;
-});
-
-io.on('connection', function(passph){
-	passph.on('chat message', function(msg){
-		const address = getClintAddr(passph);
-		helper.log(address + " sent " + sha1(msg));
-		if (sha1(msg) === password){
-			passph.emit('redirect', "./liveLog");
-			auth[address] = true;
-		}
-	});
-	passph.on("disconnect", function() {
-		const address = getClintAddr(passph);
-		auth[address] = null;
-	});
-});
 
 io.on('connect', function(socket) {
 	const address = getClintAddr(socket);
+	auth[address] = false;
 	fs.readFile(dirName + '/log.log', function(error, data) {
 		if (error) { throw error; }
 		data.toString().split("\n").forEach(function(line) {
@@ -397,11 +379,24 @@ io.on('connect', function(socket) {
 });
 
 io.on('connection', function(socket){
+	socket.on('chat message', function(msg){
+		const address = getClintAddr(socket);
+		helper.log(address + " sent " + sha1(msg));
+		if (sha1(msg) === password){
+			socket.emit('redirect', "./liveLog");
+			auth[address] = true;
+		}
+	});
+
+
 	tail.stdout.on('data', function(data) {
 		io.to(`${socket["id"]}`).emit('log output', data.toString());
 	});
-	//socket.on("disconnect", function() {
-	//});
+
+	socket.on("disconnect", function() {
+		const address = getClintAddr(socket);
+		auth[address] = null;
+	});
 });
 
 http.listen(80);
