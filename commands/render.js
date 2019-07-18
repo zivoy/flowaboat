@@ -60,7 +60,7 @@ module.exports = {
                 }
             }
 
-            let fps = 60;
+            let fps = 30;
 
             argv.map(arg => arg.toLowerCase());
 
