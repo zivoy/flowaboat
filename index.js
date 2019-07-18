@@ -224,13 +224,14 @@ function onMessage(msg){
 
     argv[0] = argv[0].substr(config.prefix.length);
 
-    if(config.debug)
-        helper.log(msg.author.username + "@" + msg.channel.name + ':', msg.content);
+    /*if(config.debug)
+        helper.log(msg.author.username + "@" + msg.channel.name + ':', msg.content);*/
 
     commands.forEach(command => {
         let check_command = checkCommand(msg, command);
-
+		helper.log(msg.author.username + "@" + msg.channel.name + ':', msg.content);
         if(check_command === true){
+
             if(command.call && typeof command.call === 'function'){
                 let promise = command.call({
                     msg,
