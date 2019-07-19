@@ -61,8 +61,9 @@ let tail = childs.spawn("tail", ["-f", todaysPath + '/log.log']);
 
 function rep(x) {
 	if (x.startsWith("'") && x.endsWith("'")) { // x.replace(/['"]+/g, '');
-		return x.substr(1).slice(0,-1);
+		x = x.substr(1).slice(0,-1);
 	}
+	return x;
 }
 module.exports = {
     init: _commands => {
