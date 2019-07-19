@@ -1372,7 +1372,8 @@ module.exports = {
 			if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
 	            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
 
-	        let beatmap_id;
+	        let beatmap_id, isValidUrl;
+	        isValidUrl=false;
 
 	        if(id_only === undefined)
 				id_only = false;
@@ -1389,10 +1390,16 @@ module.exports = {
 				beatmap_id = parseInt(beatmap_url.split("/discussion/").pop().split("/")[0]);
 	        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
 	            beatmap_id = parseInt(beatmap_url);
+			else if(beatmap_url.endsWith(".osz"))
+				isValidUrl = true;
 
-			helper.downloadBeatmap(beatmap_id).finally(() => {
-				resolve(beatmap_id);
-			});
+	        if (isValidUrl) {
+	        	resolve(beatmap_url);
+			} else {
+				helper.downloadBeatmap(beatmap_id).finally(() => {
+					resolve(beatmap_id);
+				});
+			}
 		});
     },
 
