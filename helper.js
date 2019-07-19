@@ -52,8 +52,8 @@ function logFiles (startDir, path){
 }
 
 let todaysPath = dateFolders(__dirname + "/logs");
-let logStream = fs.createWriteStream(todaysPath + "log.log", {flags:'a'});
-let errStream = fs.createWriteStream(todaysPath + "err.log", {flags:'a'});
+let logStream = fs.createWriteStream(todaysPath + "/log.log", {flags:'a'});
+let errStream = fs.createWriteStream(todaysPath + "/err.log", {flags:'a'});
 
 
 module.exports = {
