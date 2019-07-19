@@ -44,8 +44,8 @@ function logFiles (startDir, path){
 	} else {
 		logStream.end();
 		errStream.end();
-		logStream = fs.createWriteStream(todaysFolder + "log.log", {flags:'a'});
-		errStream = fs.createWriteStream(todaysFolder + "err.log", {flags:'a'});
+		logStream = fs.createWriteStream(todaysFolder + "/log.log", {flags:'a'});
+		errStream = fs.createWriteStream(todaysFolder + "/err.log", {flags:'a'});
 		todaysPath = todaysFolder;
 	}
 
