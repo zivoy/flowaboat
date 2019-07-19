@@ -59,8 +59,11 @@ let logStream = fs.createWriteStream(todaysPath + "/log.log", {flags:'a'});
 let errStream = fs.createWriteStream(todaysPath + "/err.log", {flags:'a'});
 let tail = childs.spawn("tail", ["-f", todaysPath + '/log.log']);
 
-let rep =(x) => x.replace(/['"]+/g, '');
-
+function rep(x) {
+	if (x.startsWith("'") && x.endsWith("'")) { // x.replace(/['"]+/g, '');
+		return x.substr(1).slice(0,-1);
+	}
+}
 module.exports = {
     init: _commands => {
         commands = _commands;
