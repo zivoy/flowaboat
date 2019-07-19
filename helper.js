@@ -14,6 +14,27 @@ const cmd_escape = "```";
 
 let commands;
 
+function dateFolders (startDir, date){
+	if (date === undefined) {
+		date = moment();
+	}
+	let year, month, day;
+	year = startDir + "/" + date.format("YYYY");
+	month = year + "/" + date.format("MM");
+	day = month + "/" + date.format("DD");
+
+	if (!fs.existsSync(year)){
+		fs.mkdirSync(year);
+	}
+	if (!fs.existsSync(month)) {
+		fs.mkdirSync(month);
+	}
+	if (!fs.existsSync(day)) {
+		fs.mkdirSync(day);
+	}
+	return day;
+}
+
 function logFiles (startDir, path){
 	if (path === undefined){
 		path = todaysPath
@@ -30,7 +51,7 @@ function logFiles (startDir, path){
 
 }
 
-let todaysPath = dateFolders(__dirname + "/logs");
+let todaysPath = module.exports.dateFolders(__dirname + "/logs");
 let logStream = fs.createWriteStream(todaysPath + "log.log", {flags:'a'});
 let errStream = fs.createWriteStream(todaysPath + "err.log", {flags:'a'});
 
@@ -44,26 +65,7 @@ module.exports = {
 
     cmd_escape: cmd_escape,
 
-	dateFolders: (startDir, date) => {
-		if (date === undefined) {
-			date = moment();
-		}
-		let year, month, day;
-		year = startDir + "/" + date.format("YYYY");
-		month = year + "/" + date.format("MM");
-		day = month + "/" + date.format("DD");
-
-		if (!fs.existsSync(year)){
-			fs.mkdirSync(year);
-		}
-		if (!fs.existsSync(month)) {
-			fs.mkdirSync(month);
-		}
-		if (!fs.existsSync(day)) {
-			fs.mkdirSync(day);
-		}
-		return day;
-	},
+	dateFolders: (...params) => dateFolders(...params),
 
     log: (...params) => {
 		logFiles(dateFolders(__dirname + "/logs"));
