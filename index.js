@@ -17,7 +17,7 @@ const io = require('socket.io')(http);
 const sha1 = require('js-sha1');
 
 var auth = {};
-const dirName = "./logs";
+const dirName = helper.dateFolders(__dirname + "/logs");
 
 const client = new Discord.Client({autoReconnect:true});
 

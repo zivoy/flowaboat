@@ -14,6 +14,27 @@ const cmd_escape = "```";
 
 let commands;
 
+function logFiles (startDir, path){
+	if (path === undefined){
+		path = todaysPath
+	}
+	let todaysFolder = dateFolders(startDir);
+	if (todaysFolder === path){
+	} else {
+		logStream.end();
+		errStream.end();
+		logStream = fs.createWriteStream(todaysFolder + "log.log", {flags:'a'});
+		errStream = fs.createWriteStream(todaysFolder + "err.log", {flags:'a'});
+		todaysPath = todaysFolder;
+	}
+
+}
+
+let todaysPath = dateFolders(__dirname + "/logs");
+let logStream = fs.createWriteStream(todaysPath + "log.log", {flags:'a'});
+let errStream = fs.createWriteStream(todaysPath + "err.log", {flags:'a'});
+
+
 module.exports = {
     init: _commands => {
         commands = _commands;
@@ -23,12 +44,37 @@ module.exports = {
 
     cmd_escape: cmd_escape,
 
+	dateFolders: (startDir, date) => {
+		if (date === undefined) {
+			date = moment();
+		}
+		let year, month, day;
+		year = startDir + "/" + date.format("YYYY");
+		month = year + "/" + date.format("MM");
+		day = month + "/" + date.format("DD");
+
+		if (!fs.existsSync(year)){
+			fs.mkdirSync(year);
+		}
+		if (!fs.existsSync(month)) {
+			fs.mkdirSync(month);
+		}
+		if (!fs.existsSync(day)) {
+			fs.mkdirSync(day);
+		}
+		return day;
+	},
+
     log: (...params) => {
+		logFiles(dateFolders(__dirname + "/logs"));
         console.log(`[${moment().toISOString()}]`, ...params);
+		logStream.write(`[${moment().toISOString()}]\n`);
     },
 
     error: (...params) => {
+		logFiles(dateFolders(__dirname + "/logs"));
         console.error(`[${moment().toISOString()}]`, ...params);
+		errStream.write(`[${moment().toISOString()}]\n`);
     },
 
     setItem: (item, data) => {
