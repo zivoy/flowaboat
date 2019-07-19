@@ -60,9 +60,9 @@ let errStream = fs.createWriteStream(todaysPath + "/err.log", {flags:'a'});
 let tail = childs.spawn("tail", ["-f", todaysPath + '/log.log']);
 
 function rep(x) {
-	if (x.match(/^['"`].*["'`]$/mg) !== null) { // x.replace(/['"]+/g, '');
-		x = x.substr(1).slice(0,-1);
-	}
+	if (x !== undefined)
+		if (x.match(/^['"`].*["'`]$/mg) !== null) // x.replace(/['"]+/g, '');
+			x = x.substr(1).slice(0,-1);
 	return x;
 }
 module.exports = {
