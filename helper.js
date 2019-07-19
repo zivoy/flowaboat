@@ -55,6 +55,7 @@ let todaysPath = dateFolders(__dirname + "/logs");
 let logStream = fs.createWriteStream(todaysPath + "/log.log", {flags:'a'});
 let errStream = fs.createWriteStream(todaysPath + "/err.log", {flags:'a'});
 
+let rep =(x) => x.replace(/['"]+/g, '');
 
 module.exports = {
     init: _commands => {
@@ -70,14 +71,14 @@ module.exports = {
     log: (...params) => {
 		logFiles(__dirname + "/logs");
         console.log(`[${moment().toISOString()}]`, ...params);
-		logStream.write(`[${moment().toISOString()}] ` + params.map(JSON.stringify).join('\n') + "\n");
+		logStream.write(`[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n");
     },
 
     error: (...params) => {
 		logFiles(__dirname + "/logs");
 		console.error(`[${moment().toISOString()}]`, ...params);
 		for (x in params)
-		errStream.write(`[${moment().toISOString()}] ` + params.map(JSON.stringify).join('\n') + "\n");
+		errStream.write(`[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n");
 	},
 
     setItem: (item, data) => {
