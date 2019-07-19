@@ -51,7 +51,7 @@ function logFiles (startDir, path){
 
 }
 
-let todaysPath = module.exports.dateFolders(__dirname + "/logs");
+let todaysPath = dateFolders(__dirname + "/logs");
 let logStream = fs.createWriteStream(todaysPath + "log.log", {flags:'a'});
 let errStream = fs.createWriteStream(todaysPath + "err.log", {flags:'a'});
 
@@ -68,13 +68,13 @@ module.exports = {
 	dateFolders: (...params) => dateFolders(...params),
 
     log: (...params) => {
-		logFiles(dateFolders(__dirname + "/logs"));
+		logFiles(__dirname + "/logs");
         console.log(`[${moment().toISOString()}]`, ...params);
 		logStream.write(`[${moment().toISOString()}]\n`);
     },
 
     error: (...params) => {
-		logFiles(dateFolders(__dirname + "/logs"));
+		logFiles(__dirname + "/logs");
         console.error(`[${moment().toISOString()}]`, ...params);
 		errStream.write(`[${moment().toISOString()}]\n`);
     },
