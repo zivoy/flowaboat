@@ -70,13 +70,13 @@ module.exports = {
     log: (...params) => {
 		logFiles(__dirname + "/logs");
         console.log(`[${moment().toISOString()}]`, ...params);
-		logStream.write(`[${moment().toISOString()}] ` + params.join(' ') + "\n");
+		logStream.write(`[${moment().toISOString()}] ` + [for (x of params) JSON.stringify(x)].join('\n') + "\n");
     },
 
     error: (...params) => {
 		logFiles(__dirname + "/logs");
 		console.error(`[${moment().toISOString()}]`, ...params);
-		errStream.write(`[${moment().toISOString()}] ` + params.join(' ') + "\n");
+		errStream.write(`[${moment().toISOString()}] ` + [for (x of params) JSON.stringify(x)].join('\n') + "\n");
 	},
 
     setItem: (item, data) => {
