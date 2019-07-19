@@ -221,7 +221,9 @@ module.exports = {
         });
     },
 
-    downloadBeatmap: beatmap_id => {
+    downloadBeatmap: (beatmap_id, overrideURL) => {
+    	if (overrideURL === undefined)
+			overrideURL = `https://osu.ppy.sh/osu/${beatmap_id}`;
         return new Promise((resolve, reject) => {
             let beatmap_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
@@ -229,7 +231,7 @@ module.exports = {
 
             if(!fs.existsSync(beatmap_path)
             || (fs.existsSync(beatmap_path) && !module.exports.validateBeatmap(beatmap_path))){
-                module.exports.downloadFile(beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`).then(() => {
+                module.exports.downloadFile(beatmap_path, `${overrideURL}`).then(() => {
                     resolve();
                 }).catch(reject);
             }else{

@@ -1372,8 +1372,9 @@ module.exports = {
 			if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
 	            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
 
-	        let beatmap_id, isValidUrl;
-	        isValidUrl=false;
+	        let beatmap_id, isValidUrl, discordRE;
+	        isValidUrl=undefined;
+	        discordRE = /.*discordapp\.com\/.+\/(\d+)\/(.+\.osz)$/gm;
 
 	        if(id_only === undefined)
 				id_only = false;
@@ -1390,16 +1391,15 @@ module.exports = {
 				beatmap_id = parseInt(beatmap_url.split("/discussion/").pop().split("/")[0]);
 	        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
 	            beatmap_id = parseInt(beatmap_url);
-			else if(beatmap_url.endsWith(".osz"))
-				isValidUrl = true;
-
-	        if (isValidUrl) {
-	        	resolve(beatmap_url);
-			} else {
-				helper.downloadBeatmap(beatmap_id).finally(() => {
-					resolve(beatmap_id);
-				});
+			else if((m = discordRE.exec(beatmap_url)) !== null) {
+				isValidUrl = beatmap_url;
+				beatmap_id = m[1]
 			}
+
+
+			helper.downloadBeatmap(beatmap_id, isValidUrl).finally(() => {
+				resolve(beatmap_id);
+			});
 		});
     },
 
