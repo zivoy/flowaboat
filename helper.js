@@ -6,6 +6,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const axios = require('axios');
+const childs = require('child_process');
 
 const config = require('./config.json');
 
@@ -44,8 +45,10 @@ function logFiles (startDir, path){
 	} else {
 		logStream.end();
 		errStream.end();
+		tail.kill('SIGINT');
 		logStream = fs.createWriteStream(todaysFolder + "/log.log", {flags:'a'});
 		errStream = fs.createWriteStream(todaysFolder + "/err.log", {flags:'a'});
+		tail = childs.spawn("tail", ["-f", todaysFolder + '/log.log']);
 		todaysPath = todaysFolder;
 	}
 
@@ -54,6 +57,7 @@ function logFiles (startDir, path){
 let todaysPath = dateFolders(__dirname + "/logs");
 let logStream = fs.createWriteStream(todaysPath + "/log.log", {flags:'a'});
 let errStream = fs.createWriteStream(todaysPath + "/err.log", {flags:'a'});
+let tail = childs.spawn("tail", ["-f", todaysPath + '/log.log']);
 
 let rep =(x) => x.replace(/['"]+/g, '');
 
@@ -65,6 +69,10 @@ module.exports = {
     sep: sep,
 
     cmd_escape: cmd_escape,
+
+	tail: tail,
+
+	todaysDir: todaysPath,
 
 	dateFolders: (...params) => dateFolders(...params),
 

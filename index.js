@@ -10,22 +10,19 @@ const chalk = require('chalk');
 const osu = require('./osu.js');
 const helper = require('./helper.js');
 
-const childs = require('child_process');
 const app = require('express')();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const sha1 = require('js-sha1');
 
-var auth = {};
-const dirName = helper.dateFolders(__dirname + "/logs");
+let auth = {};
 
 const client = new Discord.Client({autoReconnect:true});
 
-const tail = childs.spawn("tail", ["-f", dirName + '/log.log']);
 console.log("");
 helper.log("start tailing");
 
-tail.stdout.setEncoding('utf8');
+helper.tail.stdout.setEncoding('utf8');
 
 client.on('error', helper.error);
 
@@ -369,7 +366,7 @@ app.get('/liveLog', function(req, res){
 io.on('connect', function(socket) {
 	const address = getClintAddr(socket);
 	auth[address] = false;
-	fs.readFile(dirName + '/log.log', function(error, data) {
+	fs.readFile(helper.todaysDir + '/log.log', function(error, data) {
 		if (error) { throw error; }
 		data.toString().split("\n").forEach(function(line) {
 			io.to(`${socket["id"]}`).emit('log output', line);
@@ -389,7 +386,7 @@ io.on('connection', function(socket){
 	});
 
 
-	tail.stdout.on('data', function(data) {
+	helper.tail.stdout.on('data', function(data) {
 		io.to(`${socket["id"]}`).emit('log output', data.toString());
 	});
 
