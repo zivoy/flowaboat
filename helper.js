@@ -70,14 +70,18 @@ module.exports = {
     log: (...params) => {
 		logFiles(__dirname + "/logs");
         console.log(`[${moment().toISOString()}]`, ...params);
-		logStream.write(`[${moment().toISOString()}]\n`);
+        for (let porp in params) {
+			logStream.write(`[${moment().toISOString()}]`, porp);
+		}
     },
 
     error: (...params) => {
 		logFiles(__dirname + "/logs");
-        console.error(`[${moment().toISOString()}]`, ...params);
-		errStream.write(`[${moment().toISOString()}]\n`);
-    },
+		console.error(`[${moment().toISOString()}]`, ...params);
+		for (let porp in params) {
+			errStream.write(`[${moment().toISOString()}]`, porp);
+		}
+	},
 
     setItem: (item, data) => {
         localStorage.setItem(item, data);
