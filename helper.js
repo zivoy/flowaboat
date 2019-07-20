@@ -88,7 +88,7 @@ module.exports = {
         logMess = `[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n";
 		logStream.write(logMess);
 		tail = childs.spawn("echo", [logMess]);
-		tail.kill('SIGINT');
+		//tail.kill('SIGINT');
 	},
 
     error: (...params) => {
@@ -97,7 +97,7 @@ module.exports = {
 		logMess = `[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n";
 		errStream.write(logMess);
 		tail = childs.spawn("echo", [logMess]);
-		tail.kill('SIGINT');
+		//tail.kill('SIGINT');
 	},
 
     setItem: (item, data) => {

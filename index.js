@@ -392,6 +392,7 @@ io.on('connection', function(socket){
 		data.toString().split("\n").forEach(function(line) {
 			io.to(`${socket["id"]}`).emit('log output', line);
 		});
+		tail.kill('SIGINT');
 		//io.to(`${socket["id"]}`).emit('log output', data.toString());
 	});
 
