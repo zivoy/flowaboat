@@ -10,7 +10,7 @@ const chalk = require('chalk');
 
 const osu = require('./osu.js');
 const helper = require('./helper.js');
-const messenger = child.fork(`${__dirname}/helper.js`);
+//const messenger = child.fork(`${__dirname}/helper.js`);
 
 const app = require('express')();
 const http = require('http').createServer(app);
@@ -24,7 +24,7 @@ const client = new Discord.Client({autoReconnect:true});
 console.log("");
 helper.log("start tailing");
 
-//helper.tail.stdout.setEncoding('utf8');
+helper.tail.stdout.setEncoding('utf8');
 
 client.on('error', helper.error);
 
