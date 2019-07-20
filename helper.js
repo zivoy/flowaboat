@@ -6,7 +6,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const axios = require('axios');
-const childs = require('child_process');
+//const childs = require('child_process');
 
 const config = require('./config.json');
 
@@ -45,10 +45,10 @@ function logFiles (startDir, path){
 	} else {
 		logStream.end();
 		errStream.end();
-		tail.kill('SIGINT');
+		//tail.kill('SIGINT');
 		logStream = fs.createWriteStream(todaysFolder + "/log.log", {flags:'a'});
 		errStream = fs.createWriteStream(todaysFolder + "/err.log", {flags:'a'});
-		tail = childs.spawn("tail", ["-f", todaysFolder + '/log.log']);
+		//tail = childs.spawn("tail", ["-f", todaysFolder + '/log.log']);
 		todaysPath = todaysFolder;
 	}
 
@@ -57,7 +57,9 @@ function logFiles (startDir, path){
 let todaysPath = dateFolders(__dirname + "/logs");
 let logStream = fs.createWriteStream(todaysPath + "/log.log", {flags:'a'});
 let errStream = fs.createWriteStream(todaysPath + "/err.log", {flags:'a'});
-let tail = childs.spawn("tail", ["-f", todaysPath + '/log.log']);
+//let tail = childs.spawn("tail", ["-f", todaysPath + '/log.log']);
+
+let logMess;
 
 function rep(x) {
 	if (x !== undefined)
@@ -74,7 +76,7 @@ module.exports = {
 
     cmd_escape: cmd_escape,
 
-	tail: tail,
+	//tail: tail,
 
 	todaysDir: todaysPath,
 
@@ -83,14 +85,17 @@ module.exports = {
     log: (...params) => {
 		logFiles(__dirname + "/logs");
         console.log(`[${moment().toISOString()}]`, ...params);
-		logStream.write(`[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n");
-    },
+        logMess = `[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n";
+		logStream.write(logMess);
+		process.send(logMess)
+	},
 
     error: (...params) => {
 		logFiles(__dirname + "/logs");
 		console.error(`[${moment().toISOString()}]`, ...params);
-		for (x in params)
-		errStream.write(`[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n");
+		logMess = `[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n";
+		errStream.write(logMess);
+		process.send(logMess)
 	},
 
     setItem: (item, data) => {

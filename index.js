@@ -6,9 +6,12 @@ const fs = require('fs-extra');
 const path = require('path');
 const objectPath = require("object-path");
 const chalk = require('chalk');
+const childs = require('child_process');
+
 
 const osu = require('./osu.js');
 const helper = require('./helper.js');
+const logoutput = childs.fork(`${__dirname}/helper.js`);
 
 const app = require('express')();
 const http = require('http').createServer(app);
@@ -22,7 +25,7 @@ const client = new Discord.Client({autoReconnect:true});
 console.log("");
 helper.log("start tailing");
 
-helper.tail.stdout.setEncoding('utf8');
+//helper.tail.stdout.setEncoding('utf8');
 
 client.on('error', helper.error);
 
@@ -386,8 +389,11 @@ io.on('connection', function(socket){
 	});
 
 
-	helper.tail.stdout.on('data', function(data) {
-		io.to(`${socket["id"]}`).emit('log output', data.toString());
+	logoutput.on('message', function(data) {
+		data.toString().split("\n").forEach(function(line) {
+			io.to(`${socket["id"]}`).emit('log output', line);
+		});
+		//io.to(`${socket["id"]}`).emit('log output', data.toString());
 	});
 
 	socket.on("disconnect", function() {
