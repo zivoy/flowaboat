@@ -6,12 +6,11 @@ const fs = require('fs-extra');
 const path = require('path');
 const objectPath = require("object-path");
 const chalk = require('chalk');
-const childs = require('child_process');
 
 
 const osu = require('./osu.js');
 const helper = require('./helper.js');
-const logoutput = childs.fork(`${__dirname}/helper.js`);
+const messenger = child.fork(`${__dirname}/helper.js`);
 
 const app = require('express')();
 const http = require('http').createServer(app);
@@ -389,7 +388,7 @@ io.on('connection', function(socket){
 	});
 
 
-	logoutput.on('message', function(data) {
+	helper.tail.stdout.on('data', function(data) {
 		data.toString().split("\n").forEach(function(line) {
 			io.to(`${socket["id"]}`).emit('log output', line);
 		});

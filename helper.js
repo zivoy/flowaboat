@@ -6,7 +6,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const axios = require('axios');
-//const childs = require('child_process');
+const childs = require('child_process');
 
 const config = require('./config.json');
 
@@ -57,7 +57,7 @@ function logFiles (startDir, path){
 let todaysPath = dateFolders(__dirname + "/logs");
 let logStream = fs.createWriteStream(todaysPath + "/log.log", {flags:'a'});
 let errStream = fs.createWriteStream(todaysPath + "/err.log", {flags:'a'});
-//let tail = childs.spawn("tail", ["-f", todaysPath + '/log.log']);
+let tail = childs.spawn("echo", ['init message']);
 
 let logMess;
 
@@ -76,7 +76,7 @@ module.exports = {
 
     cmd_escape: cmd_escape,
 
-	//tail: tail,
+	tail: tail,
 
 	todaysDir: todaysPath,
 
@@ -87,7 +87,8 @@ module.exports = {
         console.log(`[${moment().toISOString()}]`, ...params);
         logMess = `[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n";
 		logStream.write(logMess);
-		process.send(logMess)
+		tail = childs.spawn("echo", [logMess]);
+		tail.kill('SIGINT');
 	},
 
     error: (...params) => {
@@ -95,7 +96,8 @@ module.exports = {
 		console.error(`[${moment().toISOString()}]`, ...params);
 		logMess = `[${moment().toISOString()}] ` + params.map(JSON.stringify).map(rep).join(' ') + "\n";
 		errStream.write(logMess);
-		process.send(logMess)
+		tail = childs.spawn("echo", [logMess]);
+		tail.kill('SIGINT');
 	},
 
     setItem: (item, data) => {
