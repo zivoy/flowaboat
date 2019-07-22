@@ -46,7 +46,7 @@
 		"object-path": "^0.11.4",
 		"ojsama": "^1.2.1",
 		"opusscript": "0.0.6",
-		"osu-parser": "git+https://github.com/LeaPhant/osu-parser.git#00d859b",
+		"osu-parser": "git+https://github.com/LeaPhant/osu-parser.git#4e2e9ca",
 		"readline-sync": "^1.4.9",
 		"semver": "^6.2.0",
 		"socket.io": "^2.2.0",

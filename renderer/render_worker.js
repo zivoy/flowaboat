@@ -53,17 +53,25 @@ process.on('message', async obj => {
         let current = replay.replay_data[replay.lastCursor - 1];
         let next = replay.replay_data[replay.lastCursor];
 
-        if(current === undefined || next === undefined)
-            return {
-                current: {
-                    x: 0,
-                    y: 0
-                },
-                next: {
-                    x: 0,
-                    y: 0
+        if(current === undefined || next === undefined){
+            if(replay.replay_data.length > 0){
+                return {
+                    current: replay.replay_data[replay.replay_data.length - 1],
+                    next: replay.replay_data[replay.replay_data.length - 1]
+                }
+            }else{
+                return {
+                    current: {
+                        x: 0,
+                        y: 0
+                    },
+                    next: {
+                        x: 0,
+                        y: 0
+                    }
                 }
             }
+        }
 
         // Interpolate cursor position between two points for smooth motion
 
@@ -260,7 +268,6 @@ process.on('message', async obj => {
                     }
 
                     // Render slider ticks (WIP)
-                    /*
                     if(time <= hitObject.endTime){
                         ctx.strokeStyle = 'rgba(255,255,255,0.8)';
                         ctx.lineWidth = 5 * scale_multiplier;
@@ -297,17 +304,20 @@ process.on('message', async obj => {
 
                         ctx.globalAlpha = opacity;
                     }
-                    */
 
                     // Render repeat arrow
                     for(let x = 1; x < hitObject.repeatCount; x++){
                         let repeatOffset = hitObject.startTime + x * (hitObject.duration / hitObject.repeatCount);
-                        let fadeInStart = x == 1 ? snakingFinish : repeatOffset - 50;
+                        let fadeInStart = x == 1 ? snakingFinish : repeatOffset - (hitObject.duration / hitObject.repeatCount) * 2;
                         let repeatPosition = (x - 1) % 2 == 0 ? hitObject.endPosition : hitObject.position;
 
                         let timeSince = Math.max(0, Math.min(1, (time - repeatOffset) / 200));
 
-                        ctx.globalAlpha = (1 - timeSince) * Math.min(1, Math.max(0, (time - fadeInStart) / 50));
+                        if(time >= repeatOffset)
+                            ctx.globalAlpha = (1 - timeSince);
+                        else
+                            ctx.globalAlpha = Math.min(1, Math.max(0, (time - fadeInStart) / 50));
+
                         let sizeFactor = 1 + timeSince * 0.3;
 
                         let comparePosition =
@@ -460,7 +470,7 @@ process.on('message', async obj => {
                         ctx.beginPath();
 
                         position = playfieldPosition(...pos_current);
-                        ctx.arc(...position, scale_multiplier * (beatmap.Radius * 3), 0, 2 * Math.PI, false);
+                        ctx.arc(...position, scale_multiplier * (beatmap.FollowpointRadius), 0, 2 * Math.PI, false);
                         ctx.stroke();
                     }
 

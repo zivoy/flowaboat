@@ -266,12 +266,25 @@ function processBeatmap(cb){
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
     beatmap.Radius = OBJECT_RADIUS * beatmap.Scale;
-    beatmap.FollowpointRadius = beatmap.Radius * 3;
+    beatmap.FollowpointRadius = beatmap.Radius * 2;
+    beatmap.ActualFollowpointRadius = beatmap.Radius * 2.4;
 
     beatmap.StackLeniency = parseFloat(beatmap.StackLeniency);
 
     if(beatmap.StackLeniency === undefined || beatmap.StackLeniency === NaN || beatmap.StackLeniency === null)
             beatmap.StackLeniency = 0.7;
+
+    // HR inversion
+    beatmap.hitObjects.forEach(function(hitObject, i){
+        if(enabled_mods.includes("HR")){
+            hitObject.position[1] = PLAYFIELD_HEIGHT - hitObject.position[1];
+
+            if(hitObject.objectName == "slider"){
+                for(let x = 0; x < hitObject.points.length; x++)
+                    hitObject.points[x][1] = PLAYFIELD_HEIGHT - hitObject.points[x][1];
+            }
+        }
+    });
 
     // Calculate slider curves
     beatmap.hitObjects.forEach(function(hitObject, i){
@@ -283,7 +296,6 @@ function processBeatmap(cb){
 
             if(hitObject.curveType == 'pass-through' && hitObject.points.length == 3){
                 // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L114
-
                 let a = hitObject.points[0];
                 let b = hitObject.points[1];
                 let c = hitObject.points[2];
@@ -335,7 +347,7 @@ function processBeatmap(cb){
                             thetaRange = 2 * Math.PI - thetaRange;
                         }
 
-                        let amountPoints = 2 * r <= CIRCULAR_ARC_TOLERANCE ? 2 : Math.max(2, Math.ceil(thetaRange / (2 * Math.acos(1 - CIRCULAR_ARC_TOLERANCE / r))));
+                        let amountPoints = Math.max(25, 2 * r <= CIRCULAR_ARC_TOLERANCE ? 2 : Math.max(2, Math.ceil(thetaRange / (2 * Math.acos(1 - CIRCULAR_ARC_TOLERANCE / r)))));
 
                         for(let i = 0; i < amountPoints; ++i){
                             let fract = i / (amountPoints - 1);
@@ -350,7 +362,11 @@ function processBeatmap(cb){
 
                             slider_dots.push(vectorAdd(center, o));
                         }
+                    }else{
+                        slider_dots = hitObject.points.slice();
                     }
+                }else{
+                    slider_dots = hitObject.points.slice();
                 }
             }else if(hitObject.curveType == 'catmull'){
                 // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L89
@@ -392,21 +408,17 @@ function processBeatmap(cb){
                 });
             }
 
-            beatmap.hitObjects[i].SliderDots = slider_dots;
-            beatmap.hitObjects[i].endPosition = slider_dots.pop();
+            hitObject.SliderDots = slider_dots;
         }
     });
 
     // Interpolate slider dots
-
-    for(let i = 0; i < beatmap.hitObjects.length; i++){
-        let hitObject = beatmap.hitObjects[i];
-
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName != 'slider')
-            continue;
+            return;
 
         if(hitObject.SliderDots.length < 2)
-            continue;
+            return;
 
         let slider_dots = [];
 
@@ -437,64 +449,66 @@ function processBeatmap(cb){
         }
 
         hitObject.SliderDots = slider_dots;
-    }
+    });
 
-    for(let i = 0; i < beatmap.hitObjects.length; i++){
-        let hitObject = beatmap.hitObjects[i];
-
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName == "circle")
-            beatmap.hitObjects[i].endPosition = beatmap.hitObjects[i].position;
+            hitObject.endPosition = hitObject.position;
 
         if(hitObject.objectName == 'slider'){
-            beatmap.hitObjects[i].endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
+            hitObject.endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
 
-            if(beatmap.hitObjects[i].endPosition === undefined)
-                beatmap.hitObjects[i].endPosition = hitObject.points[hitObject.points.length - 1];
+            let lazyEndOffset = Math.floor(beatmap.ActualFollowpointRadius);
+
+            if(hitObject.SliderDots.length < lazyEndOffset){
+                hitObject.lazyEndPosition = hitObject.position;
+                hitObject.lazyStay = true;
+            }else if(hitObject.repeatCount == 1){
+                hitObject.lazyEndPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1 - lazyEndOffset];
+            }else if(Math.floor((hitObject.SliderDots.length - 1) / 2) < lazyEndOffset){
+                hitObject.lazyEndPosition = hitObject.SliderDots[Math.floor((hitObject.SliderDots.length - 1) / 2)];
+                hitObject.lazyStay = true;
+            }
+
+            if(hitObject.endPosition === undefined)
+                hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
 
             let slider_ticks = [];
             let timingPoint = beatmap.timingPoints[0];
 
             for(let x = beatmap.timingPoints.length - 1; x >= 0; x--){
-                if(beatmap.timingPoints[x].offset <= hitObject.startTime){
+                if(beatmap.timingPoints[x].offset <= hitObject.startTime && !beatmap.timingPoints[x].timingChange){
                     timingPoint = beatmap.timingPoints[x];
                     break;
                 }
             }
 
-            for(let x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
-                let position = hitObject.SliderDots[Math.floor(x / hitObject.duration * (hitObject.SliderDots.length - 1))];
+            let scoringDistance = 100 * beatmap.SliderMultiplier * timingPoint.velocity;
+
+            let tickDistance = scoringDistance / beatmap.SliderTickRate;
+
+            for(let x = tickDistance; x < hitObject.pixelLength; x += tickDistance){
+                let position = hitObject.SliderDots[Math.floor(x)];
 
                 if(!Array.isArray(position) || position.length != 2)
                     continue;
 
-                if(vectorDistanceSquared(position, hitObject.position) > 5 * 5
-                && vectorDistanceSquared(position, hitObject.endPosition) > 5 * 5)
+                let turnDuration = hitObject.duration / hitObject.repeatCount;
+                let offset = (x / hitObject.pixelLength) * turnDuration;
+
+                if(Math.round(x) != hitObject.pixelLength)
                     slider_ticks.push({
-                        offset: x / hitObject.repeatCount,
-                        reverseOffset: (hitObject.duration / hitObject.repeatCount) - x / hitObject.repeatCount,
+                        offset: offset,
+                        reverseOffset: turnDuration - offset,
                         position
                     });
             }
 
-            beatmap.hitObjects[i].SliderTicks = slider_ticks;
+            hitObject.SliderTicks = slider_ticks;
         }
 
-        // HR inversion
-        if(enabled_mods.includes("HR")){
-            beatmap.hitObjects[i].position[1] = PLAYFIELD_HEIGHT - hitObject.position[1];
-            if(hitObject.objectName == "slider"){
-                beatmap.hitObjects[i].endPosition[1] = PLAYFIELD_HEIGHT - hitObject.endPosition[1];
-
-                for(let x = 0; x < hitObject.SliderDots.length; x++)
-                    beatmap.hitObjects[i].SliderDots[x][1] = PLAYFIELD_HEIGHT - hitObject.SliderDots[x][1];
-
-                for(let x = 0; x < hitObject.SliderTicks.length; x++)
-                    beatmap.hitObjects[i].SliderTicks[x].position[1] = PLAYFIELD_HEIGHT - hitObject.SliderTicks[x].position[1];
-            }
-        }
-
-        beatmap.hitObjects[i].StackHeight = 0;
-    }
+        hitObject.StackHeight = 0;
+    });
 
     // Apply Stacking (this was copied from somewhere but the project is gone)
 
@@ -509,7 +523,7 @@ function processBeatmap(cb){
 
     // Reset stacking first
     for(let i = end; i >= start; --i)
-      beatmap.hitObjects[i].stackHeight = 0;
+        beatmap.hitObjects[i].stackHeight = 0;
 
     // Just extend the end index in case it's not the base
     let extEnd = end;
@@ -612,7 +626,7 @@ function processBeatmap(cb){
     let currentComboNumber = 0;
 
     // Set combo colors and stacking offset
-    beatmap.hitObjects.forEach(function(hitObject, i){
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(beatmap["Combo1"] === undefined){
             beatmap["Combo1"] = "255,192,0";
             beatmap["Combo2"] = "0,202,0";
@@ -634,18 +648,19 @@ function processBeatmap(cb){
         }
 
         currentComboNumber++;
-        beatmap.hitObjects[i].Color = "rgba(" + beatmap["Combo" + currentCombo] + ",0.6)";
-        beatmap.hitObjects[i].ComboNumber = currentComboNumber;
-        beatmap.hitObjects[i].StackOffset = hitObject.stackHeight * beatmap.Scale * -6.4;
-        beatmap.hitObjects[i].position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
+        hitObject.Color = "rgba(" + beatmap["Combo" + currentCombo] + ",0.6)";
+        hitObject.ComboNumber = currentComboNumber;
+        hitObject.StackOffset = hitObject.stackHeight * beatmap.Scale * -6.4;
+        hitObject.position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
 
         if(hitObject.objectName == "slider"){
             hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
+
             for(let x = 0; x < hitObject.SliderDots.length; x++){
                 if(!Array.isArray(hitObject.SliderDots[x]) || hitObject.SliderDots[x].length != 2)
                     continue;
 
-                beatmap.hitObjects[i].SliderDots[x] = [
+                hitObject.SliderDots[x] = [
                     hitObject.SliderDots[x][0] + hitObject.StackOffset,
                     hitObject.SliderDots[x][1] + hitObject.StackOffset
                 ];
@@ -655,7 +670,7 @@ function processBeatmap(cb){
                 if(!Array.isArray(hitObject.SliderTicks[x]) || hitObject.SliderTicks[x].length != 2)
                     continue;
 
-                beatmap.hitObjects[i].SliderTicks[x] = [
+                hitObject.SliderTicks[x] = [
                     hitObject.SliderTicks[x][0] + hitObject.StackOffset,
                     hitObject.SliderTicks[x][1] + hitObject.StackOffset
                 ];
@@ -664,12 +679,12 @@ function processBeatmap(cb){
     });
 
     // Set end time for circles and duration for spinners too for easier handling
-    beatmap.hitObjects.forEach(function(hitObject, i){
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName == "circle")
-            beatmap.hitObjects[i].endTime = hitObject.startTime;
+            hitObject.endTime = hitObject.startTime;
 
         if(hitObject.objectName == "spinner")
-            beatmap.hitObjects[i].duration = hitObject.endTime - hitObject.startTime;
+            hitObject.duration = hitObject.endTime - hitObject.startTime;
     });
 
     // Generate auto replay
@@ -679,13 +694,11 @@ function processBeatmap(cb){
             replay_data: []
         };
 
-        for(let x = 0; x < beatmap.hitObjects.length; x++){
-            let hitObject = beatmap.hitObjects[x];
-
+        beatmap.hitObjects.forEach((hitObject, i) => {
             if(hitObject.objectName != "spinner"){
-                if(x > 0){
+                if(i > 0){
                     replay.replay_data.push({
-                        offset: Math.max(beatmap.hitObjects[x - 1].endTime, hitObject.startTime - 20),
+                        offset: Math.max(beatmap.hitObjects[i - 1].endTime, hitObject.startTime - 20),
                         x: hitObject.position[0],
                         y: hitObject.position[1]
                     });
@@ -721,24 +734,78 @@ function processBeatmap(cb){
             }
 
             if(hitObject.objectName == "slider"){
-                let length = hitObject.duration / hitObject.repeatCount;
+                let endPosition = hitObject.endPosition;
 
-                for(let i = 0; i < hitObject.repeatCount; i++){
-                    let slider_dots = hitObject.SliderDots.slice();
+                let nextObject;
 
-                    if(i % 2 != 0)
-                        slider_dots.reverse();
+                if(beatmap.hitObjects.length > i + 1)
+                    nextObject = beatmap.hitObjects[i + 1];
 
-                    slider_dots.forEach((dot, index) => {
-                        replay.replay_data.push({
-                            offset: hitObject.startTime + i * length + index / slider_dots.length * length,
-                            x: dot[0],
-                            y: dot[1]
-                        });
+                if(nextObject){
+                    let pos_current = hitObject.endPosition;
+                    let pos_next = nextObject.position;
+
+                    let distance = vectorDistance(pos_current, pos_next);
+
+                    let n = Math.max(1, Math.min(beatmap.ActualFollowpointRadius, distance));
+
+                    if(distance > 0){
+                        endPosition = [
+                            pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]),
+                            pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1])
+                        ];
+                    }
+                }
+
+                if(hitObject.duration < 100 && hitObject.repeatCount == 1){
+                    replay.replay_data.push({
+                        offset: hitObject.startTime,
+                        x: hitObject.position[0],
+                        y: hitObject.position[1]
                     });
+                    replay.replay_data.push({
+                        offset: hitObject.endTime,
+                        x: endPosition[0],
+                        y: endPosition[1]
+                    });
+                }else if(hitObject.repeatCount > 1 && hitObject.lazyStay){
+                    replay.replay_data.push({
+                        offset: hitObject.startTime,
+                        x: hitObject.position[0],
+                        y: hitObject.position[1]
+                    }, {
+                        offset: hitObject.startTime + hitObject.duration / hitObject.repeatCount,
+                        x: hitObject.lazyEndPosition[0],
+                        y: hitObject.lazyEndPosition[1]
+                    }, {
+                        offset: hitObject.endTime - Math.min(75, hitObject.duration),
+                        x: hitObject.lazyEndPosition[0],
+                        y: hitObject.lazyEndPosition[1]
+                    }, {
+                        offset: hitObject.endTime,
+                        x: endPosition[0],
+                        y: endPosition[1]
+                    });
+                }else{
+                    let length = hitObject.duration / hitObject.repeatCount;
+
+                    for(let i = 0; i < hitObject.repeatCount; i++){
+                        let slider_dots = hitObject.SliderDots.slice();
+
+                        if(i % 2 != 0)
+                            slider_dots.reverse();
+
+                        slider_dots.forEach((dot, index) => {
+                            replay.replay_data.push({
+                                offset: hitObject.startTime + i * length + index / slider_dots.length * length,
+                                x: dot[0],
+                                y: dot[1]
+                            });
+                        });
+                    }
                 }
             }
-        }
+        });
 
         beatmap.Replay = replay;
     }
