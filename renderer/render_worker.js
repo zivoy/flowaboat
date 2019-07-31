@@ -9,7 +9,7 @@ const PLAYFIELD_HEIGHT = 384;
 const resources = path.resolve(__dirname, "res");
 
 let images = {
-    "arrow": path.resolve(resources, "arrow.svg")
+    "arrow": path.resolve(resources, "images", "arrow.svg")
 };
 
 process.on('uncaughtException', err => {
@@ -630,6 +630,8 @@ process.on('message', async obj => {
             }
 
             fs.writeFileSync(path.resolve(file_path, `${current_frame}.rgba`), Buffer.from(image_data));
+
+            process.send(current_frame);
 
             current_frame += threads;
             time += time_frame;
