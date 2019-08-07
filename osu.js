@@ -1391,10 +1391,10 @@ module.exports = {
 				beatmap_id = parseInt(beatmap_url.split("/discussion/").pop().split("/")[0]);
 	        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
 	            beatmap_id = parseInt(beatmap_url);
-			else if((m = discordRE.exec(beatmap_url)) !== null) {
+			/*else if((m = discordRE.exec(beatmap_url)) !== null) {
 				isValidUrl = beatmap_url;
 				beatmap_id = m[1]
-			}
+			}*/
 
 
 			helper.downloadBeatmap(beatmap_id, isValidUrl).finally(() => {
