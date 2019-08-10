@@ -155,7 +155,7 @@ const od_ms_step = 6;
 const od0_ms = 79.5;
 const od10_ms = 19.5;
 
-let api;
+let api, newpp;
 
 var settings = {
     api_key: ""
@@ -713,6 +713,10 @@ module.exports = {
 		discord_client = client;
 		last_beatmap = _last_beatmap;
 
+		newpp = axios.create({
+			baseURL: 'http://osusr.rorre.xyz'
+		});
+
 		if(api_key){
 	        settings.api_key = api_key;
 	        api = axios.create({
@@ -1234,6 +1238,20 @@ module.exports = {
             getScore(recent_raw, cb);
         });
     },
+
+	get_new_top: function(options, cb){
+		newpp.get('/c',{params: {user: options.user}}).then(response => {
+			response = response.data;
+
+			if(response.length < 1){
+				cb(`No top plays found for ${options.user}`);
+				return;
+			}
+
+			options.index = options.index - response.DisplayPlays[options.index].PositionDelta;
+			get_top(options, cb)
+		});
+	},
 
     get_pp: function(options, cb){
         axios.get(`${config.beatmap_api}/b/${options.beatmap_id}`).then(response => {
