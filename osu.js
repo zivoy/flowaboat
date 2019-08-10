@@ -1240,7 +1240,11 @@ module.exports = {
     },
 
 	get_new_top: function(options, cb){
-		newpp.get('/c',{params: {user: options.user}}).then(response => {
+		api.get('/get_user_best', {params: params}).then(response => {
+			let newlist;
+			newpp.get('/c',{params: {user: options.user}}).then(response => {
+				newlist = response.data;
+			});
 			response = response.data;
 
 			if(response.length < 1){
@@ -1248,8 +1252,27 @@ module.exports = {
 				return;
 			}
 
-			options.index = options.index - response.DisplayPlays[options.index].PositionDelta;
-			get_top(options, cb)
+			let recent_raw;
+
+			if(options.rb || options.ob){
+				response.forEach((recent, index) => {
+					response[index].unix = moment(recent.date + 'Z').unix();
+				});
+			}
+
+			if(options.rb)
+				response = response.sort((a, b) => b.unix - a.unix);
+
+			if(options.ob)
+				response = response.sort((a, b) => a.unix - b.unix);
+
+			if(response.length < options.index)
+				options.index = response.length;
+
+			options.index = options.index - newlist.DisplayPlays[options.index].PositionDelta;
+			recent_raw = response[options.index - 1];
+
+			getScore(recent_raw, cb);
 		});
 	},
 
