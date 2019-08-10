@@ -3,7 +3,7 @@ const helper = require('../helper.js');
 const config = require('../config.json');
 
 module.exports = {
-	command: ['top', 'rnb', 'recentnewbest', 'onb', 'oldnewbest'],
+	command: ['newtop', 'rnb', 'recentnewbest', 'onb', 'oldnewbest'],
 	description: "Show a specific top play.",
 	startsWith: true,
 	usage: '[username]',
