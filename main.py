@@ -12,12 +12,25 @@ client = discord.Client()
 async def on_message(message):
     if message.author == client.user:
         return
-    print(message.content)
+
+    print(f"{message.author.name}@{message.channel}: {message.content}")
+
     if message.content.startswith(Config.prefix):
         mess = message.content.split()
         command = mess[0].replace(Config.prefix, "")
-        if command in commands.List:
-            await getattr(commands, command)(message)
+        command = ''.join([i for i in command if not i.isdigit()])
+
+        if command in commands.List.keys():
+            await getattr(commands, command).call(command, message)
+        else:
+            found = False
+            for i, j in commands.List.items():
+                if command in j:
+                    await getattr(commands, i).call(command, message)
+                    found = True
+                    break
+            if not found:
+                await message.channel.send(f"{command} is not a valid command")
 
 
 @client.event

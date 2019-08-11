@@ -1,8 +1,8 @@
-List = list()
+List = dict()
 from os import listdir
 
 for i in listdir("./commands"):
     if not i.startswith("__"):
         comm = i.replace(".py", "")
-        List.append(comm)
         exec(f"from .{comm} import {comm}")
+        List[comm] = eval(comm).synonyms
