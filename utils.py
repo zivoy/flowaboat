@@ -22,11 +22,11 @@ class Config:
         rawPassword = ""
         encPassword = ""
 
-    def load():
+    def load(self):
         with open(Config.file, "r") as configs:
             Config.close_dir(json.load(configs))
 
-    def save():
+    def save(self):
         with open(Config.file, "w") as outfile:
             json.dump(Config.open_dir(), outfile)
 
