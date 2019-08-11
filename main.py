@@ -1,8 +1,9 @@
-import discord, asyncio, requests, aiohttp, html, json, random, sys
+import discord, asyncio, requests, aiohttp, html, json, random, sys, re
 import commands
 from utils import *
 
 Config().load()
+Users().load()
 
 
 client = discord.Client()
@@ -16,21 +17,33 @@ async def on_message(message):
     print(f"{message.author.name}@{message.channel}: {message.content}")
 
     if message.content.startswith(Config.prefix):
-        mess = message.content.split()
-        command = mess[0].replace(Config.prefix, "")
-        command = ''.join([i for i in command if not i.isdigit()])
+        if message.author.id not in Users.users:
+            Users().add_user(message.author.id)
+
+        mess = message.content.split(" ")
+        mess[0] = mess[0][len(Config.prefix):]
+        command = ''.join([i for i in mess[0] if not i.isdigit()])
+
+        package = {
+            "message_obj": message,
+            "args": mess,
+            "client": client,
+            "user_obj": Users.users[message.author.id]
+        }
 
         if command in commands.List.keys():
-            await getattr(commands, command).call(command, message)
+            await getattr(commands, command)().call(package)
         else:
             found = False
             for i, j in commands.List.items():
                 if command in j:
-                    await getattr(commands, i).call(command, message)
+                    await getattr(commands, i)().call(package)
                     found = True
                     break
             if not found:
                 await message.channel.send(f"{command} is not a valid command")
+    elif Config.administer:
+        pass
 
 
 @client.event

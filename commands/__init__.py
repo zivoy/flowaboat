@@ -1,5 +1,5 @@
-List = dict()
 from os import listdir
+List = dict()
 
 for i in listdir("./commands"):
     if not i.startswith("__"):

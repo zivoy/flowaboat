@@ -7,3 +7,4 @@ logs
 
 # config and credentials
 config.json
+users.list

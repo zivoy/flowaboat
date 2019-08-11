@@ -1,11 +1,45 @@
-import json
+import json, os
 
 
-class Config:
+class JasonFile:
+    file = ""
+
+    def open_dir(self, obj, skip=list(), itms=dict()):
+        for i in dir(self):
+            if i in skip:
+                pass
+            elif not callable(getattr(obj, i)) and not i.startswith("__"):
+                itms[i] = getattr(obj, i)
+            elif isinstance(getattr(obj, i), type) and not i.startswith("__"):
+                itms[i] = dict()
+                self.open_dir(getattr(obj, i), skip, itms[i])
+        return itms
+
+    def close_dir(self, obj, info):
+        for i, j in info.items():
+            if not isinstance(getattr(obj, i), type):
+                setattr(obj, i, j)
+            else:
+                self.close_dir(getattr(obj, i), info[i])
+
+    def load(self):
+        with open(self.file, "r") as configs:
+            self.close_dir(self=self, obj=self, info=json.load(configs))
+
+    def save(self):
+        with open(self.file, "w") as outfile:
+            json.dump(self.open_dir(self=self, obj=self, skip=["file"]), outfile)
+
+
+class Config(JasonFile):
+    super(JasonFile)
+    if not os.path.isfile("./config.json"):
+        os.mknod("./config.json")
     file = "config.json"
 
     prefix = ""
     debug = ""
+    administer = ""
     osu_cache_path = ""
     pp_path = ""
     beatmap_api = ""
@@ -22,33 +56,21 @@ class Config:
         rawPassword = ""
         encPassword = ""
 
-    def load(self):
-        with open(Config.file, "r") as configs:
-            Config.close_dir(json.load(configs))
 
-    def save(self):
-        with open(Config.file, "w") as outfile:
-            json.dump(Config.open_dir(), outfile)
+class Users(JasonFile):
+    super(JasonFile)
+    if not os.path.isfile("./users.list"):
+        #os.mknod("./users.list")
+        open("./users.list", 'w').close()
+    file = "users.list"
 
-    def open_dir():
-        itms = dict()
-        skip = ["file"]
-        for i in dir(Config):
-            if i in skip:
-                pass
-            elif not callable(getattr(Config, i)) and not i.startswith("__"):
-                itms[i] = getattr(Config, i)
-            elif isinstance(getattr(Config, i), type) and not i.startswith("__"):
-                itms[i] = dict()
-                for j in dir(getattr(Config, i)):
-                    if not callable(getattr(getattr(Config, i), j)) and not j.startswith("__"):
-                        itms[i][j] = getattr(getattr(Config, i), j)
-        return itms
+    users = dict()
 
-    def close_dir(info):
-        for i, j in info.items():
-            if not isinstance(getattr(Config, i), type):
-                setattr(Config, i, j)
-            else:
-                for k, v in info[i].items():
-                    setattr(getattr(Config, i), k, v)
+    def add_user(self, uuid, osu_ign="", steam_ign=""):
+        if uuid not in self.users:
+            self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign, "last_beatmap": None, "last_message": None}
+            self.save(self)
+
+    def set(self, uuid, item, value):
+        self.users[uuid][item] = value
+        self.save(self)
