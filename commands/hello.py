@@ -9,6 +9,7 @@ class hello:
     }
     synonyms = ["hi"]
 
-    async def call(self, message):
+    async def call(self, package):
+        message = package["message_obj"]
         msg = 'Hello {0.author.mention}'.format(message)
         await message.channel.send(msg)
