@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import commands
 import discord
+import requests
 
 
 class JasonFile:
@@ -80,14 +81,17 @@ class Users(JasonFile):
         self.save()
 
 
-class Log:
-    def log(*args):
-        msg = f"{datetime.utcnow().isoformat()}: " + "".join([str(i) for i in args])
+class Loging:
+    def log(self, *args):
+        msg = f"{datetime.utcnow().isoformat()}: " + " ".join([str(i) for i in args])
         print(msg)
 
-    def error(*args):
-        msg = f"{datetime.utcnow().isoformat()} -- ERROR -- : " + "".join([str(i) for i in args])
+    def error(self, *args):
+        msg = f"{datetime.utcnow().isoformat()} -- ERROR -- : " + " ".join([str(i) for i in args])
         print(msg)
+
+
+Log = Loging()
 
 
 def sanitize(text):
@@ -104,10 +108,8 @@ def sanitize(text):
 
 
 def command_help(command):
-    found = False
     for i, j in commands.List.items():
         if command == i or command in j:
-            found = True
             command = getattr(commands, sanitize(i))()
             command_text = f"{Config.prefix}{i}"
 
@@ -127,7 +129,8 @@ def command_help(command):
             examps = "\n\n".join([f"```{Config.prefix}{i['run']}```{i['result']}" for i in examples])
             help_page.add_field(name="Example"+emps, value=examps, inline=False)
 
+            Log.log("Retuning help page for", command_text)
             return help_page
 
-    if not found:
-        return discord.Embed(title="ERROR", description="Command not found")
+    Log.error(command, "is not a not valid command")
+    return discord.Embed(title="ERROR", description="Command not found")

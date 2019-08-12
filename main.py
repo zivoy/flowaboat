@@ -1,4 +1,4 @@
-import discord, asyncio, requests, aiohttp, html, json, random, sys, socket
+import asyncio, aiohttp, html, sys, socket
 import commands
 from utils import *
 

@@ -6,8 +6,12 @@ class Command:
     argsRequired = 2
     usage = "[osu|steam] <username>"
     examples = [{
-        "run": "ign-set osu nathan on osu",
+        "run": "set-ign osu nathan on osu",
         "result": "Sets your osu! username to nathan on osu."
+    },
+        {
+        "run": "set steam flyingpigoftheapocalypse",
+        "result": "Sets your steam username to flyingpigoftheapocalypse."
     }]
     synonyms = ["set-ign", "set"]
 
