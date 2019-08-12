@@ -2,7 +2,7 @@ from utils import *
 import osu
 
 
-class ar:
+class Command:
     command = "ar"
     description = "Calculate Approach Rate values and miliseconds with mods applied."
     argsRequired = 1

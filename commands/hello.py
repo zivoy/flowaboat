@@ -1,4 +1,4 @@
-class hello:
+class Command:
     command = "hello"
     description = "say hello back"
     argsRequired = 0

@@ -82,3 +82,16 @@ class Log:
 
     def error(*args):
         print(*args)
+
+
+def sanitize(text):
+    meta_characters = ["\\", "^", "$", "{", "}", "[",
+                       "]", "(", ")", ".", "*", "+",
+                       "?", "|", "<", ">", "-", "&",
+                       "/", ","]
+    output_string = text
+    for i in meta_characters:
+        if i in text:
+            output_string = output_string.replace(i, "")  # "\\" + i)
+
+    return output_string

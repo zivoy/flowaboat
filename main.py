@@ -32,12 +32,12 @@ async def on_message(message):
         }
 
         if command in commands.List.keys():
-            await getattr(commands, command)().call(package)
+            await getattr(commands, sanitize(command))().call(package)
         else:
             found = False
             for i, j in commands.List.items():
                 if command in j:
-                    await getattr(commands, i)().call(package)
+                    await getattr(commands, sanitize(i))().call(package)
                     found = True
                     break
             if not found:
