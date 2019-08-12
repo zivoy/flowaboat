@@ -108,16 +108,4 @@ def calculate_ar(raw_ar, mods):
     else:
         ar = 5 + (OsuConsts.AR5_MS.value - ar_ms) / OsuConsts.AR_MS_STEP2.value
 
-    output = ""
-
-    if len(mod_list) > 0:
-        if raw_ar.is_integer():
-            raw_ar = int(raw_ar)
-        output += f"AR{raw_ar}+{''.join(mod_list).upper()} -> "
-
-    ar = float(f"{ar:.2f}")
-    if ar.is_integer():
-        ar = int(ar)
-    output += f"AR{ar} ({ar_ms:.0f}ms)"
-
-    return output
+    return ar, ar_ms, mod_list
