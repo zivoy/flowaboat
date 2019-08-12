@@ -19,8 +19,8 @@ class hello:
         except ValueError:
             msg = f"{args[1]} is not a valid ar"
             await message.channel.send(msg)
-            Log().error(msg)
+            Log.error(msg)
             return
 
         mods = args[2].upper() if len(args) > 2 else ""
-        osu.parse_mods(mods)
+        osu.calculate_ar(ar, mods)

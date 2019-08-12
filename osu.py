@@ -1,10 +1,11 @@
 from enum import Enum
+import regex
 from utils import *
 
 
 class OsuConsts(Enum):
+    # "": 0,
     MODS = {
-        "": 0,
         "NF": 2**0,
         "EZ": 2**1,
         "TD": 2**2,
@@ -57,14 +58,23 @@ class OsuConsts(Enum):
 
 
 def parse_mods(mods):
-    return []
+    if mods == '':
+        return []
+    mods = mods.replace("+", "").upper()
+    r = regex.compile(rf"^({'|'.join(OsuConsts.MODS.value.keys())})+$")
+    x = r.match(mods)
+    if x is None:
+        Log.error(f"Mods not valid: {mods}")
+        return []  # None
+    matches = x.captures(1)
+    return list(set(matches))
 
 
 def calculate_ar(raw_ar, mods):
     mod_list = parse_mods(mods)
 
-    Log().log(mods.replace("+", ""))
-    Log().log(mod_list)
+    Log.log(mods.replace("+", ""))
+    Log.log(mod_list)
 
     speed = 1
     ar_multiplier = 1

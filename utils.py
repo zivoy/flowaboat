@@ -78,7 +78,7 @@ class Users(JasonFile):
 
 class Log:
     def log(*args):
-        print(args)
+        print(*args)
 
     def error(*args):
-        print(args)
+        print(*args)
