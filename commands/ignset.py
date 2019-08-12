@@ -1,5 +1,6 @@
 from utils import *
 
+
 class Command:
     command = "ign-set"
     description = "Sets your username for platform."
@@ -18,16 +19,23 @@ class Command:
     async def call(self, package):
         message, args, user_obj = package["message_obj"], package["args"], package["user_obj"]
 
-        ign = " ".join(args[2:])
-        user_id = message.author.id
-        platform = f"{sanitize(args[1]).lower()}_ign"
+        try:
+            ign = " ".join(args[2:])
+            user_id = message.author.id
+            platform = f"{sanitize(args[1]).lower()}_ign"
+        except IndexError:
+            ign = ""
+            user_id = message.author.id
+            platform = "_ign"
 
         if len(ign) == 0:
             Log.error("No ign provided")
+            await help_me(message, self.command)
             return
 
         if platform not in user_obj.keys() or platform == "_ign":
             Log.error("Bad platform")
+            await help_me(message, self.command)
             return
 
         Users().set(user_id, platform, ign)

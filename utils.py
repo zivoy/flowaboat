@@ -134,3 +134,7 @@ def command_help(command):
 
     Log.error(command, "is not a not valid command")
     return discord.Embed(title="ERROR", description="Command not found")
+
+
+async def help_me(message_obj, command):
+    await getattr(commands, "help")().call({"message_obj": message_obj, "args": ["", command]})

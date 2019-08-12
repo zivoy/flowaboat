@@ -23,8 +23,13 @@ class Command:
             ar = float(args[1])
         except ValueError:
             msg = f"{args[1]} is not a valid ar"
-            await message.channel.send(msg)
+            # await message.channel.send(msg)
             Log.error(msg)
+            await help_me(message, self.command)
+            return
+        except IndexError:
+            Log.error("No ar provided")
+            await help_me(message, self.command)
             return
 
         mods = args[2].upper() if len(args) > 2 else ""

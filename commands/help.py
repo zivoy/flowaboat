@@ -15,4 +15,11 @@ class Command:
     async def call(self, package):
         message, args = package["message_obj"], package["args"]
 
-        await message.channel.send(embed=command_help(args[1]))
+        try:
+            embed = command_help(args[1])
+        except IndexError:
+            Log.error("No command provided")
+            await help_me(message, self.command)
+            return
+
+        await message.channel.send(embed=embed)
