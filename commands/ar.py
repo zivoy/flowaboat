@@ -1,7 +1,8 @@
 from utils import *
 import osu
 
-class hello:
+
+class ar:
     command = "ar"
     description = "Calculate Approach Rate values and miliseconds with mods applied."
     argsRequired = 1
@@ -23,4 +24,4 @@ class hello:
             return
 
         mods = args[2].upper() if len(args) > 2 else ""
-        osu.calculate_ar(ar, mods)
+        await message.channel.send(osu.calculate_ar(ar, mods))

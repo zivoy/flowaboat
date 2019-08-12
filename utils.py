@@ -24,11 +24,11 @@ class JasonFile:
 
     def load(self):
         with open(self.file, "r") as configs:
-            self.close_dir(self=self, obj=self, info=json.load(configs))
+            self.close_dir(self.__class__, json.load(configs))
 
     def save(self):
         with open(self.file, "w") as outfile:
-            json.dump(self.open_dir(self=self, obj=self, skip=["file"]), outfile)
+            json.dump(self.open_dir(self.__class__, ["file"]), outfile)
 
 
 class Config(JasonFile):
@@ -69,11 +69,11 @@ class Users(JasonFile):
     def add_user(self, uuid, osu_ign="", steam_ign=""):
         if uuid not in self.users:
             self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign, "last_beatmap": None, "last_message": None}
-            self.save(self)
+            self.save()
 
     def set(self, uuid, item, value):
         self.users[uuid][item] = value
-        self.save(self)
+        self.save()
 
 
 class Log:

@@ -111,8 +111,13 @@ def calculate_ar(raw_ar, mods):
     output = ""
 
     if len(mod_list) > 0:
+        if raw_ar.is_integer():
+            raw_ar = int(raw_ar)
         output += f"AR{raw_ar}+{''.join(mod_list).upper()} -> "
 
-    output += f"AR{ar:.2f} ({ar_ms:.0f}ms)"
+    ar = float(f"{ar:.2f}")
+    if ar.is_integer():
+        ar = int(ar)
+    output += f"AR{ar} ({ar_ms:.0f}ms)"
 
     return output
