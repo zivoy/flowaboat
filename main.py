@@ -1,4 +1,4 @@
-import discord, asyncio, requests, aiohttp, html, json, random, sys, re
+import discord, asyncio, requests, aiohttp, html, json, random, sys, re, socket
 import commands
 from utils import *
 
@@ -14,7 +14,7 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    print(f"{message.author.name}@{message.channel}: {message.content}")
+    Log().log(f"{message.author.name}@{message.channel}: {message.content}")
 
     if message.content.startswith(Config.prefix):
         if message.author.id not in Users.users:
@@ -48,9 +48,9 @@ async def on_message(message):
 
 @client.event
 async def on_ready():
-    print('Logged in as')
-    print(client.user.name)
-    print(client.user.id)
-    print('------')
+    Log().log('Logged in as')
+    Log().log(client.user.name)
+    Log().log(client.user.id)
+    Log().log('------')
 
 client.run(Config.credentials.bot_token)

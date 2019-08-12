@@ -74,3 +74,11 @@ class Users(JasonFile):
     def set(self, uuid, item, value):
         self.users[uuid][item] = value
         self.save(self)
+
+
+class Log:
+    def log(*args):
+        print(args)
+
+    def error(*args):
+        print(args)
