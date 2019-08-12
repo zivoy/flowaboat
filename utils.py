@@ -1,4 +1,5 @@
 import json, os
+from datetime import datetime
 
 
 class JasonFile:
@@ -78,17 +79,19 @@ class Users(JasonFile):
 
 class Log:
     def log(*args):
-        print(*args)
+        msg = f"{datetime.utcnow().isoformat()}: " + "".join([str(i) for i in args])
+        print(msg)
 
     def error(*args):
-        print(*args)
+        msg = f"{datetime.utcnow().isoformat()} -- ERROR -- : " + "".join([str(i) for i in args])
+        print(msg)
 
 
 def sanitize(text):
     meta_characters = ["\\", "^", "$", "{", "}", "[",
                        "]", "(", ")", ".", "*", "+",
                        "?", "|", "<", ">", "-", "&",
-                       "/", ","]
+                       "/", ",", "!"]
     output_string = text
     for i in meta_characters:
         if i in text:
