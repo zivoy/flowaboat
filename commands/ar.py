@@ -4,13 +4,17 @@ import osu
 
 class Command:
     command = "ar"
-    description = "Calculate Approach Rate values and miliseconds with mods applied."
+    description = "Calculate Approach Rate values and milliseconds with mods applied."
     argsRequired = 1
     usage = "<ar> [+mods]"
-    example = {
+    examples = [{
         'run': "ar 8 +DT",
         'result': "Returns AR of AR8 with DT applied."
-    }
+    },
+        {
+        'run': "ar 6.4 +EZ",
+        'result': "Returns AR of AR6.4 with EZ applied."
+    }]
     synonyms = []
 
     async def call(self, package):

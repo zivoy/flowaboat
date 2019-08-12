@@ -1,5 +1,4 @@
 from utils import *
-from discord import Embed
 
 
 class Command:
@@ -7,16 +6,16 @@ class Command:
     description = "Show information about this bot."
     argsRequired = 0
     usage = ""
-    example = {
+    examples = [{
         "run": "flowaboat",
         "result": "Tells you about flowaboat."
-    }
+    }]
     synonyms = ["info"]
 
     async def call(self, package):
         message = package["message_obj"]
 
-        embed = Embed(description="Modular Discord bot with advanced osu! commands.",
+        embed = discord.Embed(description="Modular Discord bot with advanced osu! commands.",
                       url="https://github.com/zivoy/flowaboat", color=0xcf660a)
         embed.set_footer(icon_url="https://avatars1.githubusercontent.com/u/16857861?s=64&v=2", text="zivoy")
         embed.set_thumbnail(

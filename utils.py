@@ -1,5 +1,8 @@
-import json, os
+import json
+import os
 from datetime import datetime
+import commands
+import discord
 
 
 class JasonFile:
@@ -98,3 +101,33 @@ def sanitize(text):
             output_string = output_string.replace(i, "")  # "\\" + i)
 
     return output_string
+
+
+def command_help(command):
+    found = False
+    for i, j in commands.List.items():
+        if command == i or command in j:
+            found = True
+            command = getattr(commands, sanitize(i))()
+            command_text = f"{Config.prefix}{i}"
+
+            help_page = discord.Embed(title="Command", description=f"`{command_text}`", inline=False)
+
+            if command.synonyms:
+                help_page.add_field(name="Synonyms", value=", ".join([f"`{Config.prefix}{i}`" for i in command.synonyms]),
+                                    inline=False)
+
+            help_page.add_field(name="Description", value=command.description, inline=False)
+
+            help_page.add_field(name="Usage", value=f"Required variables: {command.argsRequired}\n\
+                                                      ```{command_text} {command.usage}```", inline=False)
+
+            examples = command.examples
+            emps = "s" if len(examples) > 1 else ""
+            examps = "\n\n".join([f"```{Config.prefix}{i['run']}```{i['result']}" for i in examples])
+            help_page.add_field(name="Example"+emps, value=examps, inline=False)
+
+            return help_page
+
+    if not found:
+        return discord.Embed(title="ERROR", description="Command not found")

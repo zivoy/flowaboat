@@ -5,10 +5,10 @@ class Command:
     description = "Sets your username for platform."
     argsRequired = 2
     usage = "[osu|steam] <username>"
-    example = {
+    examples = [{
         "run": "ign-set osu nathan on osu",
         "result": "Sets your osu! username to nathan on osu."
-    }
+    }]
     synonyms = ["set-ign", "set"]
 
     async def call(self, package):

@@ -3,10 +3,10 @@ class Command:
     description = "say hello back"
     argsRequired = 0
     usage = "hello"
-    example = {
+    examples = [{
         'run': "hello",
         'result': "hello <@user>"
-    }
+    }]
     synonyms = ["hi"]
 
     async def call(self, package):
