@@ -14,7 +14,7 @@ class Command:
     async def call(self, package):
         message, args, user_obj = package["message_obj"], package["args"], package["user_obj"]
 
-        ign = "".join(args[2:])
+        ign = " ".join(args[2:])
         user_id = message.author.id
         platform = f"{sanitize(args[1]).lower()}_ign"
 

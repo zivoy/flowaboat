@@ -17,7 +17,7 @@ async def on_message(message):
     Log.log(f"{message.author.name}@{message.channel}: {message.content}")
 
     if message.content.startswith(Config.prefix):
-        if message.author.id not in Users.users:
+        if message.author.id not in Users.users.keys():
             Users().add_user(message.author.id)
 
         mess = message.content.split(" ")
