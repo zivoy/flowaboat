@@ -18,7 +18,8 @@ class Command:
     synonyms = []
 
     async def call(self, package):
-        message, args, user_data = package["message_obj"], package["args"], package["user_obj"]
+        message, args, user_data, client = package["message_obj"], package["args"], \
+                                           package["user_obj"], package["client"]
 
         if len(args) < 2 and user_data["osu_ign"] == "":
             Log.error("No User provided provided")
@@ -36,11 +37,11 @@ class Command:
         profile = user_profile[1][0]
 
         grades = \
-            f"XSS {profile['count_rank_ssh']} " \
-            f"SS {profile['count_rank_ss']} " \
-            f"XS {profile['count_rank_sh']} " \
-            f"S {profile['count_rank_s']} " \
-            f"A {profile['count_rank_a']}"
+            f"{osu.get_rank_emoji('XH', client)} {int(profile['count_rank_ssh']):,} " \
+            f"{osu.get_rank_emoji('X', client)} {int(profile['count_rank_ss']):,} " \
+            f"{osu.get_rank_emoji('SH', client)} {int(profile['count_rank_sh']):,} " \
+            f"{osu.get_rank_emoji('S', client)} {int(profile['count_rank_s']):,} " \
+            f"{osu.get_rank_emoji('A', client)} {int(profile['count_rank_a']):,}"
 
         seconds = int(profile['total_seconds_played'])
         play_time = f"{round(seconds / 3600)}h {round(seconds % 3600 / 60)}m"

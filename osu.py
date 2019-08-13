@@ -127,3 +127,34 @@ def get_user(user):
 
     return True, response
 
+
+def get_rank_emoji(rank, client):
+    if rank == "XH":
+        emote = fetch_emote("XH_Rank", None, client)
+        return emote if emote else "Silver SS"
+    elif rank == "X":
+        emote = fetch_emote("X_Rank", None, client)
+        return emote if emote else "SS"
+    elif rank == "SH":
+        emote = fetch_emote("SH_Rank", None, client)
+        return emote if emote else "Silver S"
+    elif rank == "S":
+        emote = fetch_emote("S_Rank", None, client)
+        return emote if emote else "S"
+    elif rank == "A":
+        emote = fetch_emote("A_Rank", None, client)
+        return emote if emote else "A"
+    elif rank == "B":
+        emote = fetch_emote("B_Rank", None, client)
+        return emote if emote else "B"
+    elif rank == "C":
+        emote = fetch_emote("C_Rank", None, client)
+        return emote if emote else "C"
+    elif rank == "D":
+        emote = fetch_emote("D_Rank", None, client)
+        return emote if emote else "D"
+    elif rank == "F":
+        emote = fetch_emote("F_Rank", None, client)
+        return emote if emote else "Fail"
+    else:
+        return False

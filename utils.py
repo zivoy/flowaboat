@@ -182,4 +182,17 @@ def get_user(args, ign, platfrom):
     return name
 
 
+def fetch_emote(emote_name, guild, client):
+    emote = []
+    if guild:
+        emote = [emoji for emoji in guild.emojis if emoji.name.lower() == emote_name.lower()]
+    if not emote:
+        emote = [emoji for emoji in client.emojis if emoji.name.lower() == emote_name.lower()]
+
+    if not emote:
+        Log.error("Not valid emote")
+        return False
+    return emote[0]
+
+
 separator = "✦"
