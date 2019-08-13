@@ -2,8 +2,8 @@ import asyncio, aiohttp, html, sys, socket
 import commands
 from utils import *
 
-Config().load()
-Users().load()
+# Config().load()
+# Users().load()
 
 
 client = discord.Client()
@@ -17,8 +17,8 @@ async def on_message(message):
     Log.log(f"{message.author.name}@{message.channel}: {message.content}")
 
     if message.content.startswith(Config.prefix):
-        if message.author.id not in Users.users.keys():
-            Users().add_user(message.author.id)
+        Users().load()
+        Users().add_user(message.author.id)
 
         mess = message.content.split(" ")
         mess[0] = mess[0][len(Config.prefix):]
@@ -28,7 +28,7 @@ async def on_message(message):
             "message_obj": message,
             "args": mess,
             "client": client,
-            "user_obj": Users.users[message.author.id]
+            "user_obj": Users.users[str(message.author.id)]
         }
 
         if command in commands.List.keys():
@@ -41,7 +41,8 @@ async def on_message(message):
                     found = True
                     break
             if not found:
-                await message.channel.send(f"{command} is not a valid command")
+                await help_me(message, "help")
+                Log.log(f"{command} is not a valid command")
     elif Config.administer:
         pass
 

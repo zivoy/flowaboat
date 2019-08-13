@@ -5,7 +5,7 @@ class Command:
     command = "hello"
     description = "say hello back"
     argsRequired = 0
-    usage = "hello"
+    usage = ""
     examples = [{
         'run': "hello",
         'result': "hello <@user>"

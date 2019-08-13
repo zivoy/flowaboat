@@ -4,6 +4,24 @@ from datetime import datetime
 import commands
 import discord
 import requests
+from time import time
+import arrow
+
+
+class Api:
+    def __init__(self, base_url, params=dict()):
+        self.url = base_url
+        self.params = params
+
+    def get(self, url, params=None, **kwargs):
+        url = self.url + url
+        if params is not None:
+            for k, j in self.params.items():
+                params[k] = j
+        elif self.params != {}:
+            params = self.params
+
+        return requests.get(url, params, **kwargs)
 
 
 class JasonFile:
@@ -72,13 +90,23 @@ class Users(JasonFile):
     users = dict()
 
     def add_user(self, uuid, osu_ign="", steam_ign=""):
+        uuid = str(uuid)
         if uuid not in self.users:
             self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign, "last_beatmap": None, "last_message": None}
             self.save()
 
     def set(self, uuid, item, value):
-        self.users[uuid][item] = value
+        self.users[str(uuid)][item] = value
         self.save()
+
+
+#
+
+
+Config().load()
+Users().load()
+
+#
 
 
 class Loging:
@@ -116,12 +144,12 @@ def command_help(command):
             help_page = discord.Embed(title="Command", description=f"`{command_text}`", inline=False)
 
             if command.synonyms:
-                help_page.add_field(name="Synonyms", value=", ".join([f"`{Config.prefix}{i}`" for i in command.synonyms]),
-                                    inline=False)
+                help_page.add_field(name="Synonyms",
+                                    value=", ".join([f"`{Config.prefix}{i}`" for i in command.synonyms]), inline=False)
 
             help_page.add_field(name="Description", value=command.description, inline=False)
 
-            help_page.add_field(name="Usage", value=f"Required variables: {command.argsRequired}\n\
+            help_page.add_field(name="Usage", value=f"Required variables: `{command.argsRequired}`\n\
                                                       ```{command_text} {command.usage}```", inline=False)
 
             examples = command.examples
@@ -138,3 +166,20 @@ def command_help(command):
 
 async def help_me(message_obj, command):
     await getattr(commands, "help")().call({"message_obj": message_obj, "args": ["", command]})
+
+
+def get_user(args, ign, platfrom):
+    name = " ".join(args[1:])
+    print(name)
+
+    if ign and not name:
+        return ign
+
+    if name.startswith("<@") and name.endswith(">"):
+        if name[2:-1] in Users.users.keys():
+            return Users.users[name[2:-1]][platfrom+"_ign"]
+
+    return name
+
+
+separator = "✦"

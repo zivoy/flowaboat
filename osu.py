@@ -3,6 +3,9 @@ import regex
 from utils import *
 
 
+osu_api = Api("https://osu.ppy.sh/api", {"k": Config.credentials.osu_api_key})
+
+
 class OsuConsts(Enum):
     # "": 0,
     MODS = {
@@ -57,16 +60,18 @@ class OsuConsts(Enum):
     EZ_AR = 0.5
 
 
+mods_re = regex.compile(rf"^({'|'.join(OsuConsts.MODS.value.keys())})+$")
+
+
 def parse_mods(mods):
     if mods == '':
         return []
     mods = mods.replace("+", "").upper()
-    r = regex.compile(rf"^({'|'.join(OsuConsts.MODS.value.keys())})+$")
-    x = r.match(mods)
-    if x is None:
+    mods_included = mods_re.match(mods)
+    if mods_included is None:
         Log.error(f"Mods not valid: {mods}")
         return []  # None
-    matches = x.captures(1)
+    matches = mods_included.captures(1)
     return list(set(matches))
 
 
@@ -109,3 +114,16 @@ def calculate_ar(raw_ar, mods):
         ar = 5 + (OsuConsts.AR5_MS.value - ar_ms) / OsuConsts.AR_MS_STEP2.value
 
     return ar, ar_ms, mod_list
+
+
+def get_user(user):
+    response = osu_api.get('/get_user', {"u": user})
+    response = response.json()
+
+    Log.log(response)
+
+    if len(response) == 0:
+        return False, "Couldn't find user"
+
+    return True, response
+
