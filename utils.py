@@ -137,7 +137,7 @@ def sanitize(text):
 
 def command_help(command):
     for i, j in commands.List.items():
-        if command == i or command in j:
+        if command == i or any([True for cm in j if cm.match(command)]):
             command = getattr(commands, sanitize(i))()
             command_text = f"{Config.prefix}{i}"
 
@@ -170,7 +170,6 @@ async def help_me(message_obj, command):
 
 def get_user(args, ign, platfrom):
     name = " ".join(args[1:])
-    print(name)
 
     if ign and not name:
         return ign

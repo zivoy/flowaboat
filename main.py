@@ -22,7 +22,7 @@ async def on_message(message):
 
         mess = message.content.split(" ")
         mess[0] = mess[0][len(Config.prefix):]
-        command = ''.join([i for i in mess[0] if not i.isdigit()])
+        command = mess[0]
 
         package = {
             "message_obj": message,
@@ -36,7 +36,7 @@ async def on_message(message):
         else:
             found = False
             for i, j in commands.List.items():
-                if command in j:
+                if any([True for cm in j if cm.match(command)]):
                     await getattr(commands, sanitize(i))().call(package)
                     found = True
                     break
