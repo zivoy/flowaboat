@@ -1,6 +1,11 @@
 from utils import *
 import osu
 
+import warnings
+from arrow.factory import ArrowParseWarning
+
+warnings.simplefilter("ignore", ArrowParseWarning)
+
 
 class Command:
     command = "osu"
@@ -45,6 +50,7 @@ class Command:
 
         seconds = int(profile['total_seconds_played'])
         play_time = f"{round(seconds / 3600)}h {round(seconds % 3600 / 60)}m"
+        date_form = "YYYY-MM-DD hh:mm:ss"
 
         embed = discord.Embed().from_dict(
             {
@@ -59,8 +65,8 @@ class Command:
                     "url": f"https://osu.ppy.sh/u/{profile['user_id']}"
                 },
                 "footer": {
-                    "text": f"Playing for {arrow.get(profile['join_date']).humanize()[:-4]} {separator} Joined on "
-                    f"{arrow.get(profile['join_date']).format('D MMMM YYYY')}"
+                    "text": f"Playing for {arrow.get(profile['join_date'], date_form).humanize()[:-4]} "
+                    f"{separator} Joined on {arrow.get(profile['join_date'], date_form).format('D MMMM YYYY')}"
                 },
                 "fields": [
                     {
