@@ -1,15 +1,15 @@
 # Commands
 ### Table Of Contents
-- [o!ar](#ar)
-- [o!cs](#cs)
-- [o!flowaboat](#flowaboat)
-- [o!hello](#hello)
-- [o!help](#help)
-- [o!hp](#hp)
-- [o!ign-set](#ign-set)
-- [o!od](#od)
-- [o!osu](#osu)
-- [o!top](#top)
+- [o!ar](#oar)
+- [o!cs](#ocs)
+- [o!flowaboat](#oflowaboat)
+- [o!hello](#ohello)
+- [o!help](#ohelp)
+- [o!hp](#ohp)
+- [o!ign-set](#oign-set)
+- [o!od](#ood)
+- [o!osu](#oosu)
+- [o!top](#otop)
 ---
 ## o!ar
 Calculate Approach Rate values and milliseconds with mods applied.

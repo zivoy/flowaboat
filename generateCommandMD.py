@@ -6,7 +6,7 @@ markdown = "# Commands\n"
 markdown += "### Table Of Contents"
 
 for command in commands.List:
-    markdown += f"\n- [{Config.prefix}{command}](#{command})"
+    markdown += f"\n- [{Config.prefix}{command}](#{sanitize(Config.prefix)}{command})"
 
 markdown += "\n---"
 
