@@ -4,7 +4,7 @@ import osu
 
 class Command:
     command = "od"
-    description = "Calculate Approach Rate values and milliseconds with mods applied."
+    description = "Calculate Overall Difficulty values and milliseconds with mods applied."
     argsRequired = 1
     usage = "<od> [+mods]"
     examples = [{
