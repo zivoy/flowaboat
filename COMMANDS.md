@@ -164,7 +164,7 @@ Sets your steam username to flyingpigoftheapocalypse.
 
 
 ## o!od
-Calculate Approach Rate values and milliseconds with mods applied.
+Calculate Overall Difficulty values and milliseconds with mods applied.
 
 **Required variables**: `1`
 
