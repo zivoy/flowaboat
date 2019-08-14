@@ -1,7 +1,10 @@
 from enum import Enum
-import regex
 from utils import *
 
+import warnings
+from arrow.factory import ArrowParseWarning
+
+warnings.simplefilter("ignore", ArrowParseWarning)
 
 osu_api = Api("https://osu.ppy.sh/api", {"k": Config.credentials.osu_api_key})
 
@@ -41,6 +44,8 @@ class OsuConsts(Enum):
         "V2": 2**29
     }
 
+    R_MODS = {v: k for k, v in MODS.items()}
+
     DIFF_MODS = ["HR", "EZ", "DT", "HT"]
     TIME_MODS = ["DT", "HT"]
 
@@ -59,11 +64,20 @@ class OsuConsts(Enum):
     HR_AR = 1.4
     EZ_AR = 0.5
 
+    HR_CS = 1.3
+    EZ_CS = 0.5
+
+    HR_OD = 1.4
+    EZ_OD = 0.5
+
+    HR_HP = 1.4
+    EZ_HP = 0.5
+
 
 mods_re = regex.compile(rf"^({'|'.join(OsuConsts.MODS.value.keys())})+$")
 
 
-def parse_mods(mods):
+def parse_mods_string(mods):
     if mods == '':
         return []
     mods = mods.replace("+", "").upper()
@@ -75,45 +89,105 @@ def parse_mods(mods):
     return list(set(matches))
 
 
-def calculate_ar(raw_ar, mods):
-    mod_list = parse_mods(mods)
+def parse_mods(mod_int):
+    mod_bin = bin(mod_int)[2:][::-1]
+    mods = list()
+    for i in range(len(mod_bin)):
+        if mod_bin[i] == '1':
+            mods.append(OsuConsts.R_MODS.value[1 << i])
+    return mods
 
-    Log.log(mods.replace("+", ""))
-    Log.log(mod_list)
 
-    speed = 1
-    ar_multiplier = 1
+class CalculateMods:
+    def __init__(self, mods):
+        self.mods = parse_mods_string(mods)
 
-    if "DT" in mod_list:
-        speed *= OsuConsts.DT_SPD.value
-    elif "HT" in mod_list:
-        speed *= OsuConsts.HT_SPD.value
+        Log.log(mods.replace("+", ""))
+        Log.log(self.mods)
 
-    if "HR" in mod_list:
-        ar_multiplier *= OsuConsts.HR_AR.value
-    elif "EZ" in mod_list:
-        ar_multiplier *= OsuConsts.EZ_AR.value
+    def ar(self, raw_ar):
+        speed = 1
+        ar_multiplier = 1
 
-    ar = raw_ar * ar_multiplier
+        if "DT" in self.mods:
+            speed *= OsuConsts.DT_SPD.value
+        elif "HT" in self.mods:
+            speed *= OsuConsts.HT_SPD.value
 
-    if ar <= 5:
-        ar_ms = OsuConsts.AR0_MS.value - OsuConsts.AR_MS_STEP1.value * ar
-    else:
-        ar_ms = OsuConsts.AR5_MS.value - OsuConsts.AR_MS_STEP2.value * (ar - 5)
+        if "HR" in self.mods:
+            ar_multiplier *= OsuConsts.HR_AR.value
+        elif "EZ" in self.mods:
+            ar_multiplier *= OsuConsts.EZ_AR.value
 
-    if ar_ms < OsuConsts.AR10_MS.value:
-        ar_ms = OsuConsts.AR10_MS.value
-    if ar_ms > OsuConsts.AR0_MS.value:
-        ar_ms = OsuConsts.AR0_MS.value
+        ar = raw_ar * ar_multiplier
 
-    ar_ms /= speed
+        if ar <= 5:
+            ar_ms = OsuConsts.AR0_MS.value - OsuConsts.AR_MS_STEP1.value * ar
+        else:
+            ar_ms = OsuConsts.AR5_MS.value - OsuConsts.AR_MS_STEP2.value * (ar - 5)
 
-    if ar <= 5:
-        ar = (OsuConsts.AR0_MS.value - ar_ms) / OsuConsts.AR_MS_STEP1.value
-    else:
-        ar = 5 + (OsuConsts.AR5_MS.value - ar_ms) / OsuConsts.AR_MS_STEP2.value
+        if ar_ms < OsuConsts.AR10_MS.value:
+            ar_ms = OsuConsts.AR10_MS.value
+        if ar_ms > OsuConsts.AR0_MS.value:
+            ar_ms = OsuConsts.AR0_MS.value
 
-    return ar, ar_ms, mod_list
+        ar_ms /= speed
+
+        if ar <= 5:
+            ar = (OsuConsts.AR0_MS.value - ar_ms) / OsuConsts.AR_MS_STEP1.value
+        else:
+            ar = 5 + (OsuConsts.AR5_MS.value - ar_ms) / OsuConsts.AR_MS_STEP2.value
+
+        return ar, ar_ms, self.mods
+
+    def cs(self, raw_cs):
+        cs_multiplier = 1
+
+        if "HR" in self.mods:
+            cs_multiplier *= OsuConsts.HR_CS.value
+        elif "EZ" in self.mods:
+            cs_multiplier *= OsuConsts.EZ_CS.value
+
+        cs = min(raw_cs * cs_multiplier, 10)
+
+        return cs, self.mods
+
+    def od(self, raw_od):
+        od_multiplier = 1
+        speed = 1
+
+        if "HR" in self.mods:
+            od_multiplier *= OsuConsts.HR_OD.value
+        elif "EZ" in self.mods:
+            od_multiplier *= OsuConsts.EZ_OD.value
+
+        if "DT" in self.mods:
+            speed *= OsuConsts.DT_SPD.value
+        elif "HT" in self.mods:
+            speed *= OsuConsts.HT_SPD.value
+
+        od = raw_od * od_multiplier
+
+        odms = OsuConsts.OD0_MS.value - math.cos(OsuConsts.OD_MS_STEP.value * od)
+        odms = min(max(OsuConsts.OD10_MS.value, odms), OsuConsts.OD0_MS.value)
+
+        odms /= speed
+
+        od = (OsuConsts.OD0_MS.value - odms) / OsuConsts.OD_MS_STEP.value
+
+        return od, odms, self.mods
+
+    def hp(self, raw_hp):
+        hp_multiplier = 1
+
+        if "HR" in self.mods:
+            hp_multiplier *= OsuConsts.HR_HP.value
+        elif "EZ" in self.mods:
+            hp_multiplier *= OsuConsts.EZ_HP.value
+
+        hp = min(raw_hp * hp_multiplier, 10)
+
+        return hp, self.mods
 
 
 def get_user(user):
@@ -158,3 +232,30 @@ def get_rank_emoji(rank, client):
         return emote if emote else "Fail"
     else:
         return False
+
+
+def get_top(user, index, rb=None, ob=None):
+    index = min(max(index, 1), 100)
+    limit = 100 if rb or ob else index
+    response = osu_api.get('/get_user_best', {"u": user, "limit": limit})
+    response = response.json()
+
+    Log.log(response)
+
+    if len(response) == 0:
+        return False, f"No top plays found for {user}"
+
+    for i in range(len(response)):
+        response[i]["date"] = arrow.get(response[i]["date"], date_form)
+
+    if rb:
+        response = sorted(response, key=lambda k: k["date"], reverse=True)
+    if ob:
+        response = sorted(response, key=lambda k: k["date"])
+
+    if len(response) < index:
+        index = len(response)
+
+    recent_raw = response[index-1]
+
+    return True, recent_raw
