@@ -1,11 +1,11 @@
 import json
 import os
-from datetime import datetime
 import commands
 import discord
 import requests
-from time import time
+import regex
 import arrow
+import math
 
 
 class Api:
@@ -111,11 +111,11 @@ Users().load()
 
 class Loging:
     def log(self, *args):
-        msg = f"{datetime.utcnow().isoformat()}: " + " ".join([str(i) for i in args])
+        msg = f"{arrow.utcnow().isoformat()}: " + " ".join([str(i) for i in args])
         print(msg)
 
     def error(self, *args):
-        msg = f"{datetime.utcnow().isoformat()} -- ERROR -- : " + " ".join([str(i) for i in args])
+        msg = f"{arrow.utcnow().isoformat()} -- ERROR -- : " + " ".join([str(i) for i in args])
         print(msg)
 
 
@@ -137,7 +137,7 @@ def sanitize(text):
 
 def command_help(command):
     for i, j in commands.List.items():
-        if command == i or any([True for cm in j if cm.match(command)]):
+        if command == i or any([True for cm in j if cm.search(command)]):
             command = getattr(commands, sanitize(i))()
             command_text = f"{Config.prefix}{i}"
 
@@ -149,8 +149,8 @@ def command_help(command):
 
             help_page.add_field(name="Description", value=command.description, inline=False)
 
-            help_page.add_field(name="Usage", value=f"Required variables: `{command.argsRequired}`\n\
-                                                      ```{command_text} {command.usage}```", inline=False)
+            help_page.add_field(name="Usage", value=f"**Required variables**: `{command.argsRequired}`\n"
+                                                    f"```{command_text} {command.usage}```", inline=False)
 
             examples = command.examples
             emps = "s" if len(examples) > 1 else ""
@@ -182,16 +182,19 @@ def get_user(args, ign, platfrom):
 
 
 def fetch_emote(emote_name, guild, client):
-    emote = []
+    e_lists = []
     if guild:
-        emote = [emoji for emoji in guild.emojis if emoji.name.lower() == emote_name.lower()]
-    if not emote:
-        emote = [emoji for emoji in client.emojis if emoji.name.lower() == emote_name.lower()]
-
-    if not emote:
+        e_lists.extend(guild.emojis)
+    e_lists.extend(client.emojis)
+    valid = [x for x in e_lists if x.name.lower() == emote_name.lower()]
+    if not valid:
         Log.error("Not valid emote")
         return False
-    return emote[0]
+    return valid[0]
 
 
 separator = "✦"
+
+digits = regex.compile(r"^\D+(\d+)$")
+
+date_form = "YYYY-MM-DD hh:mm:ss"

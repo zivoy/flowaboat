@@ -1,4 +1,5 @@
 from utils import *
+from time import time
 import osu
 
 import warnings
@@ -50,7 +51,6 @@ class Command:
 
         seconds = int(profile['total_seconds_played'])
         play_time = f"{round(seconds / 3600)}h {round(seconds % 3600 / 60)}m"
-        date_form = "YYYY-MM-DD hh:mm:ss"
 
         embed = discord.Embed().from_dict(
             {

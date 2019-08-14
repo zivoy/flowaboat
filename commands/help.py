@@ -3,8 +3,8 @@ from utils import *
 
 class Command:
     command = "help"
-    description = "Get help for a command. \n\n __to come__ **List of all commands:** \n \
-                     https://github.com/zivoy/flowaboat/blob/master/COMMANDS.md"
+    description = "Get help for a command. \n\n **List of all commands**: \n " \
+                  "https://github.com/zivoy/flowaboat/blob/pythonized/COMMANDS.md"
     argsRequired = 1
     usage = "<command>"
     examples = [{

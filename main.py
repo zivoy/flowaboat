@@ -1,5 +1,5 @@
 import asyncio, aiohttp, html, sys, socket
-import commands
+import generateCommandMD
 from utils import *
 
 # Config().load()
@@ -36,7 +36,7 @@ async def on_message(message):
         else:
             found = False
             for i, j in commands.List.items():
-                if any([True for cm in j if cm.match(command)]):
+                if any([True for cm in j if cm.search(command)]):
                     await getattr(commands, sanitize(i))().call(package)
                     found = True
                     break

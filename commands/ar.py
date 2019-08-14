@@ -20,7 +20,7 @@ class Command:
     async def call(self, package):
         message, args = package["message_obj"], package['args']
         try:
-            ar = float(args[1])
+            hp = float(args[1])
         except ValueError:
             msg = f"{args[1]} is not a valid ar"
             # await message.channel.send(msg)
@@ -34,18 +34,18 @@ class Command:
 
         mods = args[2].upper() if len(args) > 2 else ""
 
-        new_ar, ar_ms, mod_list = osu.calculate_ar(ar, mods)
+        new_ar, mod_list = osu.CalculateMods(mods).ar(hp)
 
         output = ""
 
         if len(mod_list) > 0:
-            if ar.is_integer():
-                ar = int(ar)
-            output += f"AR{ar}+{''.join(mod_list).upper()} -> "
+            if hp.is_integer():
+                hp = int(hp)
+            output += f"HP{hp}+{''.join(mod_list).upper()} -> "
 
         new_ar = float(f"{new_ar:.2f}")
         if new_ar.is_integer():
             new_ar = int(new_ar)
-        output += f"AR{new_ar} ({ar_ms:.0f}ms)"
+        output += f"HP{new_ar}"
 
         await message.channel.send(output)
