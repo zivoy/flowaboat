@@ -46,18 +46,19 @@ class JasonFile:
                 self.close_dir(getattr(obj, i), info[i])
 
     def load(self):
+        if not os.path.isfile(self.file):
+            # os.mknod(self.file)
+            open(self.file, "w").close()
+            self.save()
         with open(self.file, "r") as configs:
             self.close_dir(self.__class__, json.load(configs))
 
     def save(self):
         with open(self.file, "w") as outfile:
-            json.dump(self.open_dir(self.__class__, ["file"]), outfile)
+            json.dump(self.open_dir(self.__class__, ["file"]), outfile, indent="  ", sort_keys=True)
 
 
 class Config(JasonFile):
-    super(JasonFile)
-    if not os.path.isfile("./config.json"):
-        os.mknod("./config.json")
     file = "config.json"
 
     prefix = ""
@@ -65,7 +66,6 @@ class Config(JasonFile):
     administer = ""
     osu_cache_path = ""
     pp_path = ""
-    beatmap_api = ""
 
     class credentials:
         bot_token = ""
@@ -81,10 +81,6 @@ class Config(JasonFile):
 
 
 class Users(JasonFile):
-    super(JasonFile)
-    if not os.path.isfile("./users.list"):
-        #os.mknod("./users.list")
-        open("./users.list", 'w').close()
     file = "users.list"
 
     users = dict()
@@ -92,7 +88,9 @@ class Users(JasonFile):
     def add_user(self, uuid, osu_ign="", steam_ign=""):
         uuid = str(uuid)
         if uuid not in self.users:
-            self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign, "last_beatmap": None, "last_message": None}
+            self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign,
+                                "last_beatmap": {"map": (None, None), "mods": [], "completion": 0, "acc": 0},
+                                "last_message": None}
             self.save()
 
     def set(self, uuid, item, value):

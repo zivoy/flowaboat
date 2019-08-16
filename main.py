@@ -54,4 +54,5 @@ async def on_ready():
     Log.log(client.user.id)
     Log.log('------')
 
-client.run(Config.credentials.bot_token)
+if __name__ == "__main__":
+    client.run(Config.credentials.bot_token)

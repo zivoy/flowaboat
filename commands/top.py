@@ -23,7 +23,7 @@ class Command:
                                            package["user_obj"], package["client"]
 
         if len(args) < 2 and user_data["osu_ign"] == "":
-            Log.error("No User provided provided")
+            Log.error("No User provided")
             await help_me(message, "ign-set")
             return
 
