@@ -20,6 +20,30 @@ osu_api = Api("https://osu.ppy.sh/api", {"k": Config.credentials.osu_api_key})
 parser = pytan.parser()
 
 
+class MapError(Exception):
+    pass
+
+
+class BadLink(MapError):
+    pass
+
+
+class BadMapFile(MapError):
+    pass
+
+
+class BadId(MapError):
+    pass
+
+
+class NoPlays(UserError):
+    pass
+
+
+class BadMapObject(MapError):
+    pass
+
+
 class OsuConsts(Enum):
     # "": 0,
     MODS = {
@@ -84,20 +108,49 @@ class OsuConsts(Enum):
     HR_HP = 1.4
     EZ_HP = 0.5
 
+    STRAIN_STEP = 400.0
+    DECAY_BASE = [0.3, 0.15]
+    STAR_SCALING_FACTOR = 0.0675
+    EXTREME_SCALING_FACTOR = 0.5
+    DECAY_WEIGHT = 0.9
+
 
 mods_re = regex.compile(rf"^({'|'.join(OsuConsts.MODS.value.keys())})+$")
 
 
-def parse_mods_string(mods):
-    if mods == '':
-        return []
-    mods = mods.replace("+", "").upper()
-    mods_included = mods_re.match(mods)
-    if mods_included is None:
-        Log.error(f"Mods not valid: {mods}")
-        return []  # None
-    matches = mods_included.captures(1)
-    return list(set(matches))
+class Play:
+    def __init__(self, play_dict):
+        dict_string_to_nums(play_dict)
+
+        self.beatmap_id = play_dict["beatmap_id"]
+        self.score = play_dict["score"]
+        self.maxcombo = play_dict["maxcombo"]
+        self.countmiss = play_dict["countmiss"]
+        self.count50 = play_dict["count50"]
+        self.count100 = play_dict["count100"] + play_dict["countkatu"]
+        self.count300 = play_dict["count300"] + play_dict["countgeki"]
+        self.perfect = play_dict["perfect"]
+        self.enabled_mods = parse_mods_string(pytan.mods_str(play_dict["enabled_mods"]))
+        self.user_id = play_dict["user_id"]
+        self.date = arrow.get(play_dict["date"], date_form)
+        self.rank = play_dict["rank"]
+        self.pp = play_dict["pp"]
+        self.accuracy = pytan.acc_calc(self.count300, self.count100, self.count50, self.countmiss)
+
+        if self.rank.upper() == "F":
+            self.completion = (self.count300 + self.count100 + self.count50 + self.countmiss) / self.maxcombo
+        else:
+            self.completion = 1
+
+        if "replay_available" in play_dict:
+            self.replay_available = play_dict["replay_available"]
+        else:
+            self.replay_available = 0
+
+        if "score_id" in play_dict:
+            self.score_id = play_dict["score_id"]
+        else:
+            self.score_id = ""
 
 
 class CalculateMods:
@@ -172,7 +225,7 @@ class CalculateMods:
 
         od = raw_od * od_multiplier
 
-        odms = OsuConsts.OD0_MS.value - math.cos(OsuConsts.OD_MS_STEP.value * od)
+        odms = OsuConsts.OD0_MS.value - math.ceil(OsuConsts.OD_MS_STEP.value * od)
         odms = min(max(OsuConsts.OD10_MS.value, odms), OsuConsts.OD0_MS.value)
 
         odms /= speed
@@ -194,6 +247,18 @@ class CalculateMods:
         return hp, self.mods
 
 
+def parse_mods_string(mods):
+    if mods == '' or mods == "nomod":
+        return []
+    mods = mods.replace("+", "").upper()
+    mods_included = mods_re.match(mods)
+    if mods_included is None:
+        Log.error(f"Mods not valid: {mods}")
+        return []  # None
+    matches = mods_included.captures(1)
+    return list(set(matches))
+
+
 def get_user(user):
     response = osu_api.get('/get_user', {"u": user})
     response = response.json()
@@ -201,9 +266,9 @@ def get_user(user):
     Log.log(response)
 
     if len(response) == 0:
-        return False, "Couldn't find user"
+        raise UserNonexistent("Couldn't find user")
 
-    return True, response
+    return response
 
 
 def get_rank_emoji(rank, client):
@@ -238,7 +303,7 @@ def get_rank_emoji(rank, client):
         return False
 
 
-def get_top(user, index, rb=None, ob=None):
+def get_top(user, index, rb=False, ob=False):
     index = min(max(index, 1), 100)
     limit = 100 if rb or ob else index
     response = osu_api.get('/get_user_best', {"u": user, "limit": limit})
@@ -247,7 +312,7 @@ def get_top(user, index, rb=None, ob=None):
     Log.log(response)
 
     if len(response) == 0:
-        return False, f"No top plays found for {user}"
+        raise NoPlays(f"No top plays found for {user}")
 
     for i in range(len(response)):
         response[i]["date"] = arrow.get(response[i]["date"], date_form)
@@ -262,109 +327,134 @@ def get_top(user, index, rb=None, ob=None):
 
     recent_raw = response[index - 1]
 
-    return True, recent_raw
+    return Play(recent_raw)
 
 
-def map_stats(map_id, mods, link_type="id"):
-    """
-    get stats on map // map api
-    :param map_id:
-    :param mods:
-    :param link_type: [id|map|path|url]
-    :return: map data dict, map object
-    """
-    if link_type == "id":
-        link = f"https://osu.ppy.sh/osu/{map_id}"
-    else:
-        link = map_id
+class MapStats:
+    def __init__(self, map_id, mods, link_type="id"):
+        """
+        get stats on map // map api
+        :param map_id:
+        :param mods: mod **list**
+        :param link_type: [id|map|path|url]
+        :return: map data dict, map object with calculated values
+        """
+        if link_type == "id":
+            link = f"https://osu.ppy.sh/osu/{map_id}"
+        else:
+            link = map_id
 
-    if link_type == "map":
-        raw_map = link
-    elif link_type == "path":
-        with open(link, "r") as mp:
-            raw_map = mp.read()
-    else:
-        raw_map = requests.get(link).text
+        if link_type == "map":
+            raw_map = link
+        elif link_type == "path":
+            with open(link, "r") as mp:
+                raw_map = mp.read()
+        else:
+            raw_map = requests.get(link).text
+            if raw_map == "":
+                raise BadLink
 
-    with io.StringIO(raw_map) as map_io:
-        bmp = parser.map(map_io)
+        with io.StringIO(raw_map) as map_io:
+            bmp = parser.map(map_io)
 
-    speed = 1
-    if "DT" in mods:
-        speed *= OsuConsts.DT_SPD.value
-    elif "HT" in mods:
-        speed *= OsuConsts.HT_SPD.value
+        if not bmp.hitobjects:
+            raise BadMapFile
 
-    map_creator = osu_api.get("/get_user", {"u": bmp.creator}).json()
-    map_calc = pytan.diff_calc().calc(bmp, pytan.mods_from_str("".join(mods)))
-    diff = CalculateMods(mods)
+        speed = 1
+        if "DT" in mods:
+            speed *= OsuConsts.DT_SPD.value
+        elif "HT" in mods:
+            speed *= OsuConsts.HT_SPD.value
 
-    length = bmp.hitobjects[-1].time
-    change_list = [i for i in bmp.timing_points if i.change]
-    bpm_avg = list()
-    bpm_list = list()
-    for j, i in enumerate(change_list):
-        if i.change:
-            if j + 1 == len(change_list):
-                dur = length - i.time
-            else:
-                dur = change_list[j + 1].time - i.time
-            bpm_avg.append((1000 / i.ms_per_beat * 60) * dur)
-            bpm_list.append((1000 / i.ms_per_beat * 60))
+        map_creator = osu_api.get("/get_user", {"u": bmp.creator}).json()[0]
+        map_calc = pytan.diff_calc().calc(bmp, pytan.mods_from_str("".join(mods)))
+        diff = CalculateMods(mods)
 
-    map_data = {
-        "speed_multiplier": speed,
-        "artist": bmp.artist,
-        "title": bmp.title,
-        "artist_unicode": bmp.artist_unicode,
-        "title_unicode": bmp.title_unicode,
-        "version": bmp.version,
-        "bpm_min": min(bpm_list) * speed,
-        "bpm_max": max(bpm_list) * speed,
-        "bpm": sum(bpm_avg) / (length - bmp.hitobjects[0].time) * speed,
-        "total_length": (length - bmp.hitobjects[0].time) / 1000 / speed,
-        "max_combo": bmp.max_combo(),
-        "creator": bmp.creator,
-        "creator_id": map_creator["user_id"],
-        "base_cs": bmp.cs,
-        "base_ar": bmp.ar,
-        "base_od": bmp.od,
-        "base_hp": bmp.hp,
-        "cs": diff.cs(bmp.cs)[0],
-        "ar": diff.ar(bmp.ar)[0],
-        "od": diff.od(bmp.od)[0],
-        "hp": diff.hp(bmp.hp)[0],
-        "mode": bmp.mode,
+        length = bmp.hitobjects[-1].time
+        change_list = [i for i in bmp.timing_points if i.change]
+        bpm_avg = list()
+        bpm_list = list()
+        for j, i in enumerate(change_list):
+            if i.change:
+                if j + 1 == len(change_list):
+                    dur = length - i.time
+                else:
+                    dur = change_list[j + 1].time - i.time
+                bpm_avg.append((1000 / i.ms_per_beat * 60) * dur)
+                bpm_list.append((1000 / i.ms_per_beat * 60))
 
-        "aim_stars": map_calc.aim_difficulty,
-        "speed_stars": map_calc.speed_difficulty,
-        "total": map_calc.total,
-        "count_normal": bmp.ncircles,
-        "count_slider": bmp.nsliders,
-        "count_spinner": bmp.nspinners
-    }
+        self.speed_multiplier =  speed
+        self.artist = bmp.artist
+        self.title = bmp.title
+        self.artist_unicode = bmp.artist_unicode
+        self.title_unicode = bmp.title_unicode
+        self.version = bmp.version
+        self.bpm_min = min(bpm_list) * speed
+        self.bpm_max = max(bpm_list) * speed
+        self.bpm = sum(bpm_avg) / (length - bmp.hitobjects[0].time) * speed
+        self.total_length = (length - bmp.hitobjects[0].time) / 1000 / speed
+        self.max_combo = bmp.max_combo()
+        self.creator = bmp.creator
+        self.creator_id = map_creator["user_id"]
+        self.base_cs = bmp.cs
+        self.base_ar = bmp.ar
+        self.base_od = bmp.od
+        self.base_hp = bmp.hp
+        self.cs = diff.cs(bmp.cs)[0]
+        self.ar = diff.ar(bmp.ar)[0]
+        self.od = diff.od(bmp.od)[0]
+        self.hp = diff.hp(bmp.hp)[0]
+        self.mode = bmp.mode
 
-    if link_type == "id":
-        mods_applied = pytan.mods_from_str("".join([i for i in mods if i.upper() in OsuConsts.DIFF_MODS.value]))
-        map_web = osu_api.get("/get_beatmaps", {"b": map_id, "mods": mods_applied}).json()
-        map_data.update(map_web)
-        del map_data["difficultyrating"]
-        del map_data["diff_aim"]
-        del map_data["diff_speed"]
-        del map_data["diff_size"]
-        del map_data["diff_overall"]
-        del map_data["diff_approach"]
-        del map_data["diff_drain"]
+        self.aim_stars = map_calc.aim_difficulty
+        self.speed_stars = map_calc.speed_difficulty
+        self.total = map_calc.total
+        self.count_normal = bmp.ncircles
+        self.count_slider = bmp.nsliders
+        self.count_spinner = bmp.nspinners
 
-    return map_data, bmp
+        if link_type == "id":
+            self.approved = 0
+            self.submit_date = arrow
+            self.approved_date = arrow
+            self.last_update = arrow
+            self.beatmap_id = 0
+            self.beatmapset_id = 0
+            self.source = ""
+            self.genre_id = 0
+            self.language_id = 0
+            self.file_md5 = ""
+            self.tags = ""
+            self.favourite_count = 0
+            self.rating = 0.0
+            self.playcount = 0
+            self.passcount = 0
+            self.download_unavailable = 0
+            self.audio_unavailable = 0
+
+            mods_applied = pytan.mods_from_str(
+                "".join([i for i in mods if i.upper() in OsuConsts.DIFF_MODS.value]))
+            map_web = osu_api.get("/get_beatmaps", {"b": map_id, "mods": mods_applied}).json()
+            if not map_web:
+                raise BadId
+            dict_string_to_nums(map_web[0])
+            for i, j in map_web[0].items():
+                setattr(self, i, j)
+            self.submit_date = arrow.get(self.submit_date, date_form)
+            self.approved_date = arrow.get(self.pproved_date, date_form)
+            self.last_update = arrow.get(self.last_update, date_form)
+
+        self.beatmap = bmp
 
 
 def graph_bpm(map_link, mods, link_type):
-    map_data, map_obj = map_stats(map_link, mods, link_type)
+    map_obj = MapStats(map_link, mods, link_type)
 
-    data = [(i.time / map_data["speed_multiplier"],
-             1000 / i.ms_per_beat * 60 * map_data["speed_multiplier"])
-            for i in map_obj.timing_points if i.change]
+    Log.log(f"Graphing BPM for {map_obj.title}")
+
+    data = [(i.time / map_obj.speed_multiplier,
+             1000 / i.ms_per_beat * 60 / map_obj.speed_multiplier)
+            for i in map_obj.beatmap.timing_points if i.change]
 
     chart_points = list()
     for i, j in enumerate(data):
@@ -373,7 +463,7 @@ def graph_bpm(map_link, mods, link_type):
             chart_points.append((j[0] - .01, last[1]))
         chart_points.append(j)
         if len(data) - 1 == i:
-            chart_points.append((map_obj.hitobjects[-1].time / map_data["speed_multiplier"], j[1]))
+            chart_points.append((map_obj.beatmap.hitobjects[-1].time / map_obj.speed_multiplier, j[1]))
 
     points = pd.DataFrame(chart_points)
     points.columns = ["Time", "BPM"]
@@ -389,21 +479,22 @@ def graph_bpm(map_link, mods, link_type):
                 'axes.labelcolor': (240 / 255, 98 / 255, 150 / 255),
                 'xtick.bottom': True,
                 'xtick.direction': 'in',
-                'figure.figsize': (6, 4)
+                'figure.figsize': (6, 4),
+                'savefig.dpi': 100
                 })
 
-    ax = sns.lineplot(x="Time", y="BPM", data=points, color=(240 / 255, 98 / 255, 150 / 255), legend=None)
+    ax = sns.lineplot(x="Time", y="BPM", data=points, color=(240 / 255, 98 / 255, 150 / 255))
 
-    length = map_data["total_length"] * 1000
+    length = int(map_obj.total_length) * 1000
     m = length / 50
     plt.xlim(-m, length + m)
 
     formatter = matplotlib.ticker.FuncFormatter(lambda ms, x: strftime('%M:%S', gmtime(ms // 1000)))
     ax.xaxis.set_major_formatter(formatter)
 
-    comp = round(max(1, (map_data["max_bpm"] - map_data["max_bpm"]) / 20), 2)
-    top = round(map_data["max_bpm"], 2) + comp
-    bot = max(round(map_data["max_bpm"], 2) - comp, 0)
+    comp = round(max(1, (map_obj.bpm_max - map_obj.bpm_min) / 20), 2)
+    top = round(map_obj.bpm_max, 2) + comp
+    bot = max(round(map_obj.bpm_min, 2) - comp, 0)
     dist = top - bot
 
     plt.yticks(np.arange(bot, top, dist / 6 - .0001))
@@ -412,21 +503,21 @@ def graph_bpm(map_link, mods, link_type):
 
     round_num = 0 if dist > 10 else 2
 
-    formatter = matplotlib.ticker.FuncFormatter(lambda dig, y: f"{max(dig - .004, 0.0):.{round_num}f}")
+    formatter = matplotlib.ticker.FuncFormatter(lambda dig, y:
+                                                f"{max(dig - .004, 0.0):.{round_num}f}")
     ax.yaxis.set_major_formatter(formatter)
 
     ax.xaxis.grid(False)
-    map_title = map_data['title'] if map_data['title_unicode'] == "" else map_data['title_unicode']
-    map_author = map_data['artist'] if map_data['artist_unicode'] == "" else map_data['artist_unicode']
     width = 85
-    map_text = "\n".join(wrap(f"{map_title} by {map_author}", width=width)) + "\n" + \
-               "\n".join(wrap(f"Mapset by {map_data['creator']}, Difficulty: {map_data['version']}", width=width))
+    map_text = "\n".join(wrap(f"{map_obj.title} by {map_obj.artist}", width=width)) + "\n" + \
+               "\n".join(wrap(f"Mapset by {map_obj.creator}, "
+                              f"Difficulty: {map_obj.version}", width=width))
     plt.title(map_text)
 
     plt.box(False)
 
     image = io.BytesIO()
-    plt.savefig(image)
+    plt.savefig(image, bbox_inches='tight')
     image.seek(0)
 
     plt.clf()
@@ -456,3 +547,83 @@ def get_map_link(link, **kwargs):
 
 def extract_map(link, diff=None):
     pass
+
+
+def stat_play(play, map_obj):
+    map_strains = get_strains(map_obj.beatmap, play.enabled_mods)
+
+    strains, max_strain = map_strains["strains"], map_strains["max_strain"]
+
+
+
+def get_strains(beatmap, mods, mode=""):
+    beatmap.reset()
+    stars = pytan.diff_calc().calc(beatmap, pytan.mods_from_str("".join(
+                               filter(lambda x: x in OsuConsts.DIFF_MODS.value, mods))))
+
+    speed = 1
+    if "DT" in mods:
+        speed *= OsuConsts.DT_SPD.value
+    elif "HT" in mods:
+        speed *= OsuConsts.HT_SPD.value
+
+    aim_strains = calculate_strains(1, beatmap.hitobjects, speed)
+    speed_strains = calculate_strains(0, beatmap.hitobjects, speed)
+
+    star_strains = list()
+    max_strain = 0
+    strain_step = OsuConsts.STRAIN_STEP.value * speed
+    strain_offset = math.floor(beatmap.hitobjects[0].time / strain_step) * strain_step - strain_step
+    max_strain_time = strain_offset
+
+    for i in range(len(aim_strains)):
+        star_strains.append(aim_strains[i] + star_strains[i]
+                            + abs(speed_strains[i] - aim_strains[i])
+                            * OsuConsts.EXTREME_SCALING_FACTOR.value)
+
+    chosen_strains = star_strains
+    total = stars.total
+    if mode == "aim":
+        total = stars.aim
+        chosen_strains = aim_strains
+    if mode == "speed":
+        total = stars.speed
+        chosen_strains = speed_strains
+
+    for j, i in enumerate(chosen_strains):
+        if i > max_strain:
+            max_strain_time = i * OsuConsts.STRAIN_STEP.value + strain_offset
+            max_strain = i
+
+    return {
+                "strains": chosen_strains,
+                "max_strain": max_strain,
+                "max_strain_time": max_strain_time,
+                "max_strain_time_real": max_strain_time * speed,
+                "total": total
+           }
+
+
+def calculate_strains(mode_type, hit_objects, speed_multiplier):
+    strains = list()
+    strain_step = OsuConsts.STRAIN_STEP.value * speed_multiplier
+    interval_emd = math.ceil(hit_objects[0].time / strain_step) * strain_step
+    max_strains = 0.0
+
+    for i in range(len(hit_objects)):
+        while hit_objects[i].time > interval_emd:
+            strains.append(max_strains)
+            if i > 0:
+                decay = OsuConsts.DECAY_BASE[mode_type] ** \
+                        (interval_emd - hit_objects[i - 1].time) / 1000
+                max_strains = hit_objects[i - 1].strains[mode_type] * decay
+            else:
+                max_strains = 0.0
+            interval_emd += strain_step
+
+    strains.append(max_strains)
+    for j, i in enumerate(strains):
+        i *= 9.999
+        strains[j] = math.sqrt(i) * OsuConsts.STAR_SCALING_FACTOR.value
+
+    return strains

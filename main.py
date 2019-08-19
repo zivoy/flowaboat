@@ -1,4 +1,4 @@
-import asyncio, aiohttp, html, sys, socket
+import asyncio, aiohttp, html, socket
 import generateCommandMD
 from utils import *
 

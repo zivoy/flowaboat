@@ -4,6 +4,7 @@
 - [o!od](#ood)
 - [o!osu](#oosu)
 - [o!flowaboat](#oflowaboat)
+- [o!bpm](#obpm)
 - [o!top](#otop)
 - [o!ign-set](#oign-set)
 - [o!cs](#ocs)
@@ -91,6 +92,28 @@ Show information about this bot.
 o!flowaboat
 ```
 Tells you about flowaboat.
+
+
+## o!bpm
+Plot a graph of the bpm over the course of the song
+
+**Required variables**: `0`
+
+**Usage**: `o!bpm [map link] [+mods]`
+
+### Examples:
+
+```
+o!bpm +DT
+```
+Returns BPM graph for the last beatmap with Double time.
+
+
+
+```
+o!bpm https://osu.ppy.sh/beatmapsets/545156#osu/1262906
+```
+Returns a BPM chart for Loose Change [Rohit's Insane].
 
 
 ## o!top

@@ -9,8 +9,8 @@ class Command:
     usage = "[map link] [+mods]"
     examples = [
         {
-            "run": "bpm",
-            "result": "Returns BPM graph for the last beatmap."
+            "run": "bpm +DT",
+            "result": "Returns BPM graph for the last beatmap with Double time."
         },
         {
             "run": "bpm https://osu.ppy.sh/beatmapsets/545156#osu/1262906",
@@ -28,10 +28,11 @@ class Command:
 
         if len(args) > 1 and not args[1].startswith("+"):
             map_link, map_type = osu.get_map_link(args[1])
-            Users().set(message.author.id, "last_beatmap",
-                        {"map": (map_link, map_type), "mods": mods, "completion": 1, "acc": 1})
+            Users().update_last_message(message.author.id, map_link, map_type, mods, 1, 1)
         else:
             map_link, map_type = user_data["last_beatmap"]["map"]
+            if not mods:
+                mods = user_data["last_beatmap"]["mods"]
 
         if map_link is None:
             Log.error("No Map provided")
@@ -40,5 +41,6 @@ class Command:
 
         bpm_graph = osu.graph_bpm(map_link, mods, map_type)
 
-        await message.channel.send(file=bpm_graph.read(), name="BPM Graph.png")
+        Log.log("Posting Graph")
+        await message.channel.send(file=discord.File(bpm_graph, "BPM_Graph.png"))
         bpm_graph.close()

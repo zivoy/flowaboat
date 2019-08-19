@@ -32,15 +32,19 @@ class Command:
             await help_me(message, "ign-set")
             return
 
-        user = get_user(args, user_data["osu_ign"], "osu")
-
-        user_profile = osu.get_user(user)
-
-        if not user_profile[0]:
-            await message.channel.send(user_profile[1])
+        try:
+            user = get_user(args, user_data["osu_ign"], "osu")
+        except UserNonexistent:
+            await message.channel.send("User does not exist")
             return
 
-        profile = user_profile[1][0]
+        try:
+            user_profile = osu.get_user(user)
+        except UserNonexistent as err:
+            await message.channel.send(err)
+            return
+
+        profile = user_profile[0]
 
         grades = \
             f"{osu.get_rank_emoji('XH', client)} {int(profile['count_rank_ssh']):,} " \
@@ -65,7 +69,7 @@ class Command:
                     "url": f"https://osu.ppy.sh/u/{profile['user_id']}"
                 },
                 "footer": {
-                    "text": f"Playing for {arrow.get(profile['join_date'], date_form).humanize()[:-4]} "
+                    "text": f"Playing for {arrow.get(profile['join_date'], date_form).humanize(only_distance=True)} "
                     f"{separator} Joined on {arrow.get(profile['join_date'], date_form).format('D MMMM YYYY')}"
                 },
                 "fields": [

@@ -8,6 +8,14 @@ import arrow
 import math
 
 
+class UserError(Exception):
+    pass
+
+
+class UserNonexistent(UserError):
+    pass
+
+
 class Api:
     def __init__(self, base_url, params=dict()):
         self.url = base_url
@@ -89,13 +97,17 @@ class Users(JasonFile):
         uuid = str(uuid)
         if uuid not in self.users:
             self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign,
-                                "last_beatmap": {"map": (None, None), "mods": [], "completion": 0, "acc": 0},
+                                "last_beatmap": {"map": (None, ""), "mods": [], "completion": 0, "accuracy": 0},
                                 "last_message": None}
             self.save()
 
     def set(self, uuid, item, value):
         self.users[str(uuid)][item] = value
         self.save()
+
+    def update_last_message(self, user, map_link, map_type, mods, completion, accuracy):
+        self.set(user, "last_beatmap",
+                 {"map": (map_link, map_type), "mods": mods, "completion": completion, "accuracy": accuracy})
 
 
 #
@@ -174,7 +186,10 @@ def get_user(args, ign, platfrom):
 
     if name.startswith("<@") and name.endswith(">"):
         if name[2:-1] in Users.users.keys():
-            return Users.users[name[2:-1]][platfrom+"_ign"]
+            try:
+                return Users.users[name[2:-1]][platfrom+"_ign"]
+            except IndexError:
+                raise UserNonexistent
 
     return name
 
@@ -189,6 +204,16 @@ def fetch_emote(emote_name, guild, client):
         Log.error("Not valid emote")
         return False
     return valid[0]
+
+
+def dict_string_to_nums(dictionary):
+    for i, j in dictionary.items():
+        if type(j) == str and j.replace(".", "", 1).isnumeric():
+            num = float(j)
+            if num.is_integer():
+                num = int(num)
+
+            dictionary[i] = num
 
 
 separator = "✦"

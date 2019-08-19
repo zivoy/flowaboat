@@ -16,7 +16,7 @@ class Command:
             "run": "top5 vaxei",
             "result": "Returns Vaxei's #5 top play."
         }]
-    synonyms = [r"top\d+"]
+    synonyms = [r"top\d+", "rb", "recentbest", "ob", "oldbest"]
 
     async def call(self, package):
         message, args, user_data, client = package["message_obj"], package["args"], \
@@ -27,13 +27,31 @@ class Command:
             await help_me(message, "ign-set")
             return
 
-        user = get_user(args, user_data["osu_ign"], "osu")
+        try:
+            user = get_user(args, user_data["osu_ign"], "osu")
+        except UserNonexistent:
+            await message.channel.send("User does not exist")
+            return
 
         index = digits.match(args[0])
+
+        rb = True if args[0] == "rb" or args[0] == "recentbest" else False
+        ob = True if args[0] == "ob" or args[0] == "oldbest" else False
 
         if index is None:
             index = 1
         else:
             index = int(index.captures(1)[0])
 
-        osu.get_top(user, index)
+        try:
+            top_play = osu.get_top(user, index, rb, ob)
+        except osu.NoPlays as err:
+            await message.channel.send(err)
+            return
+
+        Users().update_last_message(message.author.id, top_play.beatmap_id, "id",
+                                    top_play.enabled_mods, 1, top_play.accuracy)
+
+        beatmap = osu.MapStats(top_play.beatmap_id, top_play.enabled_mods, "id")
+
+        osu.stat_play(top_play, beatmap)
