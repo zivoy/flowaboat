@@ -9,6 +9,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import seaborn as sns
 import pandas as pd
+import bezier
+from PIL import Image
 
 import warnings
 from arrow.factory import ArrowParseWarning
@@ -383,7 +385,7 @@ class MapStats:
                 bpm_avg.append((1000 / i.ms_per_beat * 60) * dur)
                 bpm_list.append((1000 / i.ms_per_beat * 60))
 
-        self.speed_multiplier =  speed
+        self.speed_multiplier = speed
         self.artist = bmp.artist
         self.title = bmp.title
         self.artist_unicode = bmp.artist_unicode
@@ -441,7 +443,7 @@ class MapStats:
             for i, j in map_web[0].items():
                 setattr(self, i, j)
             self.submit_date = arrow.get(self.submit_date, date_form)
-            self.approved_date = arrow.get(self.pproved_date, date_form)
+            self.approved_date = arrow.get(self.approved_date, date_form)
             self.last_update = arrow.get(self.last_update, date_form)
 
         self.beatmap = bmp
@@ -545,21 +547,94 @@ def get_map_link(link, **kwargs):
         return extract_map(link, **kwargs), "path"
 
 
-def extract_map(link, diff=None):
-    pass
+def extract_map(mapset_id, diff=None):
+    requests.get(f"https://bloodcat.com/osu/s/{mapset_id}")
 
 
 def stat_play(play, map_obj):
-    map_strains = get_strains(map_obj.beatmap, play.enabled_mods)
+    stain_bar = map_strain_graph(map_obj.beatmap, play.enabled_mods, play.completion)
 
+
+def map_strain_graph(map_obj, mods, progress=1., width=399., height=40., max_chunks=100, low_cut=30.):
+    width = float(width)
+    height = float(height)
+    low_cut = float(low_cut)
+    map_strains = get_strains(map_obj, mods)
     strains, max_strain = map_strains["strains"], map_strains["max_strain"]
 
+    strains_chunks = list()
+    chunk_size = math.ceil(len(strains) / max_chunks)
+
+    for i in range(0, len(strains), chunk_size):
+        strain_part = strains[i:i + chunk_size]
+        strains_chunks.append(max(strain_part))
+
+    x = np.linspace(0, width, num=len(strains_chunks))
+    y = np.minimum(low_cut,
+                   height * 0.125 + height * .875 - np.array([i / max_strain for i in strains_chunks]) * height * .875)
+
+    x = np.insert(x, 0, 0)
+    x = np.insert(x, 0, 0)
+    x = np.append(x, width)
+    x = np.append(x, width)
+    y = np.insert(y, 0, low_cut)
+    y = np.insert(y, 0, low_cut)
+    y = np.append(y, low_cut)
+    y = np.append(y, low_cut)
+    curves = list()
+    curves.append(bezier.Curve(np.asfortranarray([[0.0, 0.0], [height, low_cut]]), degree=1))
+    for i in range(1, len(y) - 1):
+        node = np.asfortranarray([
+            [avgpt(x, i - 1), x[i], avgpt(x, i)],
+            [avgpt(y, i - 1), y[i], avgpt(y, i)]]
+        )
+        curves.append(
+            bezier.Curve(node, degree=2)
+        )
+    curves.append(bezier.Curve(np.asfortranarray([[width, width], [low_cut, height]]), degree=1))
+    curves.append(bezier.Curve(np.asfortranarray([[width, 0.0], [height, height]]), degree=1))
+    polygon = bezier.CurvedPolygon(*curves)
+
+    _, ax = plt.subplots(figsize=(width, height), dpi=1)
+    polygon.plot(pts_per_edge=100, color=(240 / 255, 98 / 255, 146 / 255, 1), ax=ax)
+    plt.xlim(0, width)
+    plt.ylim(height, 0)
+    plt.axis('off')
+    plt.box(False)
+
+    image = io.BytesIO()
+    fig1 = plt.gcf()
+    fig1.savefig(image, bbox_inches='tight', transparent=True)
+    image.seek(0)
+    plt.clf()
+    plt.close()
+
+    img = Image.open(image)
+    data = np.array(img)
+    for j in data:
+        for pos, i in enumerate(j):
+            if pos > len(j) * progress:
+                j[pos] = i / 1.5
+
+            if i[3] != 0:
+                j[pos][3] = i[3] / 159 * 255
+
+    img = Image.fromarray(data)
+    image.close()
+    image = io.BytesIO()
+    img.save(image, "png")
+    image.seek(0)
+
+    return image
+
+
+def avgpt(points, index):
+    return (points[index] + points[index + 1]) / 2
 
 
 def get_strains(beatmap, mods, mode=""):
-    beatmap.reset()
     stars = pytan.diff_calc().calc(beatmap, pytan.mods_from_str("".join(
-                               filter(lambda x: x in OsuConsts.DIFF_MODS.value, mods))))
+        filter(lambda x: x in OsuConsts.DIFF_MODS.value, mods))))
 
     speed = 1
     if "DT" in mods:
@@ -577,7 +652,7 @@ def get_strains(beatmap, mods, mode=""):
     max_strain_time = strain_offset
 
     for i in range(len(aim_strains)):
-        star_strains.append(aim_strains[i] + star_strains[i]
+        star_strains.append(aim_strains[i] + speed_strains[i]
                             + abs(speed_strains[i] - aim_strains[i])
                             * OsuConsts.EXTREME_SCALING_FACTOR.value)
 
@@ -590,18 +665,18 @@ def get_strains(beatmap, mods, mode=""):
         total = stars.speed
         chosen_strains = speed_strains
 
-    for j, i in enumerate(chosen_strains):
+    for i in chosen_strains:
         if i > max_strain:
             max_strain_time = i * OsuConsts.STRAIN_STEP.value + strain_offset
             max_strain = i
 
     return {
-                "strains": chosen_strains,
-                "max_strain": max_strain,
-                "max_strain_time": max_strain_time,
-                "max_strain_time_real": max_strain_time * speed,
-                "total": total
-           }
+        "strains": chosen_strains,
+        "max_strain": max_strain,
+        "max_strain_time": max_strain_time,
+        "max_strain_time_real": max_strain_time * speed,
+        "total": total
+    }
 
 
 def calculate_strains(mode_type, hit_objects, speed_multiplier):
@@ -614,12 +689,13 @@ def calculate_strains(mode_type, hit_objects, speed_multiplier):
         while hit_objects[i].time > interval_emd:
             strains.append(max_strains)
             if i > 0:
-                decay = OsuConsts.DECAY_BASE[mode_type] ** \
+                decay = OsuConsts.DECAY_BASE.value[mode_type] ** \
                         (interval_emd - hit_objects[i - 1].time) / 1000
                 max_strains = hit_objects[i - 1].strains[mode_type] * decay
             else:
                 max_strains = 0.0
             interval_emd += strain_step
+        max_strains = max(max_strains, hit_objects[i].strains[mode_type])
 
     strains.append(max_strains)
     for j, i in enumerate(strains):

@@ -1,3 +1,8 @@
+matplotlib
+numpy
+seaborn
+pandas
+bezier
 discord.py
 requests
 aiohttp
