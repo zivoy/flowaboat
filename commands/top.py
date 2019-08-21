@@ -52,4 +52,15 @@ class Command:
         Users().update_last_message(message.author.id, top_play.beatmap_id, "id",
                                     top_play.enabled_mods, 1, top_play.accuracy)
 
-        osuUtils.stat_play(top_play)
+        try:
+            play_data = osuUtils.stat_play(top_play)
+        except Exception as err:
+            await message.channel.send(err)
+            Log.error(err)
+            return
+
+        embed = osuUtils.embed_play(play_data, client)
+        graph = discord.File(play_data.strain_bar, "strains_bar.png")
+
+        await message.channel.send(file=graph, embed=embed)
+        Log.log(f"Returning top play {index} for {user}")

@@ -3,7 +3,7 @@ from utils import *
 import pyttanko as pytan
 import io
 from textwrap import wrap
-from time import strftime, gmtime
+from time import strftime, gmtime, time
 import matplotlib
 from matplotlib import pyplot as plt
 import numpy as np
@@ -92,8 +92,8 @@ class OsuConsts(Enum):
 
     R_MODS = {v: k for k, v in MODS.items()}
 
-    DIFF_MODS = ["HR", "EZ", "DT", "HT"]
-    TIME_MODS = ["DT", "HT"]
+    DIFF_MODS = ["HR", "EZ", "DT", "HT", "NC", "FL", "HD", "NF"]
+    TIME_MODS = ["DT", "HT", "NC"]
 
     AR_MS_STEP1 = 120
     AR_MS_STEP2 = 150
@@ -133,7 +133,6 @@ class Play:
     def __init__(self, play_dict):
         dict_string_to_nums(play_dict)
 
-        self.beatmap_id = play_dict["beatmap_id"]
         self.score = play_dict["score"]
         self.maxcombo = play_dict["maxcombo"]
         self.countmiss = play_dict["countmiss"]
@@ -147,6 +146,11 @@ class Play:
         self.rank = play_dict["rank"]
         self.pp = play_dict["pp"]
         self.accuracy = pytan.acc_calc(self.count300, self.count100, self.count50, self.countmiss)
+
+        if "beatmap_id" in play_dict:
+            self.beatmap_id = play_dict["beatmap_id"]
+        else:
+            self.beatmap_id = 0
 
         if "replay_available" in play_dict:
             self.replay_available = play_dict["replay_available"]
@@ -169,13 +173,9 @@ class CalculateMods:
         Log.log(self.mods)
 
     def ar(self, raw_ar):
-        speed = 1
         ar_multiplier = 1
 
-        if "DT" in self.mods:
-            speed *= OsuConsts.DT_SPD.value
-        elif "HT" in self.mods:
-            speed *= OsuConsts.HT_SPD.value
+        speed = speed_multiplier(self.mods)
 
         if "HR" in self.mods:
             ar_multiplier *= OsuConsts.HR_AR.value
@@ -265,7 +265,27 @@ def parse_mods_string(mods):
     return list(set(matches))
 
 
+def sanitize_mods(mods):
+    if "NC" in mods and "DT" in mods:
+        mods.remove("DT")
+    if "PF" in mods and "SD" in mods:
+        mods.remove("SD")
+    return mods
+
+
+def speed_multiplier(mods):
+    speed = 1
+    if "DT" in mods or "NC" in mods:
+        speed *= OsuConsts.DT_SPD.value
+    elif "HT" in mods:
+        speed *= OsuConsts.HT_SPD.value
+    return speed
+
+
 def mod_int(mod_list):
+    mod_list = set(mod_list)
+    if "NC" in mod_list:
+        mod_list.add("DT")
     return pytan.mods_from_str("".join(filter(lambda x: x in OsuConsts.DIFF_MODS.value, mod_list)))
 
 
@@ -310,6 +330,7 @@ def get_user_map_best(beatmap_id, user, enabled_mods=0):
 
     for i in range(len(response)):
         response[i] = Play(response[i])
+        response[i].beatmap_id = beatmap_id
 
     return response
 
@@ -376,7 +397,7 @@ def get_top(user, index, rb=False, ob=False):
 
     recent_raw = response[index - 1]
 
-    return Play(recent_raw)
+    return recent_raw
 
 
 class MapStats:
@@ -409,11 +430,7 @@ class MapStats:
         if not bmp.hitobjects:
             raise BadMapFile
 
-        speed = 1
-        if "DT" in mods:
-            speed *= OsuConsts.DT_SPD.value
-        elif "HT" in mods:
-            speed *= OsuConsts.HT_SPD.value
+        speed = speed_multiplier(mods)
 
         map_creator = get_user(bmp.creator)[0]
         map_calc = pytan.diff_calc().calc(bmp, mod_int(mods))
@@ -440,11 +457,11 @@ class MapStats:
         self.version = bmp.version
         self.bpm_min = min(bpm_list) * speed
         self.bpm_max = max(bpm_list) * speed
-        self.bpm = sum(bpm_avg) / (length - bmp.hitobjects[0].time) * speed
         self.total_length = (length - bmp.hitobjects[0].time) / 1000 / speed
-        self.max_combo = bmp.max_combo()
+        self.max_combo = None
         self.creator = bmp.creator
         self.creator_id = map_creator["user_id"]
+        self.map_creator = Dict(map_creator)
         self.base_cs = bmp.cs
         self.base_ar = bmp.ar
         self.base_od = bmp.od
@@ -455,9 +472,6 @@ class MapStats:
         self.hp = diff.hp(bmp.hp)[0]
         self.mode = bmp.mode
 
-        self.aim_stars = map_calc.aim_difficulty
-        self.speed_stars = map_calc.speed_difficulty
-        self.total = map_calc.total
         self.hit_objects = len(bmp.hitobjects)
         self.count_normal = bmp.ncircles
         self.count_slider = bmp.nsliders
@@ -498,6 +512,12 @@ class MapStats:
         except NoLeaderBoard:
             self.leaderboard = []
 
+        if self.max_combo is None:
+            self.max_combo = bmp.max_combo()
+        self.aim_stars = map_calc.aim
+        self.speed_stars = map_calc.speed
+        self.total = map_calc.total
+        self.bpm = sum(bpm_avg) / (length - bmp.hitobjects[0].time) * speed
         self.beatmap = bmp
 
 
@@ -610,12 +630,12 @@ def stat_play(play):
     else:
         completion = 1
 
-    strain_bar = map_strain_graph(map_obj.beatmap, play.enabled_mods, play.completion)
+    strain_bar = map_strain_graph(map_obj.beatmap, play.enabled_mods, completion)
     try:
         user_leaderboard = get_user_best(play.user_id)
         map_leaderboard = map_obj.leaderboard
-        best_score = get_user_map_best(play.beatmap_id, play.user_id, play.enabled_mods)
-        user = get_user(play.user_id)
+        best_score = get_user_map_best(play.beatmap_id, play.user_id, play.enabled_mods)[0]
+        user = get_user(play.user_id)[0]
     except Exception as err:
         Log.error(err)
         return
@@ -640,13 +660,13 @@ def stat_play(play):
     recent.lb = 0
     replay = 0
 
-    for i in user_leaderboard:
+    for j, i in enumerate(user_leaderboard):
         if compare_scores(i, play):
-            recent.pb += 1
+            recent.pb = j + 1
             break
-    for i in map_leaderboard:
+    for j, i in enumerate(map_leaderboard):
         if compare_scores(i, play):
-            recent.lb += 1
+            recent.lb = j + 1
             break
 
     recent.username = user["username"]
@@ -654,7 +674,7 @@ def stat_play(play):
     recent.user_pp = user["pp_raw"]
 
     if best_score:
-        if compare_scores(play, best_score[0]):
+        if compare_scores(play, best_score):
             replay = best_score.replay_available
             recent.score_id = best_score.score_id
         else:
@@ -683,7 +703,6 @@ def stat_play(play):
         n100=play.count100,
         n50=play.count50,
         mods=mod_int(play.enabled_mods),
-        combo=play.maxcombo,
         ncircles=map_obj.count_normal,
         nsliders=map_obj.count_spinner,
         nobjects=map_obj.hit_objects,
@@ -698,10 +717,13 @@ def stat_play(play):
         recent.pp = pp
 
     if replay:
-        pass
-        # TODO: make osr parser
-    
-    return recent, strain_bar
+        recent.ur = 0
+        # TODO: make osr parser for unstable rate
+
+    recent.strain_bar = strain_bar
+    recent.map_obj = map_obj
+
+    return recent
 
 
 def compare_scores(a, b):
@@ -714,7 +736,7 @@ def compare_scores(a, b):
     return True
 
 
-def map_strain_graph(map_obj, mods, progress=1., width=399., height=40., max_chunks=100, low_cut=30., mode=""):
+def map_strain_graph(map_obj, mods, progress=1., mode="", width=399., height=40., max_chunks=100, low_cut=30.):
     width = float(width)
     height = float(height)
     low_cut = float(low_cut)
@@ -754,7 +776,7 @@ def map_strain_graph(map_obj, mods, progress=1., width=399., height=40., max_chu
     curves.append(bezier.Curve(np.asfortranarray([[width, 0.0], [height, height]]), degree=1))
     polygon = bezier.CurvedPolygon(*curves)
 
-    _, ax = plt.subplots(figsize=(width, height), dpi=1)
+    _, ax = plt.subplots(figsize=(round(width + width*.30), round(height + height*.30)), dpi=1)
     polygon.plot(pts_per_edge=200, color=(240 / 255, 98 / 255, 146 / 255, 1), ax=ax)
     plt.xlim(0, width)
     plt.ylim(height, 0)
@@ -763,7 +785,7 @@ def map_strain_graph(map_obj, mods, progress=1., width=399., height=40., max_chu
 
     image = io.BytesIO()
     fig1 = plt.gcf()
-    fig1.savefig(image, bbox_inches='tight', transparent=True)
+    fig1.savefig(image, bbox_inches='tight', transparent=True, pad_inches=0, dpi=1)
     image.seek(0)
     plt.clf()
     plt.close()
@@ -794,11 +816,7 @@ def avgpt(points, index):
 def get_strains(beatmap, mods, mode=""):
     stars = pytan.diff_calc().calc(beatmap, mod_int(mods))
 
-    speed = 1
-    if "DT" in mods:
-        speed *= OsuConsts.DT_SPD.value
-    elif "HT" in mods:
-        speed *= OsuConsts.HT_SPD.value
+    speed = speed_multiplier(mods)
 
     aim_strains = calculate_strains(1, beatmap.hitobjects, speed)
     speed_strains = calculate_strains(0, beatmap.hitobjects, speed)
@@ -861,3 +879,103 @@ def calculate_strains(mode_type, hit_objects, speed_multiplier):
         strains[j] = math.sqrt(i) * OsuConsts.STAR_SCALING_FACTOR.value
 
     return strains
+
+
+def embed_play(play_stats, client):
+    desc = ""
+    if play_stats.pb:
+        desc = f"**__#{play_stats.pb} Top Play!__**"
+    embed = discord.Embed(description=desc,
+                          url=f"https://osu.ppy.sh/b/{play_stats.beatmap_id}",
+                          title=f"{play_stats.map_obj.artist} – {play_stats.map_obj.title} [{play_stats.map_obj.version}]",
+                          color=0xbb5577)
+
+    embed.set_author(url=f"https://osu.ppy.sh/u/{play_stats.user_id}",
+                     name=f"{play_stats.username} – {play_stats.user_pp:,}pp "
+                          f"(#{play_stats.user_rank:,})",
+                     icon_url=f"https://a.ppy.sh/{play_stats.user_id}?{int(time())}")
+
+    embed.set_image(url="attachment://strains_bar.png")
+
+    ranked_text = "Submitted"
+    approved = play_stats.map_obj.approved
+    if approved == 1:
+        ranked_text = "Ranked"
+    elif approved == 2:
+        ranked_text = "Approved"
+    elif approved == 3:
+        ranked_text = "Qualified"
+    elif approved == 4:
+        ranked_text = "Loved"
+
+    embed.set_footer(icon_url=f"https://a.ppy.sh/{play_stats.map_obj.creator_id}?{int(time())}",
+                     text=f"Mapped by {play_stats.map_obj.creator} {separator} {ranked_text} on "
+                          f"{play_stats.map_obj.approved_date.format('D MMMM YYYY')}")
+
+    embed.set_thumbnail(url=f"https://b.ppy.sh/thumb/{play_stats.map_obj.beatmapset_id}l.jpg")
+
+    play_results = f"{get_rank_emoji(play_stats.rank, client)} {separator} "
+    if len(play_stats.mods) > 0:
+        play_results += f"+{','.join(sanitize_mods(play_stats.mods))} {separator} "
+
+    if play_stats.lb > 0:
+        play_results += f"r#{play_stats.lb} {separator} "
+
+    play_results += f"{play_stats.score:,} {separator} " \
+                    f"{format_nums(play_stats.acc,2)}% {separator} " \
+                    f"{play_stats.date.humanize()}"
+
+    if play_stats.pp_fc > play_stats.pp:
+        perfomacne = f"**{'*' if play_stats.unsubmitted else ''}{format_nums(play_stats.pp,2):,}" \
+                     f"pp**{'*' if play_stats.unsubmitted else ''} ➔ {format_nums(play_stats.pp_fc,2):,}pp for " \
+                     f"{format_nums(play_stats.acc_fc, 2)}% FC {separator} "
+    else:
+        perfomacne = f"**{format_nums(play_stats.pp,2):,}pp** {separator} "
+
+    if play_stats.combo < play_stats.map_obj.max_combo:
+        perfomacne += f"{play_stats.combo:,}/{play_stats.map_obj.max_combo:,}x"
+    else:
+        perfomacne += f"{play_stats.map_obj.max_combo:,}x"
+
+    if play_stats.pp_fc > play_stats.pp:
+        perfomacne += "\n"
+    elif play_stats.ur or play_stats.count100 or play_stats.count50 or play_stats.countmiss:
+        perfomacne += f" {separator} "
+
+    if play_stats.count100 > 0:
+        perfomacne += f"{play_stats.count100}x100"
+
+    if play_stats.count50 > 0:
+        if play_stats.count100 > 0:
+            perfomacne += f" {separator} "
+        perfomacne += f"{play_stats.count50}x50"
+
+    if play_stats.countmiss > 0:
+        if play_stats.count100 > 0 or play_stats.count50 > 0:
+            perfomacne += f" {separator} "
+        perfomacne += f"{play_stats.countmiss}xMiss"
+
+    if play_stats.ur is not None and play_stats.ur > 0:
+        pass
+        # TODO: implrmrnt UR and CV
+
+    embed.add_field(name=play_results, value=perfomacne)
+
+    beatmap_info = f"{arrow.Arrow(2019, 1, 1).shift(seconds=play_stats.map_obj.total_length).format('mm:ss')} ~ " \
+                   f"CS**{format_nums(play_stats.map_obj.cs, 1)}** " \
+                   f"AR**{format_nums(play_stats.map_obj.ar, 1)}** " \
+                   f"OD**{format_nums(play_stats.map_obj.od, 1)}** " \
+                   f"HP**{format_nums(play_stats.map_obj.hp, 1)}** ~ "
+
+    if play_stats.map_obj.bpm_min != play_stats.map_obj.bpm_max:
+        beatmap_info += f"{format_nums(play_stats.map_obj.bpm_min,1)}-{format_nums(play_stats.map_obj.bpm_max,1)} " \
+                        f"(**{format_nums(play_stats.map_obj.bpm,1)}**) "
+    else:
+        beatmap_info += f"**{format_nums(play_stats.map_obj.bpm,1)}** "
+
+    beatmap_info += f"BPM ~ " \
+                    f"**{format_nums(play_stats.stars,2)}**★"
+
+    embed.add_field(name="Beatmap Information", value=beatmap_info)
+
+    return embed

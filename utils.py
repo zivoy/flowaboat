@@ -268,6 +268,13 @@ def dict_string_to_nums(dictionary):
     return dictionary
 
 
+def format_nums(number, decimals):
+    if float(number).is_integer():
+        return int(f"{number:.0f}")
+    else:
+        return float(f"{number:.{decimals}f}")
+
+
 separator = "✦"
 
 digits = regex.compile(r"^\D+(\d+)$")

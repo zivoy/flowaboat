@@ -2,11 +2,6 @@ from utils import *
 from time import time
 import osuUtils
 
-import warnings
-from arrow.factory import ArrowParseWarning
-
-warnings.simplefilter("ignore", ArrowParseWarning)
-
 
 class Command:
     command = "osu"
@@ -69,8 +64,8 @@ class Command:
                     "url": f"https://osu.ppy.sh/u/{profile['user_id']}"
                 },
                 "footer": {
-                    "text": f"Playing for {arrow.get(profile['join_date'], date_form).humanize(only_distance=True)} "
-                    f"{separator} Joined on {arrow.get(profile['join_date'], date_form).format('D MMMM YYYY')}"
+                    "text": f"Playing for {profile['join_date'].humanize(only_distance=True)} "
+                    f"{separator} Joined on {profile['join_date'].format('D MMMM YYYY')}"
                 },
                 "fields": [
                     {
