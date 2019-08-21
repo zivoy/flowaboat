@@ -17,19 +17,34 @@ class UserNonexistent(UserError):
 
 
 class Api:
-    def __init__(self, base_url, params=dict()):
+    def __init__(self, base_url, max_requests_per_minute, params=dict()):
         self.url = base_url
         self.params = params
+        self.max_requests = max_requests_per_minute
+        self.actions = list()
+
+    def clear_queue(self):
+        for i in self.actions.copy():
+            if (arrow.utcnow() - i).seconds >= 60:
+                self.actions.pop(0)
+            else:
+                break
 
     def get(self, url, params=None, **kwargs):
-        url = self.url + url
-        if params is not None:
-            for k, j in self.params.items():
-                params[k] = j
-        elif self.params != {}:
-            params = self.params
+        self.clear_queue()
 
-        return requests.get(url, params, **kwargs)
+        if len(self.actions) <= self.max_requests:
+            url = self.url + url
+            if params is not None:
+                for k, j in self.params.items():
+                    params[k] = j
+            elif self.params != {}:
+                params = self.params
+            self.actions.append(arrow.utcnow())
+            return requests.get(url, params, **kwargs)
+        else:
+            sleep(max(60.1 - (arrow.utcnow() - self.actions[0]).seconds, 0))
+            return self.get(url, params, **kwargs)
 
 
 class JasonFile:
