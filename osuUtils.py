@@ -11,13 +11,14 @@ import seaborn as sns
 import pandas as pd
 import bezier
 from PIL import Image
+import math
 
 import warnings
 from arrow.factory import ArrowParseWarning
 
 warnings.simplefilter("ignore", ArrowParseWarning)
 
-osu_api = Api("https://osu.ppy.sh/api", {"k": Config.credentials.osu_api_key})
+osu_api = Api("https://osu.ppy.sh/api", 60, {"k": Config.credentials.osu_api_key})
 
 parser = pytan.parser()
 
@@ -43,6 +44,14 @@ class NoPlays(UserError):
 
 
 class BadMapObject(MapError):
+    pass
+
+
+class NoLeaderBoard(MapError):
+    pass
+
+
+class NoScore(UserError):
     pass
 
 
@@ -129,8 +138,8 @@ class Play:
         self.maxcombo = play_dict["maxcombo"]
         self.countmiss = play_dict["countmiss"]
         self.count50 = play_dict["count50"]
-        self.count100 = play_dict["count100"] + play_dict["countkatu"]
-        self.count300 = play_dict["count300"] + play_dict["countgeki"]
+        self.count100 = play_dict["count100"]  # + play_dict["countkatu"]
+        self.count300 = play_dict["count300"]  # + play_dict["countgeki"]
         self.perfect = play_dict["perfect"]
         self.enabled_mods = parse_mods_string(pytan.mods_str(play_dict["enabled_mods"]))
         self.user_id = play_dict["user_id"]
@@ -138,11 +147,6 @@ class Play:
         self.rank = play_dict["rank"]
         self.pp = play_dict["pp"]
         self.accuracy = pytan.acc_calc(self.count300, self.count100, self.count50, self.countmiss)
-
-        if self.rank.upper() == "F":
-            self.completion = (self.count300 + self.count100 + self.count50 + self.countmiss) / self.maxcombo
-        else:
-            self.completion = 1
 
         if "replay_available" in play_dict:
             self.replay_available = play_dict["replay_available"]
@@ -261,6 +265,10 @@ def parse_mods_string(mods):
     return list(set(matches))
 
 
+def mod_int(mod_list):
+    return pytan.mods_from_str("".join(filter(lambda x: x in OsuConsts.DIFF_MODS.value, mod_list)))
+
+
 def get_user(user):
     response = osu_api.get('/get_user', {"u": user})
     response = response.json()
@@ -268,7 +276,55 @@ def get_user(user):
     Log.log(response)
 
     if len(response) == 0:
-        raise UserNonexistent("Couldn't find user")
+        raise UserNonexistent(f"Couldn't find user: {user}")
+
+    for i in range(len(response)):
+        response[i]["join_date"] = arrow.get(response[i]["join_date"], date_form)
+        dict_string_to_nums(response[i])
+
+    return response
+
+
+def get_leaderboard(beatmap_id, limit=100):
+    response = osu_api.get('/get_scores', {"b": beatmap_id, "limit": limit}).json()
+
+    Log.log(response)
+
+    if len(response) == 0:
+        raise NoLeaderBoard("Couldn't find leader board for this beatmap")
+
+    for i in range(len(response)):
+        response[i]["beatmap_id"] = beatmap_id
+        response[i] = Play(response[i])
+
+    return response
+
+
+def get_user_map_best(beatmap_id, user, enabled_mods=0):
+    response = osu_api.get('/get_scores', {"b": beatmap_id, "u": user, "mods": enabled_mods}).json()
+
+    Log.log(response)
+
+    # if len(response) == 0:
+    #     raise NoScore("Couldn't find user score for this beatmap")
+
+    for i in range(len(response)):
+        response[i] = Play(response[i])
+
+    return response
+
+
+def get_user_best(user, limit=100):
+    response = osu_api.get('/get_user_best', {"u": user, "limit": limit})
+    response = response.json()
+
+    Log.log(response)
+
+    if len(response) == 0:
+        raise NoPlays(f"No top plays found for {user}")
+
+    for i in range(len(response)):
+        response[i] = Play(response[i])
 
     return response
 
@@ -308,21 +364,12 @@ def get_rank_emoji(rank, client):
 def get_top(user, index, rb=False, ob=False):
     index = min(max(index, 1), 100)
     limit = 100 if rb or ob else index
-    response = osu_api.get('/get_user_best', {"u": user, "limit": limit})
-    response = response.json()
-
-    Log.log(response)
-
-    if len(response) == 0:
-        raise NoPlays(f"No top plays found for {user}")
-
-    for i in range(len(response)):
-        response[i]["date"] = arrow.get(response[i]["date"], date_form)
+    response = get_user_best(user, limit)
 
     if rb:
-        response = sorted(response, key=lambda k: k["date"], reverse=True)
-    if ob:
         response = sorted(response, key=lambda k: k["date"])
+    if ob:
+        response = sorted(response, key=lambda k: k["date"], reverse=True)
 
     if len(response) < index:
         index = len(response)
@@ -368,8 +415,8 @@ class MapStats:
         elif "HT" in mods:
             speed *= OsuConsts.HT_SPD.value
 
-        map_creator = osu_api.get("/get_user", {"u": bmp.creator}).json()[0]
-        map_calc = pytan.diff_calc().calc(bmp, pytan.mods_from_str("".join(mods)))
+        map_creator = get_user(bmp.creator)[0]
+        map_calc = pytan.diff_calc().calc(bmp, mod_int(mods))
         diff = CalculateMods(mods)
 
         length = bmp.hitobjects[-1].time
@@ -411,6 +458,7 @@ class MapStats:
         self.aim_stars = map_calc.aim_difficulty
         self.speed_stars = map_calc.speed_difficulty
         self.total = map_calc.total
+        self.hit_objects = len(bmp.hitobjects)
         self.count_normal = bmp.ncircles
         self.count_slider = bmp.nsliders
         self.count_spinner = bmp.nspinners
@@ -434,8 +482,7 @@ class MapStats:
             self.download_unavailable = 0
             self.audio_unavailable = 0
 
-            mods_applied = pytan.mods_from_str(
-                "".join([i for i in mods if i.upper() in OsuConsts.DIFF_MODS.value]))
+            mods_applied = mod_int(mods)
             map_web = osu_api.get("/get_beatmaps", {"b": map_id, "mods": mods_applied}).json()
             if not map_web:
                 raise BadId
@@ -445,6 +492,11 @@ class MapStats:
             self.submit_date = arrow.get(self.submit_date, date_form)
             self.approved_date = arrow.get(self.approved_date, date_form)
             self.last_update = arrow.get(self.last_update, date_form)
+
+        try:
+            self.leaderboard = get_leaderboard(map_id)
+        except NoLeaderBoard:
+            self.leaderboard = []
 
         self.beatmap = bmp
 
@@ -551,15 +603,122 @@ def extract_map(mapset_id, diff=None):
     requests.get(f"https://bloodcat.com/osu/s/{mapset_id}")
 
 
-def stat_play(play, map_obj):
-    stain_bar = map_strain_graph(map_obj.beatmap, play.enabled_mods, play.completion)
+def stat_play(play):
+    map_obj = MapStats(play.beatmap_id, play.enabled_mods, "id")
+    if play.rank.upper() == "F":
+        completion = (play.count300 + play.count100 + play.count50 + play.countmiss) / map_obj.hit_objects
+    else:
+        completion = 1
+
+    strain_bar = map_strain_graph(map_obj.beatmap, play.enabled_mods, play.completion)
+    try:
+        user_leaderboard = get_user_best(play.user_id)
+        map_leaderboard = map_obj.leaderboard
+        best_score = get_user_map_best(play.beatmap_id, play.user_id, play.enabled_mods)
+        user = get_user(play.user_id)
+    except Exception as err:
+        Log.error(err)
+        return
+
+    recent = Dict({
+        "user_id": play.user_id,
+        "beatmap_id": play.beatmap_id,
+        "rank": play.rank,
+        "score": play.score,
+        "combo": play.maxcombo,
+        "count300": play.count300,
+        "count100": play.count100,
+        "count50": play.count50,
+        "countmiss": play.countmiss,
+        "mods": play.enabled_mods,
+        "date": play.date,
+        "unsubmitted": False,
+        "pp": play.pp
+    })
+
+    recent.pb = 0
+    recent.lb = 0
+    replay = 0
+
+    for i in user_leaderboard:
+        if compare_scores(i, play):
+            recent.pb += 1
+            break
+    for i in map_leaderboard:
+        if compare_scores(i, play):
+            recent.lb += 1
+            break
+
+    recent.username = user["username"]
+    recent.user_rank = user["pp_rank"]
+    recent.user_pp = user["pp_raw"]
+
+    if best_score:
+        if compare_scores(play, best_score[0]):
+            replay = best_score.replay_available
+            recent.score_id = best_score.score_id
+        else:
+            recent.unsubmitted = True
+
+    pp, _, _, _, acc = pytan.ppv2(
+        aim_stars=map_obj.aim_stars,
+        speed_stars=map_obj.speed_stars,
+        base_ar=map_obj.ar,
+        base_od=map_obj.od,
+        n100=play.count100,
+        n50=play.count50,
+        nmiss=play.countmiss,
+        mods=mod_int(play.enabled_mods),
+        combo=play.maxcombo,
+        ncircles=map_obj.count_normal,
+        nsliders=map_obj.count_spinner,
+        nobjects=map_obj.hit_objects,
+        max_combo=map_obj.max_combo)
+
+    pp_fc, _, _, _, acc_fc = pytan.ppv2(
+        aim_stars=map_obj.aim_stars,
+        speed_stars=map_obj.speed_stars,
+        base_ar=map_obj.ar,
+        base_od=map_obj.od,
+        n100=play.count100,
+        n50=play.count50,
+        mods=mod_int(play.enabled_mods),
+        combo=play.maxcombo,
+        ncircles=map_obj.count_normal,
+        nsliders=map_obj.count_spinner,
+        nobjects=map_obj.hit_objects,
+        max_combo=map_obj.max_combo)
+
+    recent.stars = map_obj.total
+    recent.pp_fc = pp_fc
+    recent.acc = acc
+    recent.acc_fc = acc_fc
+
+    if recent.pp is None:
+        recent.pp = pp
+
+    if replay:
+        pass
+        # TODO: make osr parser
+    
+    return recent, strain_bar
 
 
-def map_strain_graph(map_obj, mods, progress=1., width=399., height=40., max_chunks=100, low_cut=30.):
+def compare_scores(a, b):
+    if a.date != b.date:
+        return False
+
+    if a.user_id != b.user_id:
+        return False
+
+    return True
+
+
+def map_strain_graph(map_obj, mods, progress=1., width=399., height=40., max_chunks=100, low_cut=30., mode=""):
     width = float(width)
     height = float(height)
     low_cut = float(low_cut)
-    map_strains = get_strains(map_obj, mods)
+    map_strains = get_strains(map_obj, mods, mode)
     strains, max_strain = map_strains["strains"], map_strains["max_strain"]
 
     strains_chunks = list()
@@ -596,7 +755,7 @@ def map_strain_graph(map_obj, mods, progress=1., width=399., height=40., max_chu
     polygon = bezier.CurvedPolygon(*curves)
 
     _, ax = plt.subplots(figsize=(width, height), dpi=1)
-    polygon.plot(pts_per_edge=100, color=(240 / 255, 98 / 255, 146 / 255, 1), ax=ax)
+    polygon.plot(pts_per_edge=200, color=(240 / 255, 98 / 255, 146 / 255, 1), ax=ax)
     plt.xlim(0, width)
     plt.ylim(height, 0)
     plt.axis('off')
@@ -633,8 +792,7 @@ def avgpt(points, index):
 
 
 def get_strains(beatmap, mods, mode=""):
-    stars = pytan.diff_calc().calc(beatmap, pytan.mods_from_str("".join(
-        filter(lambda x: x in OsuConsts.DIFF_MODS.value, mods))))
+    stars = pytan.diff_calc().calc(beatmap, mod_int(mods))
 
     speed = 1
     if "DT" in mods:

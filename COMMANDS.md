@@ -125,7 +125,7 @@ Show a specific top play.
 
 #### Synonyms:
 
-`o!top\d+`
+`o!top\d+`, `o!rb`, `o!recentbest`, `o!ob`, `o!oldbest`
 
 ### Examples:
 

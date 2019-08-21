@@ -1,5 +1,5 @@
 from utils import *
-import osu
+import osuUtils
 
 
 class Command:
@@ -44,14 +44,12 @@ class Command:
             index = int(index.captures(1)[0])
 
         try:
-            top_play = osu.get_top(user, index, rb, ob)
-        except osu.NoPlays as err:
+            top_play = osuUtils.get_top(user, index, rb, ob)
+        except osuUtils.NoPlays as err:
             await message.channel.send(err)
             return
 
         Users().update_last_message(message.author.id, top_play.beatmap_id, "id",
                                     top_play.enabled_mods, 1, top_play.accuracy)
 
-        beatmap = osu.MapStats(top_play.beatmap_id, top_play.enabled_mods, "id")
-
-        osu.stat_play(top_play, beatmap)
+        osuUtils.stat_play(top_play)

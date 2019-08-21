@@ -1,5 +1,5 @@
 from utils import *
-import osu
+import osuUtils
 
 
 class Command:
@@ -34,7 +34,7 @@ class Command:
 
         mods = args[2].upper() if len(args) > 2 else ""
 
-        new_hp, mod_list = osu.CalculateMods(mods).hp(hp)
+        new_hp, mod_list = osuUtils.CalculateMods(mods).hp(hp)
 
         output = ""
 

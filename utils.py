@@ -5,7 +5,7 @@ import discord
 import requests
 import regex
 import arrow
-import math
+from time import sleep
 
 
 class UserError(Exception):
@@ -131,20 +131,56 @@ class Users(JasonFile):
 Config().load()
 Users().load()
 
+
 #
 
 
-class Loging:
-    def log(self, *args):
+class Log:
+    @staticmethod
+    def log(*args):
         msg = f"{arrow.utcnow().isoformat()}: " + " ".join([str(i) for i in args])
         print(msg)
 
-    def error(self, *args):
+    @staticmethod
+    def error(*args):
         msg = f"{arrow.utcnow().isoformat()} -- ERROR -- : " + " ".join([str(i) for i in args])
         print(msg)
 
 
-Log = Loging()
+class Dict(dict):
+    def __init__(self, *args, **kwargs):
+        super(Dict, self).__init__(*args, **kwargs)
+        for arg in args:
+            if isinstance(arg, dict):
+                for k, v in arg.items():
+                    if isinstance(v, dict):
+                        self[k] = Dict(v)
+                    else:
+                        self[k] = v
+
+        if kwargs:
+            for k, v in kwargs.items():
+                if isinstance(v, dict):
+                    self[k] = Dict(v)
+                else:
+                    self[k] = v
+
+    def __getattr__(self, attr):
+        return self.get(attr)
+
+    def __setattr__(self, key, value):
+        self.__setitem__(key, value)
+
+    def __setitem__(self, key, value):
+        super(Dict, self).__setitem__(key, value)
+        self.__dict__.update({key: value})
+
+    def __delattr__(self, item):
+        self.__delitem__(item)
+
+    def __delitem__(self, key):
+        super(Dict, self).__delitem__(key)
+        del self.__dict__[key]
 
 
 def sanitize(text):
@@ -180,7 +216,7 @@ def command_help(command):
             examples = command.examples
             emps = "s" if len(examples) > 1 else ""
             examps = "\n\n".join([f"```{Config.prefix}{i['run']}```{i['result']}" for i in examples])
-            help_page.add_field(name="Example"+emps, value=examps, inline=False)
+            help_page.add_field(name="Example" + emps, value=examps, inline=False)
 
             Log.log("Retuning help page for", command_text)
             return help_page
@@ -202,7 +238,7 @@ def get_user(args, ign, platfrom):
     if name.startswith("<@") and name.endswith(">"):
         if name[2:-1] in Users.users.keys():
             try:
-                return Users.users[name[2:-1]][platfrom+"_ign"]
+                return Users.users[name[2:-1]][platfrom + "_ign"]
             except IndexError:
                 raise UserNonexistent
 
@@ -229,6 +265,7 @@ def dict_string_to_nums(dictionary):
                 num = int(num)
 
             dictionary[i] = num
+    return dictionary
 
 
 separator = "✦"

@@ -1,9 +1,10 @@
+Pillow
 matplotlib
 numpy
 seaborn
 pandas
 bezier
-discord.py
+discord
 requests
 aiohttp
 pyttanko

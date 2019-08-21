@@ -1,6 +1,8 @@
 import asyncio, aiohttp, html, socket
 import generateCommandMD
-from utils import *
+from utils import sanitize, Log, Config, Users, help_me
+import commands
+import discord
 
 # Config().load()
 # Users().load()
