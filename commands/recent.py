@@ -45,17 +45,17 @@ class Command:
             index = int(index.captures(1)[0])
 
         try:
-            top_play = osuUtils.get_recent(user, index)
+            recent_play = osuUtils.get_recent(user, index)
         except osuUtils.NoPlays as err:
             await message.channel.send(f"`{err}`")
             Log.log(err)
             return
 
-        Users().update_last_message(message.author.id, top_play.beatmap_id, "id",
-                                    top_play.enabled_mods, 1, top_play.accuracy)
+        Users().update_last_message(message.author.id, recent_play.beatmap_id, "id",
+                                    recent_play.enabled_mods, 1, recent_play.accuracy)
 
         try:
-            play_data = osuUtils.stat_play(top_play)
+            play_data = osuUtils.stat_play(recent_play)
         except Exception as err:
             await message.channel.send(err)
             Log.error(err)

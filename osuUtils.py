@@ -669,11 +669,14 @@ def stat_play(play):
     try:
         user_leaderboard = get_user_best(play.user_id)
         map_leaderboard = map_obj.leaderboard
-        best_score = get_user_map_best(play.beatmap_id, play.user_id, play.enabled_mods)[0]
+        best_score = get_user_map_best(play.beatmap_id, play.user_id, play.enabled_mods)
         user = get_user(play.user_id)[0]
     except Exception as err:
         Log.error(err)
         return
+
+    if best_score:
+        best_score = best_score[0]
 
     recent = Dict({
         "user_id": play.user_id,
@@ -725,10 +728,10 @@ def stat_play(play):
         nmiss=play.countmiss,
         mods=mod_int(play.enabled_mods),
         combo=play.maxcombo,
-        ncircles=map_obj.count_normal,
-        nsliders=map_obj.count_spinner,
-        nobjects=map_obj.hit_objects,
-        max_combo=map_obj.max_combo)
+        ncircles=int(map_obj.count_normal * completion),
+        nsliders=int(map_obj.count_spinner * completion),
+        nobjects=int(map_obj.hit_objects * completion),
+        max_combo=int(map_obj.max_combo * completion))
 
     pp_fc, _, _, _, acc_fc = pytan.ppv2(
         aim_stars=map_obj.aim_stars,
@@ -738,10 +741,10 @@ def stat_play(play):
         n100=play.count100,
         n50=play.count50,
         mods=mod_int(play.enabled_mods),
-        ncircles=map_obj.count_normal,
-        nsliders=map_obj.count_spinner,
-        nobjects=map_obj.hit_objects,
-        max_combo=map_obj.max_combo)
+        ncircles=int(map_obj.count_normal * completion),
+        nsliders=int(map_obj.count_spinner * completion),
+        nobjects=int(map_obj.hit_objects * completion),
+        max_combo=int(map_obj.max_combo * completion))
 
     recent.stars = map_obj.total
     recent.pp_fc = pp_fc
@@ -755,6 +758,7 @@ def stat_play(play):
         recent.ur = 0
         # TODO: make osr parser for unstable rate
 
+    recent.completion = completion
     recent.strain_bar = strain_bar
     recent.map_obj = map_obj
 
@@ -993,6 +997,9 @@ def embed_play(play_stats, client):
     if play_stats.ur is not None and play_stats.ur > 0:
         pass
         # TODO: implrmrnt UR and CV
+
+    if play_stats.completion < 1:
+        perfomacne += f"\n**{format_nums(play_stats.completion * 100, 2)}%** completion"
 
     embed.add_field(name=play_results, value=perfomacne)
 
