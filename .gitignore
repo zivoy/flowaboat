@@ -8,3 +8,7 @@ logs
 # config and credentials
 config.json
 users.list
+
+#python cache
+__pycache__/
+*/__pycache__/
