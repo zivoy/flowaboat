@@ -815,7 +815,7 @@ def map_strain_graph(map_obj, mods, progress=1., mode="", width=399., height=40.
     curves.append(bezier.Curve(np.asfortranarray([[width, 0.0], [height, height]]), degree=1))
     polygon = bezier.CurvedPolygon(*curves)
 
-    _, ax = plt.subplots(figsize=(round(width + width*.30), round(height + height*.30)), dpi=1)
+    _, ax = plt.subplots(figsize=(round(width * 1.30), round(height * 1.30)), dpi=1)
     polygon.plot(pts_per_edge=200, color=(240 / 255, 98 / 255, 146 / 255, 1), ax=ax)
     plt.xlim(0, width)
     plt.ylim(height, 0)
