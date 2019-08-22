@@ -3,20 +3,24 @@ import osuUtils
 
 
 class Command:
-    command = "top"
-    description = "Show a specific top play."
+    command = "recent"
+    description = "Show recent score or pass."
     argsRequired = 0
     usage = "[username]"
     examples = [
-        {
-            "run": "top",
-            "result": "Returns your #1 top play."
-        },
-        {
-            "run": "top5 vaxei",
-            "result": "Returns Vaxei's #5 top play."
-        }]
-    synonyms = [r"top\d+", "rb", "recentbest", "ob", "oldbest"]
+            {
+                "run": "recent nathan_on_osu",
+                "result": "Returns nathan on osu's most recent score."
+            },
+            {
+                "run": "recent3 respektive",
+                "result": "Returns respektive's most recent score."
+            },
+            {
+                "run": "recentpass",
+                "result": "Returns your most recent pass."
+            }]
+    synonyms = [r"recent\d+", "rs", "recentpass", "rp"]
 
     async def call(self, package):
         message, args, user_data, client = package["message_obj"], package["args"], \
@@ -35,18 +39,16 @@ class Command:
 
         index = digits.match(args[0])
 
-        rb = True if args[0] == "rb" or args[0] == "recentbest" else False
-        ob = True if args[0] == "ob" or args[0] == "oldbest" else False
-
         if index is None:
             index = 1
         else:
             index = int(index.captures(1)[0])
 
         try:
-            top_play = osuUtils.get_top(user, index, rb, ob)
+            top_play = osuUtils.get_recent(user, index)
         except osuUtils.NoPlays as err:
-            await message.channel.send(err)
+            await message.channel.send(f"`{err}`")
+            Log.log(err)
             return
 
         Users().update_last_message(message.author.id, top_play.beatmap_id, "id",
@@ -63,4 +65,4 @@ class Command:
         graph = discord.File(play_data.strain_bar, "strains_bar.png")
 
         await message.channel.send(file=graph, embed=embed)
-        Log.log(f"Returning top play {play_data.pb} for {user}")
+        Log.log(f"Returning top play {index} for {user}")

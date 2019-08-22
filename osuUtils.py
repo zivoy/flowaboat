@@ -144,7 +144,6 @@ class Play:
         self.user_id = play_dict["user_id"]
         self.date = arrow.get(play_dict["date"], date_form)
         self.rank = play_dict["rank"]
-        self.pp = play_dict["pp"]
         self.accuracy = pytan.acc_calc(self.count300, self.count100, self.count50, self.countmiss)
 
         if "beatmap_id" in play_dict:
@@ -161,6 +160,11 @@ class Play:
             self.score_id = play_dict["score_id"]
         else:
             self.score_id = ""
+
+        if "pp" in play_dict:
+            self.pp = play_dict["pp"]
+        else:
+            self.pp = None
 
 
 class CalculateMods:
@@ -293,7 +297,8 @@ def get_user(user):
     response = osu_api.get('/get_user', {"u": user})
     response = response.json()
 
-    Log.log(response)
+    if Config.debug:
+        Log.log(response)
 
     if len(response) == 0:
         raise UserNonexistent(f"Couldn't find user: {user}")
@@ -308,7 +313,8 @@ def get_user(user):
 def get_leaderboard(beatmap_id, limit=100):
     response = osu_api.get('/get_scores', {"b": beatmap_id, "limit": limit}).json()
 
-    Log.log(response)
+    if Config.debug:
+        Log.log(response)
 
     if len(response) == 0:
         raise NoLeaderBoard("Couldn't find leader board for this beatmap")
@@ -323,7 +329,8 @@ def get_leaderboard(beatmap_id, limit=100):
 def get_user_map_best(beatmap_id, user, enabled_mods=0):
     response = osu_api.get('/get_scores', {"b": beatmap_id, "u": user, "mods": enabled_mods}).json()
 
-    Log.log(response)
+    if Config.debug:
+        Log.log(response)
 
     # if len(response) == 0:
     #     raise NoScore("Couldn't find user score for this beatmap")
@@ -339,10 +346,26 @@ def get_user_best(user, limit=100):
     response = osu_api.get('/get_user_best', {"u": user, "limit": limit})
     response = response.json()
 
-    Log.log(response)
+    if Config.debug:
+        Log.log(response)
 
     if len(response) == 0:
         raise NoPlays(f"No top plays found for {user}")
+
+    for i in range(len(response)):
+        response[i] = Play(response[i])
+
+    return response
+
+
+def get_user_recent(user, limit=10):
+    response = osu_api.get('/get_user_recent', {"u": user, "limit": limit}).json()
+
+    if Config.debug:
+        Log.log(response)
+
+    if len(response) == 0:
+        raise NoPlays(f"No recent plays found for {user}")
 
     for i in range(len(response)):
         response[i] = Play(response[i])
@@ -388,9 +411,21 @@ def get_top(user, index, rb=False, ob=False):
     response = get_user_best(user, limit)
 
     if rb:
-        response = sorted(response, key=lambda k: k["date"])
+        response = sorted(response, key=lambda k: k.date, reverse=True)
     if ob:
-        response = sorted(response, key=lambda k: k["date"], reverse=True)
+        response = sorted(response, key=lambda k: k.date)
+
+    if len(response) < index:
+        index = len(response)
+
+    recent_raw = response[index - 1]
+
+    return recent_raw
+
+
+def get_recent(user, index):
+    index = min(max(index, 1), 50)
+    response = get_user_recent(user, index)
 
     if len(response) < index:
         index = len(response)

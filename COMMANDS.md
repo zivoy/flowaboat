@@ -9,6 +9,7 @@
 - [o!ign-set](#oign-set)
 - [o!cs](#ocs)
 - [o!hp](#ohp)
+- [o!recent](#orecent)
 - [o!ar](#oar)
 - [o!help](#ohelp)
 ---
@@ -210,6 +211,39 @@ Returns HP of AR8 with HR applied.
 o!hp 7 +EZ
 ```
 Returns HP of AR6.4 with EZ applied.
+
+
+## o!recent
+Show recent score or pass.
+
+**Required variables**: `0`
+
+**Usage**: `o!recent [username]`
+
+#### Synonyms:
+
+`o!recent\d+`, `o!rs`, `o!recentpass`, `o!rp`
+
+### Examples:
+
+```
+o!recent nathan_on_osu
+```
+Returns nathan on osu's most recent score.
+
+
+
+```
+o!recent3 respektive
+```
+Returns respektive's most recent score.
+
+
+
+```
+o!recentpass
+```
+Returns your most recent pass.
 
 
 ## o!ar

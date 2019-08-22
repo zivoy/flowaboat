@@ -85,7 +85,7 @@ class Config(JasonFile):
     file = "config.json"
 
     prefix = ""
-    debug = ""
+    debug = False
     administer = ""
     osu_cache_path = ""
     pp_path = ""
@@ -269,7 +269,7 @@ def dict_string_to_nums(dictionary):
 
 
 def format_nums(number, decimals):
-    if float(number).is_integer():
+    if round(float(number), decimals).is_integer():
         return int(f"{number:.0f}")
     else:
         return float(f"{number:.{decimals}f}")
