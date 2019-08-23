@@ -728,10 +728,10 @@ def stat_play(play):
         nmiss=play.countmiss,
         mods=mod_int(play.enabled_mods),
         combo=play.maxcombo,
-        ncircles=int(map_obj.count_normal * completion),
-        nsliders=int(map_obj.count_spinner * completion),
-        nobjects=int(map_obj.hit_objects * completion),
-        max_combo=int(map_obj.max_combo * completion))
+        ncircles=map_obj.count_normal,
+        nsliders=map_obj.count_spinner,
+        nobjects=map_obj.hit_objects,
+        max_combo=map_obj.max_combo)
 
     pp_fc, _, _, _, acc_fc = pytan.ppv2(
         aim_stars=map_obj.aim_stars,
@@ -741,10 +741,10 @@ def stat_play(play):
         n100=play.count100,
         n50=play.count50,
         mods=mod_int(play.enabled_mods),
-        ncircles=int(map_obj.count_normal * completion),
-        nsliders=int(map_obj.count_spinner * completion),
-        nobjects=int(map_obj.hit_objects * completion),
-        max_combo=int(map_obj.max_combo * completion))
+        ncircles=map_obj.count_normal,
+        nsliders=map_obj.count_spinner,
+        nobjects=map_obj.hit_objects,
+        max_combo=map_obj.max_combo)
 
     recent.stars = map_obj.total
     recent.pp_fc = pp_fc

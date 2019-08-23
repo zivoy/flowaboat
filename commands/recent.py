@@ -51,15 +51,15 @@ class Command:
             Log.log(err)
             return
 
-        Users().update_last_message(message.author.id, recent_play.beatmap_id, "id",
-                                    recent_play.enabled_mods, 1, recent_play.accuracy)
-
         try:
             play_data = osuUtils.stat_play(recent_play)
         except Exception as err:
             await message.channel.send(err)
             Log.error(err)
             return
+
+        Users().update_last_message(message.author.id, recent_play.beatmap_id, "id",
+                                    recent_play.enabled_mods, play_data.completion, recent_play.accuracy)
 
         embed = osuUtils.embed_play(play_data, client)
         graph = discord.File(play_data.strain_bar, "strains_bar.png")
