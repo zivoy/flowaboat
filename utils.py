@@ -112,7 +112,8 @@ class Users(JasonFile):
         uuid = str(uuid)
         if uuid not in self.users:
             self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign,
-                                "last_beatmap": {"map": (None, ""), "mods": [], "completion": 0, "accuracy": 0},
+                                "last_beatmap": {"map": (None, ""), "mods": [], "completion": 0, "accuracy": 0,
+                                                 "user": osu_ign, "replay": None},
                                 "last_message": None}
             self.save()
 
@@ -120,9 +121,10 @@ class Users(JasonFile):
         self.users[str(uuid)][item] = value
         self.save()
 
-    def update_last_message(self, user, map_link, map_type, mods, completion, accuracy):
+    def update_last_message(self, user, map_link, map_type, mods, completion, accuracy, user_ign, replay):
         self.set(user, "last_beatmap",
-                 {"map": (map_link, map_type), "mods": mods, "completion": completion, "accuracy": accuracy})
+                 {"map": (map_link, map_type), "mods": mods, "completion": completion, "accuracy": accuracy,
+                  "user": user_ign, "replay": replay})
 
 
 #

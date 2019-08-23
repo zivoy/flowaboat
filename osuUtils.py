@@ -12,6 +12,7 @@ import pandas as pd
 import bezier
 from PIL import Image
 import math
+import replayParser
 
 import warnings
 from arrow.factory import ArrowParseWarning
@@ -52,6 +53,10 @@ class NoLeaderBoard(MapError):
 
 
 class NoScore(UserError):
+    pass
+
+
+class NoReplay(UserError):
     pass
 
 
@@ -371,6 +376,18 @@ def get_user_recent(user, limit=10):
         response[i] = Play(response[i])
 
     return response
+
+
+def get_replay(beatmap_id, user_id, mods, mode):
+    response = osu_api.get("/get_replay", {"b": beatmap_id, "u": user_id,
+                                           "mods": mods, "m": mode}).json()
+
+    if "error" in response:
+        raise NoReplay("Could not find replay for this user")
+
+    replay = response["content"]
+
+    return replay
 
 
 def get_rank_emoji(rank, client):
@@ -754,7 +771,10 @@ def stat_play(play):
     if recent.pp is None:
         recent.pp = pp
 
+    recent.replay = None
     if replay:
+        recent.replay = get_replay(play.beatmap_id, play.user_id, play.enabled_mods, 0)
+
         recent.ur = 0
         # TODO: make osr parser for unstable rate
 

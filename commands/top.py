@@ -49,15 +49,15 @@ class Command:
             await message.channel.send(err)
             return
 
-        Users().update_last_message(message.author.id, top_play.beatmap_id, "id",
-                                    top_play.enabled_mods, 1, top_play.accuracy)
-
         try:
             play_data = osuUtils.stat_play(top_play)
         except Exception as err:
             await message.channel.send(err)
             Log.error(err)
             return
+
+        Users().update_last_message(message.author.id, top_play.beatmap_id, "id",
+                                    top_play.enabled_mods, 1, top_play.accuracy, user, play_data.replay)
 
         embed = osuUtils.embed_play(play_data, client)
         graph = discord.File(play_data.strain_bar, "strains_bar.png")

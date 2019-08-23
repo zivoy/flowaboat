@@ -59,7 +59,8 @@ class Command:
             return
 
         Users().update_last_message(message.author.id, recent_play.beatmap_id, "id",
-                                    recent_play.enabled_mods, play_data.completion, recent_play.accuracy)
+                                    recent_play.enabled_mods, play_data.completion, recent_play.accuracy, user,
+                                    play_data.replay)
 
         embed = osuUtils.embed_play(play_data, client)
         graph = discord.File(play_data.strain_bar, "strains_bar.png")

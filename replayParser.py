@@ -1,7 +1,7 @@
 import pandas as pd
 import lzma
 from io import StringIO
-from base64 import b64decode
+from base64 import b64decode, b64encode
 from urllib.request import urlopen, Request
 
 
@@ -10,7 +10,11 @@ def lzma_replay_to_df(lzma_byte_string):
     dataframe = info_string_to_df(stream)
     dataframe.columns = ["ms since last", "x pos", "y pos", "clicks"]
     dataframe['offset'] = dataframe["ms since last"].cumsum()
-    return dataframe
+    seed = 0
+    if dataframe["ms since last"].iloc[-1] == -12345:
+        seed = int(dataframe["clicks"].iloc[-1])
+        dataframe.drop(dataframe.tail(1).index, inplace=True)
+    return dataframe, seed
 
 
 def info_string_to_df(info):
@@ -20,7 +24,7 @@ def info_string_to_df(info):
 
 def replay_string_to_df(replay):
     byte_string = b64decode(replay)
-    dataframe = lzma_replay_to_df(byte_string)
+    dataframe, _ = lzma_replay_to_df(byte_string)
     return dataframe
 
 
@@ -62,12 +66,9 @@ class ParseReplayByteSting:
         byte_string, self.time_stamp = get_long(byte_string)
 
         byte_string, replay_length = get_integer(byte_string)
-        self.replay = lzma_replay_to_df(byte_string[:replay_length])
+        self.replay, self.seed = lzma_replay_to_df(byte_string[:replay_length])
+        self.replay_encoded = b64encode(byte_string[:replay_length])
         byte_string = byte_string[replay_length:]
-        self.seed = 0
-        if self.replay["ms since last"].iloc[-1] == -12345:
-            self.seed = int(self.replay["clicks"].iloc[-1])
-            self.replay.drop(self.replay.tail(1).index, inplace=True)
 
         _, self.score_id = get_integer(byte_string)
 
@@ -122,19 +123,7 @@ def get_string(byte_str):
     return byte_str, string
 
 
-def test_get_string():
-    c = bytes([0, 65])
-    a, b = get_string(c)
-    print(a, b)
-
-    c = bytes([11, 5, 65, 65, 64, 65, 65, 65, 67])
-    a, b = get_string(c)
-    print(a, b)
-
-
-test_get_string()
-
-
 def calculate_unstable_rate(replay_dataframe, beatmap_obj, speed=1):
     pass
     # TODO
+
