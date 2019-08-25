@@ -22,6 +22,8 @@ colors = [
     [33, 122, 137]
 ]
 
+border = [1, 1, 1]  # [45/255,45/255,45/255]
+
 colors = list(map(lambda x: [i / 255 for i in x], colors))
 
 
@@ -52,7 +54,8 @@ class HitCircle:
 
     def render(self, time):
         alph = get_alpha(self, time)
-        circle = gizeh.circle(self.radius, xy=self.position, fill=(*self.color, alph))
+        circle = gizeh.circle(self.radius - 5, xy=self.position,
+                              stroke=(*border, alph), stroke_width=5, fill=(*self.color, alph))
         appr_circle = approach_circle(self, time)
         return [circle, appr_circle]
 
@@ -82,7 +85,7 @@ class Spinner:
 
 class Slider:
     def __init__(self, time, position, radius, distance, repetitions, slider_type,
-                 points, beat_duration, slider_vel, color, ar_ms, fade_ms):
+                 points, beat_duration, slider_vel, color, ar_ms, fade_ms, tick_rate):
         slider_duration = distance / (100.0 * slider_vel) * beat_duration
         self.appear = time - ar_ms
         self.disappear = time + slider_duration * repetitions
@@ -91,13 +94,14 @@ class Slider:
         self.repetitions = repetitions
         position = list(map(lambda x: x + padding, position))
         self.position = position
-        self.radius = radius
+        self.radius = radius - 5
         self.points = [(i.x + padding, i.y + padding) for i in points]
         self.visable = False
         self.color = color
         self.type = slider_type
         self.fade_ms = fade_ms
         self.ar_ms = ar_ms
+        self.tick_rate = tick_rate
 
     def slide(self, alpha):
         slider = gizeh.circle(0)
@@ -123,8 +127,10 @@ class Slider:
             if time_strt / self.duration % 2 > 1:
                 per = 1 - per
             pos = curv.evaluate(per)
-            bll = map(lambda x: x * .6, self.color)
-            ball = gizeh.circle(self.radius, xy=pos, fill=(*bll, alpha))
+            bll = map(lambda x: x * .4, self.color)
+            alph = alpha if time < self.action else 0
+            ball = gizeh.circle(self.radius, xy=pos, fill=(*bll, alpha),
+                                stroke=(*border, alph), stroke_width=5)
 
         return ball
 
@@ -147,11 +153,14 @@ def approach_circle(self, time):
 
 
 class Replay:
-    def __init__(self, beatmap_obj, replay_dataframe, combo_colors=colors):
+    def __init__(self, beatmap_obj, replay_dataframe, combo_colors=None):
+        if combo_colors is None:
+            combo_colors = colors
         self.colors = combo_colors
         self.minimum = abs(min(0, replay_dataframe["offset"].min()))
         self.replay = replay_dataframe
         self.beatmap = beatmap_obj
+        self.tick_rate = beatmap_obj.tick_rate
 
         self.circle_radius = (width / 16) * (1 - (0.7 * (beatmap_obj.cs - 5) / 5))
         self.spinner_radius = height * .85 / 2
@@ -190,7 +199,7 @@ class Replay:
                 objects.append(
                     Slider(i.time, (i.data.pos.x, i.data.pos.y), self.circle_radius, i.data.distance,
                            i.data.repetitions, i.data.type, i.data.points, self.beat_durations[duration],
-                           beatmap_obj.sv, colors[col], self.ar_ms, self.fade_ms))
+                           beatmap_obj.sv, colors[col], self.ar_ms, self.fade_ms, self.tick_rate))
         self.objects = objects[::-1]
 
         self.offset = 0
