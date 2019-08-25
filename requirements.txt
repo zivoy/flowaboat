@@ -1,3 +1,5 @@
+gizeh
+moviepy
 Pillow
 matplotlib
 numpy
@@ -7,6 +9,5 @@ bezier
 discord
 requests
 aiohttp
-pyttanko
 regex
 arrow

@@ -9,11 +9,20 @@ def lzma_replay_to_df(lzma_byte_string):
     stream = lzma.decompress(lzma_byte_string)
     dataframe = info_string_to_df(stream)
     dataframe.columns = ["ms since last", "x pos", "y pos", "clicks"]
-    dataframe['offset'] = dataframe["ms since last"].cumsum()
     seed = 0
+
     if dataframe["ms since last"].iloc[-1] == -12345:
         seed = int(dataframe["clicks"].iloc[-1])
         dataframe.drop(dataframe.tail(1).index, inplace=True)
+    smallidx = dataframe["ms since last"].idxmin()
+    offset = 0
+    if dataframe["ms since last"].iloc[smallidx] < 0:
+        offset = int(dataframe.head(smallidx).sum()["ms since last"])
+        dataframe.drop(dataframe.head(smallidx).index, inplace=True)
+    dataframe["ms since last"] = dataframe["ms since last"].replace(0, 1)
+
+    dataframe['offset'] = dataframe["ms since last"].cumsum() + offset
+    dataframe = dataframe.drop(columns=["ms since last"])
     return dataframe, seed
 
 
@@ -34,8 +43,7 @@ def open_file(file_name):
 
 
 def open_link(link):
-    with urlopen(Request(link,
-                         headers={'User-Agent': 'Mozilla/5.0'})) as replay:
+    with urlopen(Request(link, headers={'User-Agent': 'Mozilla/5.0'})) as replay:
         return ParseReplayByteSting(replay.read())
 
 
@@ -127,3 +135,29 @@ def calculate_unstable_rate(replay_dataframe, beatmap_obj, speed=1):
     pass
     # TODO
 
+
+def get_action_at_time(dataframe, time, index_override=None):
+    if index_override is None:
+        time = max(time, dataframe["offset"].iloc[0])
+        time = min(time, dataframe["offset"].iloc[-1])
+        exactmatch = dataframe[dataframe["offset"] == time]
+        if not exactmatch.empty:
+            index = exactmatch.index[0]
+        else:
+            index = dataframe["offset"][dataframe["offset"] < time].idxmax()
+
+        index = index - 1
+        """lower = dataframe.iloc[index]
+        upper = dataframe.iloc[index+1]
+        perc = (time-lower["offset"])/(upper["offset"]-lower["offset"])
+        dist = upper - lower"""
+        # todo: smart interpolation
+    else:
+        index = index_override
+    try:
+        return dataframe.iloc[index]
+    except Exception as e:
+        print(index)
+        if not index < 0:
+            return get_action_at_time(dataframe, time, index - 1)
+        raise e

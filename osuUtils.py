@@ -1,5 +1,9 @@
 from enum import Enum
-from utils import *
+from utils import dict_string_to_nums, fetch_emote, Log, Config, date_form, \
+    separator, UserNonexistent, Dict, format_nums, UserError, Api
+import requests
+import discord
+import regex
 import pyttanko as pytan
 import io
 from textwrap import wrap
@@ -12,6 +16,7 @@ import pandas as pd
 import bezier
 from PIL import Image
 import math
+import arrow
 import replayParser
 
 import warnings
