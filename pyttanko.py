@@ -35,8 +35,8 @@ domain. check the attached UNLICENSE or http://unlicense.org/
 __author__ = "Franc[e]sco <lolisamurai@tfwno.gf>"
 __version__ = "1.2.1"
 
-import sys
 import math
+import sys
 
 if sys.version_info[0] < 3:
     # hack to force utf-8
@@ -401,6 +401,8 @@ class parser:
         p = self.property(line)
         if p[0] == "Mode":
             b.mode = int(self.setlastpos(p[1]))
+        elif p[0] == "AudioFilename":
+            b.audio = self.setlastpos(p[1])[1:]
 
     def difficulty(self, b, line):
         p = self.property(line)

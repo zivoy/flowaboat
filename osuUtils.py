@@ -1,26 +1,28 @@
-from enum import Enum
-from utils import dict_string_to_nums, fetch_emote, Log, Config, date_form, \
-    separator, UserNonexistent, Dict, format_nums, UserError, Api
-import requests
-import discord
-import regex
-import pyttanko as pytan
 import io
+import math
+import os
+import warnings
+import zipfile
+from enum import Enum
 from textwrap import wrap
 from time import strftime, gmtime, time
-import matplotlib
-from matplotlib import pyplot as plt
-import numpy as np
-import seaborn as sns
-import pandas as pd
-import bezier
-from PIL import Image
-import math
-import arrow
-import replayParser
 
-import warnings
+import arrow
+import bezier
+import discord
+import matplotlib
+import numpy as np
+import pandas as pd
+import regex
+import requests
+import seaborn as sns
+from PIL import Image
 from arrow.factory import ArrowParseWarning
+from matplotlib import pyplot as plt
+
+import pyttanko as pytan
+from utils import dict_string_to_nums, fetch_emote, Log, Config, date_form, \
+    separator, UserNonexistent, Dict, format_nums, UserError, Api
 
 warnings.simplefilter("ignore", ArrowParseWarning)
 
@@ -54,6 +56,10 @@ class BadMapObject(MapError):
 
 
 class NoLeaderBoard(MapError):
+    pass
+
+
+class NoBeatmap(MapError):
     pass
 
 
@@ -673,11 +679,42 @@ def get_map_link(link, **kwargs):
         elif "/discussion/" in link:
             return int(link.split("/discussion/")[-1].split("/")[0]), "id"
     elif link.endswith(".osz"):
-        return extract_map(link, **kwargs), "path"
+        return download_mapset(link, **kwargs), "path"
 
 
-def extract_map(mapset_id, diff=None):
-    requests.get(f"https://bloodcat.com/osu/s/{mapset_id}")
+def download_mapset(link_id=None, link=None):
+    if link_id is None and link is None:
+        raise NoBeatmap("No beatmap provided")
+    if link_id is not None:
+        link = f"https://bloodcat.com/osu/s/{link_id}"
+        name = str(link_id)
+    else:
+        name = link.split('/')[-1].split(".osz")[0]
+
+    mapset = requests.get(link).content
+
+    if link_id is not None and 'File not found or inaccessible!' in mapset:  # here
+        link = f"https://osu.gatari.pw/d/{link_id}"
+        mapset = requests.get(link).content
+        if mapset == b"probably something went wrong, you can try to refresh page several times, it could help":  # here . check what you shjould have .
+            raise NoBeatmap("Could not find beatmap")
+
+    location = os.path.join(Config.osu_cache_path, name)
+
+    map_files = zipfile.ZipFile(io.BytesIO(mapset), "r")
+
+    osu_file = regex.compile(r".+\[(\D+)\]\.osu")
+
+    for i in map_files.infolist():
+        for j in [".osu", ".jpg", ".jpeg", ".png", ".mp3"]:
+            if i.filename.endswith(j):
+                if j == ".osu":
+                    diff_name = osu_file.match(i.filename).captures(1)[0]
+                    i.filename = f"{diff_name}.osu"
+                map_files.extract(i, location)
+                break
+
+    return location
 
 
 def stat_play(play):
@@ -986,15 +1023,15 @@ def embed_play(play_stats, client):
         play_results += f"r#{play_stats.lb} {separator} "
 
     play_results += f"{play_stats.score:,} {separator} " \
-                    f"{format_nums(play_stats.acc,2)}% {separator} " \
+                    f"{format_nums(play_stats.acc, 2)}% {separator} " \
                     f"{play_stats.date.humanize()}"
 
     if play_stats.pp_fc > play_stats.pp:
-        perfomacne = f"**{'*' if play_stats.unsubmitted else ''}{format_nums(play_stats.pp,2):,}" \
-                     f"pp**{'*' if play_stats.unsubmitted else ''} ➔ {format_nums(play_stats.pp_fc,2):,}pp for " \
+        perfomacne = f"**{'*' if play_stats.unsubmitted else ''}{format_nums(play_stats.pp, 2):,}" \
+                     f"pp**{'*' if play_stats.unsubmitted else ''} ➔ {format_nums(play_stats.pp_fc, 2):,}pp for " \
                      f"{format_nums(play_stats.acc_fc, 2)}% FC {separator} "
     else:
-        perfomacne = f"**{format_nums(play_stats.pp,2):,}pp** {separator} "
+        perfomacne = f"**{format_nums(play_stats.pp, 2):,}pp** {separator} "
 
     if play_stats.combo < play_stats.map_obj.max_combo:
         perfomacne += f"{play_stats.combo:,}/{play_stats.map_obj.max_combo:,}x"
@@ -1035,13 +1072,13 @@ def embed_play(play_stats, client):
                    f"HP**{format_nums(play_stats.map_obj.hp, 1)}** ~ "
 
     if play_stats.map_obj.bpm_min != play_stats.map_obj.bpm_max:
-        beatmap_info += f"{format_nums(play_stats.map_obj.bpm_min,1)}-{format_nums(play_stats.map_obj.bpm_max,1)} " \
-                        f"(**{format_nums(play_stats.map_obj.bpm,1)}**) "
+        beatmap_info += f"{format_nums(play_stats.map_obj.bpm_min, 1)}-{format_nums(play_stats.map_obj.bpm_max, 1)} " \
+                        f"(**{format_nums(play_stats.map_obj.bpm, 1)}**) "
     else:
-        beatmap_info += f"**{format_nums(play_stats.map_obj.bpm,1)}** "
+        beatmap_info += f"**{format_nums(play_stats.map_obj.bpm, 1)}** "
 
     beatmap_info += f"BPM ~ " \
-                    f"**{format_nums(play_stats.stars,2)}**★"
+                    f"**{format_nums(play_stats.stars, 2)}**★"
 
     embed.add_field(name="Beatmap Information", value=beatmap_info)
 

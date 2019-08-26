@@ -1,8 +1,9 @@
-import pandas as pd
 import lzma
-from io import StringIO
 from base64 import b64decode, b64encode
-from urllib.request import urlopen, Request
+from io import StringIO
+
+import pandas as pd
+import requests
 
 
 def lzma_replay_to_df(lzma_byte_string):
@@ -43,8 +44,8 @@ def open_file(file_name):
 
 
 def open_link(link):
-    with urlopen(Request(link, headers={'User-Agent': 'Mozilla/5.0'})) as replay:
-        return ParseReplayByteSting(replay.read())
+    replay = requests.get(link)
+    return ParseReplayByteSting(replay.content)
 
 
 class ParseReplayByteSting:
@@ -68,7 +69,10 @@ class ParseReplayByteSting:
         byte_string, self.mods = get_integer(byte_string)
 
         byte_string, life_graph = get_string(byte_string)
-        self.life_graph = info_string_to_df(life_graph)
+        if life_graph:
+            self.life_graph = info_string_to_df(life_graph)
+        else:
+            self.life_graph = pd.DataFrame([[0, 0], [0, 0]])
         self.life_graph.columns = ["offset", "health"]
 
         byte_string, self.time_stamp = get_long(byte_string)
@@ -136,28 +140,20 @@ def calculate_unstable_rate(replay_dataframe, beatmap_obj, speed=1):
     # TODO
 
 
-def get_action_at_time(dataframe, time, index_override=None):
-    if index_override is None:
-        time = max(time, dataframe["offset"].iloc[0])
-        time = min(time, dataframe["offset"].iloc[-1])
-        exactmatch = dataframe[dataframe["offset"] == time]
-        if not exactmatch.empty:
-            index = exactmatch.index[0]
-        else:
-            index = dataframe["offset"][dataframe["offset"] < time].idxmax()
-
-        index = index - 1
-        """lower = dataframe.iloc[index]
-        upper = dataframe.iloc[index+1]
-        perc = (time-lower["offset"])/(upper["offset"]-lower["offset"])
-        dist = upper - lower"""
-        # todo: smart interpolation
+def get_action_at_time(dataframe, time):
+    time = max(time, dataframe["offset"].iloc[0])
+    time = min(time, dataframe["offset"].iloc[-1])
+    exactmatch = dataframe[dataframe["offset"] == time]
+    if not exactmatch.empty:
+        index = exactmatch.index[0]
     else:
-        index = index_override
-    try:
-        return dataframe.iloc[index]
-    except Exception as e:
-        print(index)
-        if not index < 0:
-            return get_action_at_time(dataframe, time, index - 1)
-        raise e
+        index = dataframe["offset"][dataframe["offset"] < time].idxmax()
+
+    index = index - 2
+    """lower = dataframe.iloc[index]
+    upper = dataframe.iloc[index+1]
+    perc = (time-lower["offset"])/(upper["offset"]-lower["offset"])
+    dist = upper - lower"""
+    # todo: smart interpolation
+
+    return dataframe.iloc[index]
