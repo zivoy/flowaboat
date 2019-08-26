@@ -22,8 +22,8 @@ class PositionTests(unittest.TestCase):
         self.assertEqual((test == self.data.iloc[0]).all(), True)
 
     def test_equals(self):
-        test = get_action_at_time(self.data, -123)
-        self.assertEqual((test == self.data.iloc[0]).all(), True)
+        test = get_action_at_time(self.data, 0)
+        self.assertEqual((test == self.data.iloc[3]).all(), True)
 
     def test_round_down(self):
         test = get_action_at_time(self.data, 140)
@@ -32,6 +32,14 @@ class PositionTests(unittest.TestCase):
     def test_bigger_then(self):
         test = get_action_at_time(self.data, 400)
         self.assertEqual((test == self.data.iloc[8]).all(), True)
+
+    def test_smallest_equals(self):
+        test = get_action_at_time(self.data, -123)
+        self.assertEqual((test == self.data.iloc[0]).all(), True)
+
+    def test_largest_equals(self):
+        test = get_action_at_time(self.data, 300)
+        self.assertEqual((test == self.data.iloc[-1]).all(), True)
 
 
 if __name__ == '__main__':
