@@ -5,8 +5,9 @@ import bezier
 import gizeh
 import moviepy.editor as mpy
 import numpy as np
+import pandas as pd
 
-from osuUtils import speed_multiplier
+from osuUtils import speed_multiplier, CalculateMods
 from replayParser import get_action_at_time
 
 dist_before = 100
@@ -115,7 +116,6 @@ class Slider:
         return slider
 
     def ball(self, time, alpha):
-        ball = gizeh.circle(0)
         time_strt = min(max(self.action, time) - self.action, self.duration * self.repetitions)
         per = time_strt % (self.duration + 1) / self.duration
         if time_strt / self.duration % 2 > 1:
@@ -154,7 +154,10 @@ class SliderCurve:
             resolution = 2
 
         if slider_type != "C":
-            points_list = split_on_double(points)
+            if slider_type == "B":
+                points_list = split_on_double(points)
+            else:
+                points_list = [points]
             paths = list()
             for i in points_list:
                 nodes = np.asfortranarray(i).transpose()
@@ -184,7 +187,7 @@ class SliderCurve:
                 clostper = i
                 clost = j
 
-        loc = (percentage - clostper) * self.length / self.length
+        loc = (percentage * self.length - clostper * self.length) / clost.length
         return clost.evaluate(loc)
 
 
@@ -207,6 +210,9 @@ class Replay:
             combo_colors = colors
         self.mods = mods
         self.speed = speed_multiplier(mods)
+        aug = CalculateMods([i for i in mods if i not in ["DT", "HT", "NC"]])
+        self.ar, _, _ = aug.ar(beatmap_obj.ar)
+        self.cs, _ = aug.cs(beatmap_obj.cs)
         self.border = combo_colors[0]
         self.colors = combo_colors[1:]
         self.minimum = abs(min(0, replay_dataframe["offset"].min()))
@@ -214,9 +220,9 @@ class Replay:
         self.beatmap = beatmap_obj
         self.tick_rate = beatmap_obj.tick_rate
 
-        self.circle_radius = (width / 16) * (1 - (0.7 * (beatmap_obj.cs - 5) / 5))
+        self.circle_radius = (width / 16) * (1 - (0.7 * (self.cs - 5) / 5))
         self.spinner_radius = height * .85 / 2
-        self.ar_ms, self.fade_ms = ar(beatmap_obj.ar)
+        self.ar_ms, self.fade_ms = ar(self.ar)
         self.beat_durations = dict()
         last_non = 1000
         beatmap_obj.timing_points[0].time = 0
@@ -275,7 +281,8 @@ class Replay:
             right = (.9, 0, 0)
 
         bg = 1.15 if click else 1
-        mouse = gizeh.circle(10 * bg, xy=(cords["x pos"] + padding, cords["y pos"] + padding), fill=(1, 0, 0))
+        mouse = gizeh.circle(10 * bg, xy=(cords["x pos"] + padding, cords["y pos"] + padding), fill=(1, 0, 0),
+                             stroke=(0, 1, 0), stroke_width=2)
 
         sqrl = gizeh.square(l=30, fill=left, xy=(surface.width - 60, surface.height - 24))
         sqrr = gizeh.square(l=30, fill=right, xy=(surface.width - 25, surface.height - 24))
@@ -319,3 +326,86 @@ class Replay:
                 ["../gifsicle-1.82.1-lossy/mac/gifsicle", "-O3", "--lossy=30", "-o", "circle.gif", "circle.gif"])
         else:
             clip.write_videofile(name, fps=fps)
+
+
+def perfect_play(beatmap_obj):
+    beat_durations = dict()
+    last_non = 1000
+    beatmap_obj.timing_points[0].time = 0
+    for i in beatmap_obj.timing_points:
+        if i.ms_per_beat > 0:
+            last_non = i.ms_per_beat
+            duration = i.ms_per_beat
+        else:
+            duration = last_non * abs(i.ms_per_beat) / 100
+        beat_durations[i.time] = duration
+
+    objects = list()
+    for i in beatmap_obj.hitobjects:
+        duration = [j for j in beat_durations.keys() if j <= i.time][-1]
+        if i.typestr() == "circle":
+            objects.append({"type": "circle", "time": i.time, "position": (i.data.pos.x, i.data.pos.y)})
+        elif i.typestr() == "spinner":
+            objects.append({"type": "spinner", "time": i.time, "duration": i.data.end_time})
+        else:
+            slider_duration = i.data.distance / (100.0 * beatmap_obj.sv) * beat_durations[duration]
+            slider = SliderCurve([(i.data.pos.x, i.data.pos.y)] + [(a.x, a.y) for a in i.data.points], i.data.type)
+            objects.append({"type": "slider", "time": i.time, "slider": slider,
+                            "repetitions": i.data.repetitions, "duration": slider_duration})
+
+    last_click = 10
+    last_offset = objects[0]["time"] - 2000
+    safzon = 70
+    play = pd.DataFrame([[last_offset - 17, width / 2, height / 2, 0]], columns=["offset", "x pos", "y pos", "clicks"])
+
+    for i in objects:
+        if last_click == 10:
+            last_click = 5
+        else:
+            last_click = 10
+        for j in np.arange(last_offset, i["time"], 17):
+            play = play.append(
+                pd.DataFrame([[int(j), np.nan, np.nan, 0]], columns=["offset", "x pos", "y pos", "clicks"]), True)
+
+        if i["type"] == "circle":
+            for j in np.arange(i["time"], i["time"] + 80, 17):
+                play = play.append(
+                    pd.DataFrame([[int(j), *i["position"], last_click]],
+                                 columns=["offset", "x pos", "y pos", "clicks"]), True)
+                last_offset = j
+
+        elif i["type"] == "slider":
+            l = list()
+            for j in i["slider"].curve:
+                dst = j - i["slider"].curve[0]
+                l.append(np.sqrt(dst[0] ** 2 + dst[1] ** 2))
+            s = pd.Series(l)
+            for j in np.arange(i["time"], i["time"] + i["duration"] * i["repetitions"], 17):
+                if s[s > safzon].any():
+                    time_strt = min(max(i["time"], j) - i["time"], i["duration"] * i["repetitions"])
+                    per = time_strt % (i["duration"] + 1) / i["duration"]
+                    if time_strt / i["duration"] % 2 > 1:
+                        per = 1 - per
+                    pos = i["slider"].get_point(per)
+                else:
+                    pos = i["slider"].get_point(0)
+
+                play = play.append(
+                    pd.DataFrame([[int(j), *[r[0] for r in pos], last_click]],
+                                 columns=["offset", "x pos", "y pos", "clicks"]), True)
+                last_offset = j
+
+        elif i["type"] == "spinner":
+            for j in np.arange(i["time"], i["duration"], 17):
+                xpos = -np.math.sin(j / 30) * 50 + 512 / 2
+                ypos = np.math.cos(j / 30) * 50 + 384 / 2
+
+                play = play.append(
+                    pd.DataFrame([[int(j), xpos, ypos, last_click]],
+                                 columns=["offset", "x pos", "y pos", "clicks"]), True)
+                last_offset = j
+
+    play = play.append(
+        pd.DataFrame([[play["offset"].iloc[-1] + 17, width / 2, height / 2, 0]],
+                     columns=["offset", "x pos", "y pos", "clicks"]), True)
+    return play.interpolate()

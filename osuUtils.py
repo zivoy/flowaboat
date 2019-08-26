@@ -189,8 +189,8 @@ class CalculateMods:
         if list(mods) != mods:
             self.mods = parse_mods_string(mods)
 
-            Log.log(mods.replace("+", ""))
-        Log.log(self.mods)
+        #     Log.log(mods.replace("+", ""))
+        # Log.log(self.mods)
 
     def ar(self, raw_ar):
         ar_multiplier = 1
