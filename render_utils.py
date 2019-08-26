@@ -416,27 +416,29 @@ def perfect_play(beatmap_obj):
                             "repetitions": i.data.repetitions, "duration": slider_duration})
 
     last_click = 10
-    last_offset = objects[0]["time"] - 2000
+    first_offset = objects[0]["time"] - 2000
+    last_offset = objects[-1]["time"] + 2000
     safzon = 70
-    play = pd.DataFrame([[last_offset - 17, WIDTH / 2, HEIGHT / 2, 0]],
+    play = pd.DataFrame([[i, np.nan, np.nan, 0] for i in np.arange(first_offset, last_offset, 17)],
                         columns=["offset", "x pos", "y pos", "clicks"])
+
+    play.iloc[0, ["x pos", "y pos"]] = 0
 
     for i in objects:
         if last_click == 10:
             last_click = 5
         else:
             last_click = 10
-        for j in np.arange(last_offset, i["time"], 17):
-            play = play.append(
-                pd.DataFrame([[int(j), np.nan, np.nan, 0]],
-                             columns=["offset", "x pos", "y pos", "clicks"]), True)
+
+        exact_match = play[play["offset"] == i["time"]]
+        if not exact_match.empty:
+            index = exact_match.index[0]
+        else:
+            index = play["offset"][play["offset"] < i["time"]].idxmax()
 
         if i["type"] == "circle":
             for j in np.arange(i["time"], i["time"] + 80, 17):
-                play = play.append(
-                    pd.DataFrame([[int(j), *i["position"], last_click]],
-                                 columns=["offset", "x pos", "y pos", "clicks"]), True)
-                last_offset = j
+                play.iloc[index] = [int(j), *i["position"], last_click]
 
         elif i["type"] == "slider":
             items = list()
@@ -455,22 +457,15 @@ def perfect_play(beatmap_obj):
                 else:
                     pos = i["slider"].get_point(0)
 
-                play = play.append(
-                    pd.DataFrame([[int(j), *[r[0] for r in pos], last_click]],
-                                 columns=["offset", "x pos", "y pos", "clicks"]), True)
-                last_offset = j
+                play.iloc[index] = [int(j), *[r[0] for r in pos], last_click]
 
         elif i["type"] == "spinner":
             for j in np.arange(i["time"], i["duration"], 17):
                 xpos = -np.math.sin(j / 30) * 50 + 512 / 2
                 ypos = np.math.cos(j / 30) * 50 + 384 / 2
 
-                play = play.append(
-                    pd.DataFrame([[int(j), xpos, ypos, last_click]],
-                                 columns=["offset", "x pos", "y pos", "clicks"]), True)
-                last_offset = j
+                play.iloc[index] = [int(j), xpos, ypos, last_click]
 
-    play = play.append(
-        pd.DataFrame([[play["offset"].iloc[-1] + 17, WIDTH / 2, HEIGHT / 2, 0]],
-                     columns=["offset", "x pos", "y pos", "clicks"]), True)
+    play.ioc[-1, ["x pos", "y pos"]] = [WIDTH / 2, HEIGHT / 2]
+
     return play.interpolate()

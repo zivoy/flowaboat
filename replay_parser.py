@@ -221,7 +221,6 @@ def get_action_at_time(dataframe, time):
     else:
         index = dataframe["offset"][dataframe["offset"] < time].idxmax()
 
-    index = index
     """lower = dataframe.iloc[index]
     upper = dataframe.iloc[index+1]
     perc = (time-lower["offset"])/(upper["offset"]-lower["offset"])
@@ -319,18 +318,19 @@ class ScoreReplay:
                 duration = last_non * abs(i.ms_per_beat) / 100
             beat_durations[i.time] = duration
 
-        objects = list()
+        self.objects = list()
         for i in beatmap_obj.hitobjects:
             duration = [j for j in beat_durations if j <= i.time][-1]
             if i.typestr() == "circle":
-                objects.append({"type": "circle", "time": i.time,
-                                "position": (i.data.pos.x, i.data.pos.y)})
+                self.objects.append({"type": "circle", "time": i.time,
+                                     "position": (i.data.pos.x, i.data.pos.y)})
             elif i.typestr() == "spinner":
-                objects.append({"type": "spinner", "time": i.time, "duration": i.data.end_time})
+                self.objects.append({"type": "spinner", "time": i.time, "duration": i.data.end_time})
             else:
                 slider_duration = i.data.distance / (100.0 * beatmap_obj.sv) \
                                   * beat_durations[duration]
                 slider = SliderCurve([(i.data.pos.x, i.data.pos.y)]
                                      + [(a.x, a.y) for a in i.data.points], i.data.type)
-                objects.append({"type": "slider", "time": i.time, "slider": slider,
-                                "repetitions": i.data.repetitions, "duration": slider_duration})
+                self.objects.append({"type": "slider", "time": i.time, "slider": slider,
+                                     "repetitions": i.data.repetitions, "duration": slider_duration,
+                                     "tick rate": beatmap_obj.tick_rate})
