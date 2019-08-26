@@ -1,5 +1,5 @@
-from utils import *
-import osuUtils
+import osu_utils
+from utils import Log, help_me
 
 
 class Command:
@@ -28,13 +28,13 @@ class Command:
             await help_me(message, self.command)
             return
         except IndexError:
-            Log.error("No ar provided")
+            Log.error("No hp provided")
             await help_me(message, self.command)
             return
 
         mods = args[2].upper() if len(args) > 2 else ""
 
-        new_hp, mod_list = osuUtils.CalculateMods(mods).hp(hp)
+        new_hp, mod_list = osu_utils.CalculateMods(mods).hp(hp)
 
         output = ""
 

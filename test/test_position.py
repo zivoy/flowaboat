@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from replayParser import get_action_at_time
+from replay_parser import get_action_at_time
 
 
 class PositionTests(unittest.TestCase):

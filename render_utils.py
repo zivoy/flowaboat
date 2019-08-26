@@ -1,26 +1,26 @@
+"""
+Module for rendering replays
+"""
 import subprocess
 from os import remove
 
-import bezier
 import gizeh
 import moviepy.editor as mpy
 import numpy as np
 import pandas as pd
 
-from osuUtils import speed_multiplier, CalculateMods
-from replayParser import get_action_at_time
+from osu_utils import speed_multiplier, CalculateMods
+from replay_parser import get_action_at_time, SliderCurve
 
-dist_before = 100
-dist_after = 10
+DIST_BEFORE = 100
+DIST_AFTER = 10
 
-width = 512
-height = 384
+WIDTH = 512
+HEIGHT = 384
 
-padding = 64
+PADDING = 64
 
-res = 200
-
-colors = [
+COLORS = [
     [255, 255, 255],  # [45,45,45]
     [197, 97, 26],
     [112, 197, 104],
@@ -28,10 +28,15 @@ colors = [
     [33, 122, 137]
 ]
 
-colors = list(map(lambda x: [i / 255 for i in x], colors))
+COLORS = list(map(lambda x: [i / 255 for i in x], COLORS))
 
 
-def ar(approach_rate):
+def for_approach_rate(approach_rate):
+    """
+    for a approach rate get how much before the circle appers and when it has full opacity
+    :param approach_rate: float ar
+    :return: preempt in ms, fade time in ms
+    """
     if approach_rate < 5:
         preempt = 1200 + 600 * (5 - approach_rate) / 5
         fade_in = 800 + 400 * (5 - approach_rate) / 5
@@ -45,12 +50,23 @@ def ar(approach_rate):
 
 
 class HitCircle:
+    """
+    hit circle object
+    :param time: start time
+    :param position: position
+    :param radius: circle radius
+    :param color: circle color
+    :param border: border color
+    :param ar_ms: how fast circle appears
+    :param fade_ms: when is it fully opaque
+    """
+
     def __init__(self, time, position, radius, color, border, ar_ms, fade_ms):
         self.appear = time - ar_ms
-        self.disappear = time + (ar_ms / dist_after)
+        self.disappear = time + (ar_ms / DIST_AFTER)
         self.action = time
         self.border = border
-        self.position = list(map(lambda x: x + padding, position))
+        self.position = list(map(lambda x: x + PADDING, position))
         self.radius = radius
         self.color = color
         self.visable = False
@@ -58,6 +74,11 @@ class HitCircle:
         self.ar_ms = ar_ms
 
     def render(self, time):
+        """
+        create gizeh object
+        :param time: current time
+        :return: gizeh object
+        """
         alph = get_alpha(self, time)
         circle = gizeh.circle(self.radius - 5, xy=self.position,
                               stroke=(*self.border, alph), stroke_width=5, fill=(*self.color, alph))
@@ -66,29 +87,68 @@ class HitCircle:
 
 
 class Spinner:
+    """
+    spinner object
+    :param time: start time
+    :param end_time: end time
+    :param color: color
+    :param radius: circle radius
+    :param ar_ms: how much before it appears
+    :param fade_ms: when is it fully opaque
+    """
+
     def __init__(self, time, end_time, color, radius, ar_ms, fade_ms):
         self.appear = time - ar_ms
         self.action = time
         self.radius = radius
         self.disappear = end_time
-        pos = [width / 2, height / 2]
-        self.position = list(map(lambda x: x + padding, pos))
+        pos = [WIDTH / 2, HEIGHT / 2]
+        self.position = list(map(lambda x: x + PADDING, pos))
         self.visable = False
         self.color = color
         self.fade_ms = fade_ms
         self.ar_ms = ar_ms
 
     def approach_circle(self, time):
+        """
+        gets radius
+        :param time: current time
+        :return: radius
+        """
         return min(self.radius, 9 + abs(-(1 - time / self.disappear) * self.radius * 2))
 
     def render(self, time):
+        """
+        create gizeh object
+        :param time: current time
+        :return: gizeh object
+        """
         alph = get_alpha(self, time)
         center = gizeh.circle(9, xy=self.position, fill=(1, 1, 1, alph))
-        spinn = gizeh.circle(self.approach_circle(time), xy=self.position, stroke_width=17, stroke=(*self.color, alph))
+        spinn = gizeh.circle(self.approach_circle(time), xy=self.position,
+                             stroke_width=17, stroke=(*self.color, alph))
         return [center, spinn]
 
 
 class Slider:
+    """
+    slider object
+    :param time: start time
+    :param position: position
+    :param radius: circle radius
+    :param distance: length of slider
+    :param repetitions: how many repetitions
+    :param slider_type: slider type
+    :param points: slider points
+    :param beat_duration: beat duration
+    :param slider_vel: slider velocity
+    :param color: slider color
+    :param border: border color
+    :param ar_ms: how much before it appears
+    :param fade_ms: when is it fully opaque
+    :param tick_rate: tick rate
+    """
+
     def __init__(self, time, position, radius, distance, repetitions, slider_type,
                  points, beat_duration, slider_vel, color, border, ar_ms, fade_ms, tick_rate):
         slider_duration = distance / (100.0 * slider_vel) * beat_duration
@@ -97,10 +157,10 @@ class Slider:
         self.action = time
         self.duration = slider_duration
         self.repetitions = repetitions
-        position = list(map(lambda x: x + padding, position))
+        position = list(map(lambda x: x + PADDING, position))
         self.position = position
         self.radius = radius - 5
-        self.points = [(i.x + padding, i.y + padding) for i in points]
+        self.points = [(i.x + PADDING, i.y + PADDING) for i in points]
         self.visable = False
         self.color = color
         self.border = border
@@ -110,12 +170,23 @@ class Slider:
         self.slider = SliderCurve([tuple(self.position)] + self.points, slider_type)
 
     def slide(self, alpha):
+        """
+        create gizeh object
+        :param alpha: current alpha
+        :return: gizeh object
+        """
         sld = map(lambda x: x * .9, self.color)
-        slider = gizeh.polyline(points=self.slider.curve, stroke_width=self.radius * 2 + 5, stroke=(*sld, alpha),
-                                line_cap="round", line_join="round")
+        slider = gizeh.polyline(points=self.slider.curve, stroke_width=self.radius * 2 + 5,
+                                stroke=(*sld, alpha), line_cap="round", line_join="round")
         return slider
 
     def ball(self, time, alpha):
+        """
+        create gizeh object
+        :param time: current time
+        :param alpha: current alpha
+        :return: gizeh object
+        """
         time_strt = min(max(self.action, time) - self.action, self.duration * self.repetitions)
         per = time_strt % (self.duration + 1) / self.duration
         if time_strt / self.duration % 2 > 1:
@@ -129,6 +200,11 @@ class Slider:
         return ball
 
     def render(self, time):
+        """
+        create gizeh object
+        :param time: current time
+        :return: gizeh object
+        """
         alph = get_alpha(self, time)
         slide = self.slide(alph)
         ball = self.ball(time, alph)
@@ -137,82 +213,44 @@ class Slider:
 
 
 def get_alpha(self, time):
+    """
+    get alpha object should have
+    :param self: object
+    :param time: current time
+    :return: alpha float
+    """
     return min(1, max(0, (time - self.appear) / self.fade_ms))
 
 
 def approach_circle(self, time):
-    rad = self.radius + max(0, (self.action - time) / (self.ar_ms / dist_before))
+    """
+    create gizeh object
+    :param self: object
+    :param time: current time
+    :return: gizeh object
+    """
+    rad = self.radius + max(0, (self.action - time) / (self.ar_ms / DIST_BEFORE))
     alpha = 0.15 if rad == self.radius else get_alpha(self, time)
     return gizeh.circle(rad, xy=self.position, stroke_width=5, stroke=(1, 1, 1, alpha))
 
 
-class SliderCurve:
-    def __init__(self, points, slider_type, resolution=None):
-        if resolution is None:
-            resolution = res
-        if slider_type == "L":
-            resolution = 2
-
-        if slider_type != "C":
-            if slider_type == "B":
-                points_list = split_on_double(points)
-            else:
-                points_list = [points]
-            paths = list()
-            for i in points_list:
-                nodes = np.asfortranarray(i).transpose()
-                paths.append(bezier.Curve.from_nodes(nodes))
-
-            curve = list()
-            for i in paths:
-                s_v = np.linspace(0, 1, resolution)
-                curve.append(i.evaluate_multi(s_v).transpose())
-            for i, j in enumerate(curve[:-1]):
-                curve[i] = j[:-1]
-            self.curve = np.concatenate(curve)
-
-            self.length = sum([i.length for i in paths])
-
-            self.paths = list()
-            per = 0
-            for i in paths:
-                self.paths.append((per, i))
-                per += i.length / self.length
-
-    def get_point(self, percentage):
-        clost = self.paths[0][1]
-        clostper = 0
-        for i, j in self.paths:
-            if percentage >= i >= clostper:
-                clostper = i
-                clost = j
-
-        loc = (percentage * self.length - clostper * self.length) / clost.length
-        return clost.evaluate(loc)
-
-
-def split_on_double(item_list):
-    last = item_list[0]
-    l_index = 0
-    split_list = list()
-    for i, j in list(enumerate(item_list))[1:]:
-        if j == last:
-            split_list.append(item_list[l_index:i])
-            l_index = i
-        last = j
-    split_list.append(item_list[l_index:])
-    return split_list
-
-
 class Replay:
+    """
+    replay object for rendering
+    :param beatmap_obj: beatmap object
+    :param replay_dataframe: replay pandas dataframe
+    :param mods: mods applied
+    :param combo_colors: --optional-- colors
+    """
+
     def __init__(self, beatmap_obj, replay_dataframe, mods, combo_colors=None):
         if combo_colors is None:
-            combo_colors = colors
+            combo_colors = COLORS
         self.mods = mods
         self.speed = speed_multiplier(mods)
         aug = CalculateMods([i for i in mods if i not in ["DT", "HT", "NC"]])
-        self.ar, _, _ = aug.ar(beatmap_obj.ar)
-        self.cs, _ = aug.cs(beatmap_obj.cs)
+        self.approach_rate, _, _ = aug.ar(beatmap_obj.ar)
+        self.circle_size, _ = aug.cs(beatmap_obj.cs)
         self.border = combo_colors[0]
         self.colors = combo_colors[1:]
         self.minimum = abs(min(0, replay_dataframe["offset"].min()))
@@ -220,9 +258,9 @@ class Replay:
         self.beatmap = beatmap_obj
         self.tick_rate = beatmap_obj.tick_rate
 
-        self.circle_radius = (width / 16) * (1 - (0.7 * (self.cs - 5) / 5))
-        self.spinner_radius = height * .85 / 2
-        self.ar_ms, self.fade_ms = ar(self.ar)
+        self.circle_radius = (WIDTH / 16) * (1 - (0.7 * (self.circle_size - 5) / 5))
+        self.spinner_radius = HEIGHT * .85 / 2
+        self.ar_ms, self.fade_ms = for_approach_rate(self.approach_rate)
         self.beat_durations = dict()
         last_non = 1000
         beatmap_obj.timing_points[0].time = 0
@@ -247,7 +285,7 @@ class Replay:
                 col += (64 >> 4)
             col = col % len(self.colors)
 
-            duration = [j for j in self.beat_durations.keys() if j <= i.time][-1]
+            duration = [j for j in self.beat_durations if j <= i.time][-1]
             if i.typestr() == "circle":
                 objects.append(HitCircle(i.time, (i.data.pos.x, i.data.pos.y),
                                          self.circle_radius, self.colors[col],
@@ -257,38 +295,44 @@ class Replay:
                                        self.spinner_radius, self.ar_ms, self.fade_ms))
             else:
                 objects.append(
-                    Slider(i.time, (i.data.pos.x, i.data.pos.y), self.circle_radius, i.data.distance,
-                           i.data.repetitions, i.data.type, i.data.points, self.beat_durations[duration],
-                           beatmap_obj.sv, self.colors[col], self.border, self.ar_ms, self.fade_ms,
-                           self.tick_rate))
+                    Slider(i.time, (i.data.pos.x, i.data.pos.y), self.circle_radius,
+                           i.data.distance, i.data.repetitions, i.data.type, i.data.points,
+                           self.beat_durations[duration], beatmap_obj.sv, self.colors[col],
+                           self.border, self.ar_ms, self.fade_ms, self.tick_rate))
         self.objects = objects[::-1]
 
         self.offset = 0
 
-    def make_frame(self, t):
-        t = t + self.offset
-        time = t * 1000 - self.minimum
-        surface = gizeh.Surface(width + padding * 2, height + padding * 2)
+    def make_frame(self, time_decimal):
+        """
+        render frame
+        :param time_decimal: time in seconds
+        :return: 3d numpy array
+        """
+        time_decimal = time_decimal + self.offset
+        time = time_decimal * 1000 - self.minimum
+        surface = gizeh.Surface(WIDTH + PADDING * 2, HEIGHT + PADDING * 2)
         cords = get_action_at_time(self.replay, time)
 
         left = (.2, 0, 0)
         right = (.2, 0, 0)
 
         click = cords["clicks"]
-        if click == 5 or click == 1 or click == 15:
+        if click in [1, 5, 15]:
             left = (.9, 0, 0)
-        if click == 10 or click == 2 or click == 15:
+        if click in [2, 10, 15]:
             right = (.9, 0, 0)
 
-        bg = 1.15 if click else 1
-        mouse = gizeh.circle(10 * bg, xy=(cords["x pos"] + padding, cords["y pos"] + padding), fill=(1, 0, 0),
-                             stroke=(0, 1, 0), stroke_width=2)
+        size_multiplier = 1.15 if click else 1
+        mouse = gizeh.circle(10 * size_multiplier, xy=(cords["x pos"] + PADDING,
+                                                       cords["y pos"] + PADDING),
+                             fill=(1, 0, 0), stroke=(0, 1, 0), stroke_width=2)
 
         sqrl = gizeh.square(l=30, fill=left, xy=(surface.width - 60, surface.height - 24))
         sqrr = gizeh.square(l=30, fill=right, xy=(surface.width - 25, surface.height - 24))
         clicks = gizeh.Group([sqrl, sqrr])
 
-        renderObjs = list()
+        render_objects = list()
         for i in self.objects:
             if i.appear <= time:
                 i.visable = True
@@ -296,39 +340,54 @@ class Replay:
                 i.visable = False
 
             if i.visable:
-                renderObjs.extend(i.render(time))
-        circls = gizeh.Group(renderObjs)
+                render_objects.extend(i.render(time))
+        hit_objects = gizeh.Group(render_objects)
 
-        circls.draw(surface)
+        hit_objects.draw(surface)
         mouse.draw(surface)
         clicks.draw(surface)
         return surface.get_npimage()
 
     def render(self, name, start_offset, duration, fps=30, audio=None):
+        """
+        render object
+        :param name: file to save as
+        :param start_offset: where to start
+        :param duration: how long the clip will be
+        :param fps: default: 30
+        :param audio: audio file path
+        :return: None. saves file
+        """
         self.offset = start_offset
         clip = mpy.VideoClip(self.make_frame, duration=duration * self.speed).speedx(self.speed)
         if audio is not None:
-            subprocess.run(["ffmpeg", "-loglevel", "quiet", "-i", audio, "-filter:a", f"atempo={self.speed}", "-vn",
-                            f"{audio}.mp3"])
+            subprocess.run(["ffmpeg", "-loglevel", "quiet", "-i", audio, "-filter:a",
+                            f"atempo={self.speed}", "-vn", f"{audio}.mp3"])
             audio = f"{audio}.mp3"
-            audioOffset = start_offset
+            audio_start_offset = start_offset
             acl = mpy.AudioFileClip(audio)
             blnk = mpy.AudioClip(lambda x: 0, duration=self.minimum / 1000)
-            aftr = max(0, (duration + audioOffset) - acl.duration)
+            aftr = max(0, (duration + audio_start_offset) - acl.duration)
             ablnk = mpy.AudioClip(lambda x: 0, duration=aftr)
             snd = mpy.concatenate_audioclips([blnk, acl, ablnk])
-            clip = clip.set_audio(snd.subclip(audioOffset, duration + audioOffset))
+            clip = clip.set_audio(snd.subclip(audio_start_offset, duration + audio_start_offset))
             remove(audio)
 
         if name.endswith(".gif"):
             clip.write_gif(name, fps=fps)
             subprocess.run(
-                ["../gifsicle-1.82.1-lossy/mac/gifsicle", "-O3", "--lossy=30", "-o", "circle.gif", "circle.gif"])
+                ["../gifsicle-1.82.1-lossy/mac/gifsicle", "-O3", "--lossy=30", "-o",
+                 "circle.gif", "circle.gif"])
         else:
             clip.write_videofile(name, fps=fps)
 
 
 def perfect_play(beatmap_obj):
+    """
+    given a beatmap object generate a perfect play
+    :param beatmap_obj: beatmap object
+    :return: pandas dataframe play
+    """
     beat_durations = dict()
     last_non = 1000
     beatmap_obj.timing_points[0].time = 0
@@ -342,21 +401,25 @@ def perfect_play(beatmap_obj):
 
     objects = list()
     for i in beatmap_obj.hitobjects:
-        duration = [j for j in beat_durations.keys() if j <= i.time][-1]
+        duration = [j for j in beat_durations if j <= i.time][-1]
         if i.typestr() == "circle":
-            objects.append({"type": "circle", "time": i.time, "position": (i.data.pos.x, i.data.pos.y)})
+            objects.append({"type": "circle", "time": i.time,
+                            "position": (i.data.pos.x, i.data.pos.y)})
         elif i.typestr() == "spinner":
             objects.append({"type": "spinner", "time": i.time, "duration": i.data.end_time})
         else:
-            slider_duration = i.data.distance / (100.0 * beatmap_obj.sv) * beat_durations[duration]
-            slider = SliderCurve([(i.data.pos.x, i.data.pos.y)] + [(a.x, a.y) for a in i.data.points], i.data.type)
+            slider_duration = i.data.distance / (100.0 * beatmap_obj.sv) \
+                              * beat_durations[duration]
+            slider = SliderCurve([(i.data.pos.x, i.data.pos.y)]
+                                 + [(a.x, a.y) for a in i.data.points], i.data.type)
             objects.append({"type": "slider", "time": i.time, "slider": slider,
                             "repetitions": i.data.repetitions, "duration": slider_duration})
 
     last_click = 10
     last_offset = objects[0]["time"] - 2000
     safzon = 70
-    play = pd.DataFrame([[last_offset - 17, width / 2, height / 2, 0]], columns=["offset", "x pos", "y pos", "clicks"])
+    play = pd.DataFrame([[last_offset - 17, WIDTH / 2, HEIGHT / 2, 0]],
+                        columns=["offset", "x pos", "y pos", "clicks"])
 
     for i in objects:
         if last_click == 10:
@@ -365,7 +428,8 @@ def perfect_play(beatmap_obj):
             last_click = 10
         for j in np.arange(last_offset, i["time"], 17):
             play = play.append(
-                pd.DataFrame([[int(j), np.nan, np.nan, 0]], columns=["offset", "x pos", "y pos", "clicks"]), True)
+                pd.DataFrame([[int(j), np.nan, np.nan, 0]],
+                             columns=["offset", "x pos", "y pos", "clicks"]), True)
 
         if i["type"] == "circle":
             for j in np.arange(i["time"], i["time"] + 80, 17):
@@ -375,16 +439,17 @@ def perfect_play(beatmap_obj):
                 last_offset = j
 
         elif i["type"] == "slider":
-            l = list()
+            items = list()
             for j in i["slider"].curve:
                 dst = j - i["slider"].curve[0]
-                l.append(np.sqrt(dst[0] ** 2 + dst[1] ** 2))
-            s = pd.Series(l)
+                items.append(np.sqrt(dst[0] ** 2 + dst[1] ** 2))
+            series = pd.Series(items)
             for j in np.arange(i["time"], i["time"] + i["duration"] * i["repetitions"], 17):
-                if s[s > safzon].any():
-                    time_strt = min(max(i["time"], j) - i["time"], i["duration"] * i["repetitions"])
-                    per = time_strt % (i["duration"] + 1) / i["duration"]
-                    if time_strt / i["duration"] % 2 > 1:
+                if series[series > safzon].any():
+                    time_start = min(max(i["time"], j) - i["time"],
+                                     i["duration"] * i["repetitions"])
+                    per = time_start % (i["duration"] + 1) / i["duration"]
+                    if time_start / i["duration"] % 2 > 1:
                         per = 1 - per
                     pos = i["slider"].get_point(per)
                 else:
@@ -406,6 +471,6 @@ def perfect_play(beatmap_obj):
                 last_offset = j
 
     play = play.append(
-        pd.DataFrame([[play["offset"].iloc[-1] + 17, width / 2, height / 2, 0]],
+        pd.DataFrame([[play["offset"].iloc[-1] + 17, WIDTH / 2, HEIGHT / 2, 0]],
                      columns=["offset", "x pos", "y pos", "clicks"]), True)
     return play.interpolate()

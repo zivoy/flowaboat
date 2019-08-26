@@ -380,7 +380,7 @@ class parser:
             raise SyntaxError(
                 "property must be a pair of ':'-separated values"
             )
-        return (s[0], "".join(s[1:]))
+        return s[0], "".join(s[1:])
 
     def metadata(self, b, line):
         p = self.property(line)

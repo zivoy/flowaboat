@@ -12,3 +12,7 @@ users.list
 #python cache
 __pycache__/
 */__pycache__/
+
+temp/
+*.ipynb
+.ipynb_checkpoints/

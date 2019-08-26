@@ -1,11 +1,13 @@
 import json
 import os
-import commands
-import discord
-import requests
-import regex
-import arrow
 from time import sleep
+
+import arrow
+import discord
+import regex
+import requests
+
+import commands
 
 
 class UserError(Exception):
@@ -112,7 +114,8 @@ class Users(JasonFile):
         uuid = str(uuid)
         if uuid not in self.users:
             self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign,
-                                "last_beatmap": {"map": (None, ""), "mods": [], "completion": 0, "accuracy": 0,
+                                "last_beatmap": {"map": (None, ""), "mods": [],
+                                                 "completion": 0, "accuracy": 0,
                                                  "user": osu_ign, "replay": None},
                                 "last_message": None}
             self.save()
@@ -121,9 +124,11 @@ class Users(JasonFile):
         self.users[str(uuid)][item] = value
         self.save()
 
-    def update_last_message(self, user, map_link, map_type, mods, completion, accuracy, user_ign, replay):
+    def update_last_message(self, user, map_link, map_type, mods,
+                            completion, accuracy, user_ign, replay):
         self.set(user, "last_beatmap",
-                 {"map": (map_link, map_type), "mods": mods, "completion": completion, "accuracy": accuracy,
+                 {"map": (map_link, map_type), "mods": mods,
+                  "completion": completion, "accuracy": accuracy,
                   "user": user_ign, "replay": replay})
 
 
@@ -204,20 +209,25 @@ def command_help(command):
             command = getattr(commands, sanitize(i))()
             command_text = f"{Config.prefix}{i}"
 
-            help_page = discord.Embed(title="Command", description=f"`{command_text}`", inline=False)
+            help_page = discord.Embed(title="Command",
+                                      description=f"`{command_text}`", inline=False)
 
             if command.synonyms:
                 help_page.add_field(name="Synonyms",
-                                    value=", ".join([f"`{Config.prefix}{i}`" for i in command.synonyms]), inline=False)
+                                    value=", ".join([f"`{Config.prefix}{i}`"
+                                                     for i in command.synonyms]), inline=False)
 
             help_page.add_field(name="Description", value=command.description, inline=False)
 
-            help_page.add_field(name="Usage", value=f"**Required variables**: `{command.argsRequired}`\n"
-                                                    f"```{command_text} {command.usage}```", inline=False)
+            help_page.add_field(name="Usage", value=f"**Required variables**: "
+                                                    f"`{command.argsRequired}`\n"
+                                                    f"```{command_text} {command.usage}```",
+                                inline=False)
 
             examples = command.examples
             emps = "s" if len(examples) > 1 else ""
-            examps = "\n\n".join([f"```{Config.prefix}{i['run']}```{i['result']}" for i in examples])
+            examps = "\n\n".join([f"```{Config.prefix}"
+                                  f"{i['run']}```{i['result']}" for i in examples])
             help_page.add_field(name="Example" + emps, value=examps, inline=False)
 
             Log.log("Retuning help page for", command_text)

@@ -1,5 +1,5 @@
+import osu_utils
 from utils import *
-import osuUtils
 
 
 class Command:
@@ -24,10 +24,10 @@ class Command:
         mods = []
         for i in args:
             if i.startswith("+"):
-                mods = osuUtils.parse_mods_string(i[1:])
+                mods = osu_utils.parse_mods_string(i[1:])
 
         if len(args) > 1 and not args[1].startswith("+"):
-            map_link, map_type = osuUtils.get_map_link(args[1])
+            map_link, map_type = osu_utils.get_map_link(args[1])
             Users().update_last_message(message.author.id, map_link, map_type, mods, 1, 1)
         else:
             map_link, map_type = user_data["last_beatmap"]["map"]
@@ -39,7 +39,7 @@ class Command:
             await help_me(message, "map")
             return
 
-        bpm_graph = osuUtils.graph_bpm(map_link, mods, map_type)
+        bpm_graph = osu_utils.graph_bpm(map_link, mods, map_type)
 
         Log.log("Posting Graph")
         await message.channel.send(file=discord.File(bpm_graph, "BPM_Graph.png"))

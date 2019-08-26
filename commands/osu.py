@@ -1,6 +1,7 @@
-from utils import *
 from time import time
-import osuUtils
+
+import osu_utils
+from utils import *
 
 
 class Command:
@@ -34,7 +35,7 @@ class Command:
             return
 
         try:
-            user_profile = osuUtils.get_user(user)
+            user_profile = osu_utils.get_user(user)
         except UserNonexistent as err:
             await message.channel.send(err)
             return
@@ -42,11 +43,11 @@ class Command:
         profile = user_profile[0]
 
         grades = \
-            f"{osuUtils.get_rank_emoji('XH', client)} {int(profile['count_rank_ssh']):,} " \
-            f"{osuUtils.get_rank_emoji('X', client)} {int(profile['count_rank_ss']):,} " \
-            f"{osuUtils.get_rank_emoji('SH', client)} {int(profile['count_rank_sh']):,} " \
-            f"{osuUtils.get_rank_emoji('S', client)} {int(profile['count_rank_s']):,} " \
-            f"{osuUtils.get_rank_emoji('A', client)} {int(profile['count_rank_a']):,}"
+            f"{osu_utils.get_rank_emoji('XH', client)} {int(profile['count_rank_ssh']):,} " \
+            f"{osu_utils.get_rank_emoji('X', client)} {int(profile['count_rank_ss']):,} " \
+            f"{osu_utils.get_rank_emoji('SH', client)} {int(profile['count_rank_sh']):,} " \
+            f"{osu_utils.get_rank_emoji('S', client)} {int(profile['count_rank_s']):,} " \
+            f"{osu_utils.get_rank_emoji('A', client)} {int(profile['count_rank_a']):,}"
 
         seconds = int(profile['total_seconds_played'])
         play_time = f"{round(seconds / 3600)}h {round(seconds % 3600 / 60)}m"

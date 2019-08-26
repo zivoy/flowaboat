@@ -1,5 +1,5 @@
+import osu_utils
 from utils import *
-import osuUtils
 
 
 class Command:
@@ -45,14 +45,14 @@ class Command:
             index = int(index.captures(1)[0])
 
         try:
-            recent_play = osuUtils.get_recent(user, index)
-        except osuUtils.NoPlays as err:
+            recent_play = osu_utils.get_recent(user, index)
+        except osu_utils.NoPlays as err:
             await message.channel.send(f"`{err}`")
             Log.log(err)
             return
 
         try:
-            play_data = osuUtils.stat_play(recent_play)
+            play_data = osu_utils.stat_play(recent_play)
         except Exception as err:
             await message.channel.send(err)
             Log.error(err)
@@ -62,7 +62,7 @@ class Command:
                                     recent_play.enabled_mods, play_data.completion, recent_play.accuracy, user,
                                     play_data.replay)
 
-        embed = osuUtils.embed_play(play_data, client)
+        embed = osu_utils.embed_play(play_data, client)
         graph = discord.File(play_data.strain_bar, "strains_bar.png")
 
         await message.channel.send(file=graph, embed=embed)

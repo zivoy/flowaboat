@@ -1,5 +1,5 @@
-from utils import *
-import osuUtils
+import osu_utils
+from utils import Log, help_me
 
 
 class Command:
@@ -7,14 +7,15 @@ class Command:
     description = "Calculate Overall Difficulty values and milliseconds with mods applied."
     argsRequired = 1
     usage = "<od> [+mods]"
-    examples = [{
-        'run': "od 7 +HT",
-        'result': "Returns OD of AR8 with HT applied."
-    },
+    examples = [
         {
-        'run': "od 3.5 +HR",
-        'result': "Returns OD of AR6.4 with HR applied."
-    }]
+            'run': "od 7 +HT",
+            'result': "Returns OD of AR8 with HT applied."
+        },
+        {
+            'run': "od 3.5 +HR",
+            'result': "Returns OD of AR6.4 with HR applied."
+        }]
     synonyms = []
 
     async def call(self, package):
@@ -28,13 +29,13 @@ class Command:
             await help_me(message, self.command)
             return
         except IndexError:
-            Log.error("No ar provided")
+            Log.error("No od provided")
             await help_me(message, self.command)
             return
 
         mods = args[2].upper() if len(args) > 2 else ""
 
-        new_od, od_ms, mod_list = osuUtils.CalculateMods(mods).od(od)
+        new_od, od_ms, mod_list = osu_utils.CalculateMods(mods).od(od)
 
         output = ""
 
