@@ -1,6 +1,8 @@
 import unittest
 from unittest import mock
+
 import arrow
+
 import utils
 
 date_form = "YYYY-MM-DD hh:mm:ss"

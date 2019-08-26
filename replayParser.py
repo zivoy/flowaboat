@@ -149,7 +149,7 @@ def get_action_at_time(dataframe, time):
     else:
         index = dataframe["offset"][dataframe["offset"] < time].idxmax()
 
-    index = index - 2
+    index = index
     """lower = dataframe.iloc[index]
     upper = dataframe.iloc[index+1]
     perc = (time-lower["offset"])/(upper["offset"]-lower["offset"])
