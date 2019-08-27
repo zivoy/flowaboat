@@ -352,10 +352,9 @@ class ScoreReplay:
         self.replay = replay
 
     def score(self, od, cs):
-        score = pd.DataFrame(columns=["offset", "combo", "hit", "displacement", "object"])
+        score = pd.DataFrame(columns=["offset", "combo", "hit", "displacement", "object", "bonus"])
         # calculate score and accuracy afterwords
 
-        miss_window = 200 + 50 * (5 - od) / 5
         hit_window50 = 150 + 50 * (5 - od) / 5
         hit_window100 = 100 + 40 * (5 - od) / 5
         hit_window300 = 50 + 30 * (5 - od) / 5
@@ -374,66 +373,65 @@ class ScoreReplay:
 
         key1 = False
         key2 = False
-        obj_pos = 0
         combo = 0.
 
-        for j in range(len(self.replay)):
-            last_key1 = key1
-            last_key2 = key2
-            i = self.replay.iloc[j]
-
-            obj_pos = min(obj_pos, len(self.objects) - 1)
-
-            if int(i["clicks"]) & k1:
-                key1 = True
-            else:
+        for i in self.objects:
+            if i["type"] == "circle":
+                lower = self.replay[self.replay["offset"] > i["time"] - hit_window50]
+                upper = lower[lower["offset"] < i["time"] + hit_window50]
                 key1 = False
-            if int(i["clicks"]) & k2:
-                key2 = True
-            else:
                 key2 = False
+                clicks = list()
+                for j in upper.iterrows():
+                    time_action = j[1]
+                    last_key1 = key1
+                    last_key2 = key2
+                    if int(time_action["clicks"]) & k1:
+                        key1 = True
+                    else:
+                        key1 = False
+                    if int(time_action["clicks"]) & k2:
+                        key2 = True
+                    else:
+                        key2 = False
+                    if (not last_key1 and key1) or (not last_key2 and key2):
+                        if np.sqrt((time_action["x pos"] - i["position"][0]) ** 2 +
+                                   (time_action["y pos"] - i["position"][1]) ** 2) <= circle_radius:
+                            if i["time"] - hit_window300 < time_action["offset"] < i["time"] + hit_window300:
+                                clicks.append(time_action["offset"] - i["time"])
+                            elif i["time"] - hit_window100 < time_action["offset"] < i["time"] + hit_window100:
+                                clicks.append(time_action["offset"] - i["time"])
 
-            if i["offset"] > self.objects[obj_pos]["time"] + miss_window:  # missed note
+                            elif i["time"] - hit_window50 < time_action["offset"] < i["time"] + hit_window50:
+                                clicks.append(time_action["offset"] - i["time"])
+                        i["pressed"] = True
+                if i["pressed"]:
+                    closet_click = min([(abs(i), i) for i in clicks])
+                    if closet_click[0] < hit_window300:
+                        hit = 300.
+                    elif closet_click[0] < hit_window100:
+                        hit = 100.
+                    else:
+                        hit = 50
+                    combo += 1.
+                    offset = closet_click[1] + i["time"]
+                    deviance = closet_click[1]
+                else:
+                    combo = 0.
+                    offset = i["time"]
+                    hit = 0.
+                    deviance = np.nan
+                bonus = np.nan
+            else:
                 combo = 0.
-                score = score.append(pd.DataFrame(
-                    [[i["offset"], combo, 0., np.nan, self.objects[obj_pos]["type"]]],
-                    columns=["offset", "combo", "hit", "displacement", "object"]), True)
-                obj_pos += 1
+                offset = 0.
+                hit = 0.
+                deviance = np.nan
+                bonus = np.nan
 
-            obj_pos = min(obj_pos, len(self.objects) - 1)
-
-            curr_obj = self.objects[obj_pos]
-
-            if curr_obj["type"] == "circle":
-                if (not last_key1 and key1) or (not last_key2 and key2):
-                    if np.sqrt((i["x pos"] - curr_obj["position"][0]) ** 2 +
-                               (i["y pos"] - curr_obj["position"][1]) ** 2) <= circle_radius:
-                        if curr_obj["time"] - hit_window300 < i["offset"] < curr_obj["time"] + hit_window300:
-                            combo += 1.
-                            hit = 300.
-                            deviance = i["offset"] - curr_obj["time"]
-                        elif curr_obj["time"] - hit_window100 < i["offset"] < curr_obj["time"] + hit_window100:
-                            combo += 1.
-                            hit = 100.
-                            deviance = i["offset"] - curr_obj["time"]
-                        elif curr_obj["time"] - hit_window50 < i["offset"] < curr_obj["time"] + hit_window50:
-                            combo += 1.
-                            hit = 50.
-                            deviance = i["offset"] - curr_obj["time"]
-                        elif curr_obj["time"] - miss_window < i["offset"] < curr_obj["time"] + miss_window:
-                            combo = 0.
-                            hit = 0.
-                            deviance = np.nan
-                        else:
-                            continue
-
-                        obj_pos += 1
-                        curr_obj["pressed"] = True
-                        score = score.append(pd.DataFrame(
-                            [[i["offset"], combo, hit, deviance, "circle"]],
-                            columns=["offset", "combo", "hit", "displacement", "object"]), True)
-                        continue
-
+            score = score.append(pd.DataFrame(
+                [[offset, combo, hit, deviance, i["type"], bonus]],
+                columns=["offset", "combo", "hit", "displacement", "object", "bonus"]), True)
         return score
 
     def calculate_unstable_rate(self, speed=1):
