@@ -201,9 +201,21 @@ def get_string(byte_str):
     return byte_str, string
 
 
-def calculate_unstable_rate(replay_dataframe, beatmap_obj, speed=1):
-    pass
-    # TODO
+def index_at_value(dataframe, value, column):
+    """
+    get closet lower index closet to value
+    :param dataframe: pandas dataframe
+    :param value: value to search for
+    :param column: column to search in
+    :return: index
+    """
+    exact_match = dataframe[dataframe[column] == value]
+    if not exact_match.empty:
+        index = exact_match.index[0]
+    else:
+        index = dataframe[column][dataframe[column] < value].idxmax()
+
+    return index
 
 
 def get_action_at_time(dataframe, time):
@@ -213,13 +225,9 @@ def get_action_at_time(dataframe, time):
     :param time: time in milliseconds
     :return: dataframe entry
     """
-    time = max(time, dataframe["offset"].iloc[0])
-    time = min(time, dataframe["offset"].iloc[-1])
-    exact_match = dataframe[dataframe["offset"] == time]
-    if not exact_match.empty:
-        index = exact_match.index[0]
-    else:
-        index = dataframe["offset"][dataframe["offset"] < time].idxmax()
+    time = max(time, dataframe.loc[0, "offset"])
+    time = min(time, dataframe.loc[-1, "offset"])
+    index = index_at_value(dataframe, time, "offset")
 
     """lower = dataframe.iloc[index]
     upper = dataframe.iloc[index+1]
@@ -310,10 +318,12 @@ class ScoreReplay:
         beat_durations = dict()
         last_non = 1000
         beatmap_obj.timing_points[0].time = 0
+        mspb = dict()
         for i in beatmap_obj.timing_points:
             if i.ms_per_beat > 0:
                 last_non = i.ms_per_beat
                 duration = i.ms_per_beat
+                mspb[i.time] = i.ms_per_beat
             else:
                 duration = last_non * abs(i.ms_per_beat) / 100
             beat_durations[i.time] = duration
@@ -321,9 +331,11 @@ class ScoreReplay:
         self.objects = list()
         for i in beatmap_obj.hitobjects:
             duration = [j for j in beat_durations if j <= i.time][-1]
+            msperb = [j for j in mspb if j <= i.time][-1]
             if i.typestr() == "circle":
                 self.objects.append({"type": "circle", "time": i.time,
-                                     "position": (i.data.pos.x, i.data.pos.y)})
+                                     "position": (i.data.pos.x, i.data.pos.y),
+                                     "pressed": False})
             elif i.typestr() == "spinner":
                 self.objects.append({"type": "spinner", "time": i.time, "duration": i.data.end_time})
             else:
@@ -331,6 +343,106 @@ class ScoreReplay:
                                   * beat_durations[duration]
                 slider = SliderCurve([(i.data.pos.x, i.data.pos.y)]
                                      + [(a.x, a.y) for a in i.data.points], i.data.type)
+                num_of_ticks = beatmap_obj.tick_rate * slider_duration / msperb
+                ticks = {i: False for i in percent_positions(int(num_of_ticks))}
                 self.objects.append({"type": "slider", "time": i.time, "slider": slider,
                                      "repetitions": i.data.repetitions, "duration": slider_duration,
-                                     "tick rate": beatmap_obj.tick_rate})
+                                     "ticks": ticks, "end": False})
+
+        self.replay = replay
+
+    def score(self, od, cs):
+        score = pd.DataFrame(columns=["offset", "combo", "hit", "displacement", "object"])
+        # calculate score and accuracy afterwords
+
+        miss_window = 200 + 50 * (5 - od) / 5
+        hit_window50 = 150 + 50 * (5 - od) / 5
+        hit_window100 = 100 + 40 * (5 - od) / 5
+        hit_window300 = 50 + 30 * (5 - od) / 5
+
+        circle_radius = (512 / 16) * (1 - (0.7 * (cs - 5) / 5))
+
+        if od > 5:
+            spins_per_second = 5 + 2.5 * (od - 5) / 5
+        elif od < 5:
+            spins_per_second = 5 - 2 * (5 - od) / 5
+        else:
+            spins_per_second = 5
+
+        k1 = 1 << 0
+        k2 = 1 << 1
+
+        key1 = False
+        key2 = False
+        obj_pos = 0
+        combo = 0.
+
+        for j in range(len(self.replay)):
+            last_key1 = key1
+            last_key2 = key2
+            i = self.replay.iloc[j]
+
+            obj_pos = min(obj_pos, len(self.objects) - 1)
+
+            if int(i["clicks"]) & k1:
+                key1 = True
+            else:
+                key1 = False
+            if int(i["clicks"]) & k2:
+                key2 = True
+            else:
+                key2 = False
+
+            if i["offset"] > self.objects[obj_pos]["time"] + miss_window:  # missed note
+                combo = 0.
+                score = score.append(pd.DataFrame(
+                    [[i["offset"], combo, 0., np.nan, self.objects[obj_pos]["type"]]],
+                    columns=["offset", "combo", "hit", "displacement", "object"]), True)
+                obj_pos += 1
+
+            obj_pos = min(obj_pos, len(self.objects) - 1)
+
+            curr_obj = self.objects[obj_pos]
+
+            if curr_obj["type"] == "circle":
+                if (not last_key1 and key1) or (not last_key2 and key2):
+                    if np.sqrt((i["x pos"] - curr_obj["position"][0]) ** 2 +
+                               (i["y pos"] - curr_obj["position"][1]) ** 2) <= circle_radius:
+                        if curr_obj["time"] - hit_window300 < i["offset"] < curr_obj["time"] + hit_window300:
+                            combo += 1.
+                            hit = 300.
+                            deviance = i["offset"] - curr_obj["time"]
+                        elif curr_obj["time"] - hit_window100 < i["offset"] < curr_obj["time"] + hit_window100:
+                            combo += 1.
+                            hit = 100.
+                            deviance = i["offset"] - curr_obj["time"]
+                        elif curr_obj["time"] - hit_window50 < i["offset"] < curr_obj["time"] + hit_window50:
+                            combo += 1.
+                            hit = 50.
+                            deviance = i["offset"] - curr_obj["time"]
+                        elif curr_obj["time"] - miss_window < i["offset"] < curr_obj["time"] + miss_window:
+                            combo = 0.
+                            hit = 0.
+                            deviance = np.nan
+                        else:
+                            continue
+
+                        obj_pos += 1
+                        curr_obj["pressed"] = True
+                        score = score.append(pd.DataFrame(
+                            [[i["offset"], combo, hit, deviance, "circle"]],
+                            columns=["offset", "combo", "hit", "displacement", "object"]), True)
+                        continue
+
+        return score
+
+    def calculate_unstable_rate(self, speed=1):
+        pass
+        # TODO
+
+
+def percent_positions(num_of_itms):
+    percentages = list()
+    for i in range(1, num_of_itms + 1):
+        percentages.append(i / (num_of_itms + 1))
+    return percentages

@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 
 from osu_utils import speed_multiplier, CalculateMods
-from replay_parser import get_action_at_time, SliderCurve
+# speed_multiplier = CalculateMods=None
+from replay_parser import get_action_at_time, SliderCurve, index_at_value
 
 DIST_BEFORE = 100
 DIST_AFTER = 10
@@ -115,7 +116,9 @@ class Spinner:
         :param time: current time
         :return: radius
         """
-        return min(self.radius, 9 + abs(-(1 - time / self.disappear) * self.radius * 2))
+        return max(min(self.radius,
+                       -self.radius * ((time - self.action) / (self.disappear - self.action) - 1)),
+                   0) + 9
 
     def render(self, time):
         """
@@ -177,7 +180,7 @@ class Slider:
         """
         sld = map(lambda x: x * .9, self.color)
         slider = gizeh.polyline(points=self.slider.curve, stroke_width=self.radius * 2 + 5,
-                                stroke=(*sld, alpha), line_cap="round", line_join="round")
+                                stroke=(*sld, alpha * .7), line_cap="round", line_join="round")
         return slider
 
     def ball(self, time, alpha):
@@ -243,7 +246,7 @@ class Replay:
     :param combo_colors: --optional-- colors
     """
 
-    def __init__(self, beatmap_obj, replay_dataframe, mods, combo_colors=None):
+    def __init__(self, beatmap_obj, replay_dataframe, mods=[], combo_colors=None):
         if combo_colors is None:
             combo_colors = COLORS
         self.mods = mods
@@ -417,12 +420,17 @@ def perfect_play(beatmap_obj):
 
     last_click = 10
     first_offset = objects[0]["time"] - 2000
-    last_offset = objects[-1]["time"] + 2000
+    if objects[-1]["type"] == "spinner":
+        last_offset = objects[-1]["duration"] + 2000
+    elif objects[-1]["type"] == "slider":
+        last_offset = objects[-1]["duration"] + objects[-1]["time"] + 2000
+    else:
+        last_offset = objects[-1]["time"] + 2000
     safzon = 70
-    play = pd.DataFrame([[i, np.nan, np.nan, 0] for i in np.arange(first_offset, last_offset, 17)],
+    play = pd.DataFrame([[int(i), np.nan, np.nan, 0] for i in np.arange(first_offset, last_offset, 17)],
                         columns=["offset", "x pos", "y pos", "clicks"])
 
-    play.iloc[0, ["x pos", "y pos"]] = 0
+    play.loc[0, ["x pos", "y pos"]] = [WIDTH / 2, HEIGHT / 2]
 
     for i in objects:
         if last_click == 10:
@@ -430,14 +438,9 @@ def perfect_play(beatmap_obj):
         else:
             last_click = 10
 
-        exact_match = play[play["offset"] == i["time"]]
-        if not exact_match.empty:
-            index = exact_match.index[0]
-        else:
-            index = play["offset"][play["offset"] < i["time"]].idxmax()
-
         if i["type"] == "circle":
             for j in np.arange(i["time"], i["time"] + 80, 17):
+                index = index_at_value(play, j, "offset")
                 play.iloc[index] = [int(j), *i["position"], last_click]
 
         elif i["type"] == "slider":
@@ -457,6 +460,7 @@ def perfect_play(beatmap_obj):
                 else:
                     pos = i["slider"].get_point(0)
 
+                index = index_at_value(play, j, "offset")
                 play.iloc[index] = [int(j), *[r[0] for r in pos], last_click]
 
         elif i["type"] == "spinner":
@@ -464,8 +468,9 @@ def perfect_play(beatmap_obj):
                 xpos = -np.math.sin(j / 30) * 50 + 512 / 2
                 ypos = np.math.cos(j / 30) * 50 + 384 / 2
 
+                index = index_at_value(play, j, "offset")
                 play.iloc[index] = [int(j), xpos, ypos, last_click]
 
-    play.ioc[-1, ["x pos", "y pos"]] = [WIDTH / 2, HEIGHT / 2]
+    play.loc[-1, ["x pos", "y pos"]] = [WIDTH / 2, HEIGHT / 2]
 
     return play.interpolate()
