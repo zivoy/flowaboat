@@ -16,3 +16,5 @@ __pycache__/
 temp/
 *.ipynb
 .ipynb_checkpoints/
+
+osu-tools/
