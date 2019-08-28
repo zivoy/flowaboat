@@ -11,3 +11,4 @@ requests
 aiohttp
 regex
 arrow
+-e git://github.com/zivoy/pyttanko.git#egg=pyttanko
