@@ -1,4 +1,5 @@
 import pyttanko
+
 import replay_parser
 
 p = pyttanko.parser()
@@ -10,8 +11,13 @@ with open("./temp/664841/Hard.osu") as f:
 
 rep = replay_parser.ScoreReplay(mp, replay)
 
-a = rep.score(mp.od, mp.cs)
+a = rep.score(mp.od, mp.cs, 1.5)
 
-avg = a.loc[:, "displacement"].sum() / len(a[a["object"] == "circle"])
+cir = a[a["object"] == "circle"]
+avg = cir.loc[:, "displacement"].sum() / len(cir)
+revs = a.iloc[0].loc["displacement"]
+u = revs.sum() / len(revs)
+
 print(avg)
 print(a)
+print(u)

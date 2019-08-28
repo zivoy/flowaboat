@@ -337,7 +337,7 @@ class ScoreReplay:
                                      "position": (i.data.pos.x, i.data.pos.y),
                                      "pressed": False})
             elif i.typestr() == "spinner":
-                self.objects.append({"type": "spinner", "time": i.time, "duration": i.data.end_time})
+                self.objects.append({"type": "spinner", "time": i.time, "end_time": i.data.end_time})
             else:
                 slider_duration = i.data.distance / (100.0 * beatmap_obj.sv) \
                                   * beat_durations[duration]
@@ -351,8 +351,8 @@ class ScoreReplay:
 
         self.replay = replay
 
-    def score(self, od, cs):
-        score = pd.DataFrame(columns=["offset", "combo", "hit", "displacement", "object", "bonus"])
+    def score(self, od, cs, speed=1):
+        score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
         # calculate score and accuracy afterwords
 
         hit_window50 = 150 + 50 * (5 - od) / 5
@@ -416,22 +416,76 @@ class ScoreReplay:
                     combo += 1.
                     offset = closet_click[1] + i["time"]
                     deviance = closet_click[1]
+                    bonuses = 0.
                 else:
                     combo = 0.
                     offset = i["time"]
                     hit = 0.
                     deviance = np.nan
-                bonus = np.nan
+                    bonuses = 0.
+
+            elif i["type"] == "spinner":
+                length = (i["end_time"] - i["time"]) / 1000
+                required_spins = np.floor(spins_per_second * length * .55)
+
+                lower = self.replay[self.replay["offset"] > i["time"]]
+                upper = lower[lower["offset"] < i["end_time"]]
+                hold = upper[upper["clicks"] != 0]
+                spins = pd.Series(name="completed spin")
+                last = 0
+                spin = 0
+                for j in hold.iterrows():
+                    time_action = j[1]
+                    xpos = time_action["x pos"] - 512 / 2
+                    ypos = time_action["y pos"] - 384 / 2
+                    spn = np.arctan2(ypos, xpos) * 180 / np.pi
+                    if spn < 0:
+                        spn += 360
+                    if abs(last - spn) > 120:  # fix for going over but limits rpm to 500
+                        spin += abs(last - spn)
+                    if spin >= 360:
+                        spin = spin % 360
+                        spins.at[time_action["offset"]] = time_action["offset"]
+                    last = spn
+
+                rpm = pd.Series(name="rotations per minute")
+                last_revolution = i["time"]
+                for time, revelation in spins.items():
+                    rpm.at[time] = revelation - last_revolution
+                    last_revolution = revelation
+
+                if len(rpm) >= required_spins:
+                    hit = 300.
+                    combo += 1.
+                    bonuses = 1000. * (len(rpm) - required_spins)
+                elif len(rpm) + spin / 360 >= required_spins / 2 * .5 + required_spins / 2:
+                    hit = 100.
+                    combo += 1.
+                    bonuses = 0.
+                elif len(rpm) + spin / 360 >= required_spins / 2:
+                    hit = 50.
+                    combo += 1.
+                    bonuses = 0.
+                else:
+                    combo = 0.
+                    hit = 0.
+                    bonuses = 0.
+
+                offset = i["time"]
+                deviance = 1000 / rpm * 60 * speed
+
+
+
             else:
                 combo = 0.
                 offset = 0.
                 hit = 0.
                 deviance = np.nan
-                bonus = np.nan
+                bonuses = 0
 
             score = score.append(pd.DataFrame(
-                [[offset, combo, hit, deviance, i["type"], bonus]],
-                columns=["offset", "combo", "hit", "displacement", "object", "bonus"]), True)
+                [[offset, combo, hit, bonuses, deviance, i["type"]]],
+                columns=["offset", "combo", "hit", "bonuses", "displacement", "object"]), True)
         return score
 
     def calculate_unstable_rate(self, speed=1):
