@@ -386,14 +386,8 @@ class ScoreReplay:
                     time_action = j[1]
                     last_key1 = key1
                     last_key2 = key2
-                    if int(time_action["clicks"]) & k1:
-                        key1 = True
-                    else:
-                        key1 = False
-                    if int(time_action["clicks"]) & k2:
-                        key2 = True
-                    else:
-                        key2 = False
+                    key1 = int(time_action["clicks"]) & k1
+                    key2 = int(time_action["clicks"]) & k2
                     if (not last_key1 and key1) or (not last_key2 and key2):
                         if np.sqrt((time_action["x pos"] - i["position"][0]) ** 2 +
                                    (time_action["y pos"] - i["position"][1]) ** 2) <= circle_radius:

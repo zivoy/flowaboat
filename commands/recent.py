@@ -66,4 +66,4 @@ class Command:
         graph = discord.File(play_data.strain_bar, "strains_bar.png")
 
         await message.channel.send(file=graph, embed=embed)
-        Log.log(f"Returning top play {index} for {user}")
+        Log.log(f"Returning recent play #{index} for {user}")

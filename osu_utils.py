@@ -13,6 +13,7 @@ import discord
 import matplotlib
 import numpy as np
 import pandas as pd
+import pyttanko as pytan
 import regex
 import requests
 import seaborn as sns
@@ -20,7 +21,6 @@ from PIL import Image
 from arrow.factory import ArrowParseWarning
 from matplotlib import pyplot as plt
 
-import pyttanko as pytan
 from utils import dict_string_to_nums, fetch_emote, Log, Config, date_form, \
     separator, UserNonexistent, Dict, format_nums, UserError, Api
 
@@ -316,10 +316,10 @@ def get_user(user):
     if Config.debug:
         Log.log(response)
 
-    if len(response) == 0:
+    if not response:
         raise UserNonexistent(f"Couldn't find user: {user}")
 
-    for i in range(len(response)):
+    for i, _ in enumerate(response):
         response[i]["join_date"] = arrow.get(response[i]["join_date"], date_form)
         dict_string_to_nums(response[i])
 
@@ -332,10 +332,10 @@ def get_leaderboard(beatmap_id, limit=100):
     if Config.debug:
         Log.log(response)
 
-    if len(response) == 0:
+    if not response:
         raise NoLeaderBoard("Couldn't find leader board for this beatmap")
 
-    for i in range(len(response)):
+    for i, _ in enumerate(response):
         response[i]["beatmap_id"] = beatmap_id
         response[i] = Play(response[i])
 
@@ -351,7 +351,7 @@ def get_user_map_best(beatmap_id, user, enabled_mods=0):
     # if len(response) == 0:
     #     raise NoScore("Couldn't find user score for this beatmap")
 
-    for i in range(len(response)):
+    for i, _ in enumerate(response):
         response[i] = Play(response[i])
         response[i].beatmap_id = beatmap_id
 
@@ -365,10 +365,10 @@ def get_user_best(user, limit=100):
     if Config.debug:
         Log.log(response)
 
-    if len(response) == 0:
+    if not response:
         raise NoPlays(f"No top plays found for {user}")
 
-    for i in range(len(response)):
+    for i, _ in enumerate(response):
         response[i] = Play(response[i])
 
     return response
@@ -380,10 +380,10 @@ def get_user_recent(user, limit=10):
     if Config.debug:
         Log.log(response)
 
-    if len(response) == 0:
+    if not response:
         raise NoPlays(f"No recent plays found for {user}")
 
-    for i in range(len(response)):
+    for i, _ in enumerate(response):
         response[i] = Play(response[i])
 
     return response
@@ -405,32 +405,31 @@ def get_rank_emoji(rank, client):
     if rank == "XH":
         emote = fetch_emote("XH_Rank", None, client)
         return emote if emote else "Silver SS"
-    elif rank == "X":
+    if rank == "X":
         emote = fetch_emote("X_Rank", None, client)
         return emote if emote else "SS"
-    elif rank == "SH":
+    if rank == "SH":
         emote = fetch_emote("SH_Rank", None, client)
         return emote if emote else "Silver S"
-    elif rank == "S":
+    if rank == "S":
         emote = fetch_emote("S_Rank", None, client)
         return emote if emote else "S"
-    elif rank == "A":
+    if rank == "A":
         emote = fetch_emote("A_Rank", None, client)
         return emote if emote else "A"
-    elif rank == "B":
+    if rank == "B":
         emote = fetch_emote("B_Rank", None, client)
         return emote if emote else "B"
-    elif rank == "C":
+    if rank == "C":
         emote = fetch_emote("C_Rank", None, client)
         return emote if emote else "C"
-    elif rank == "D":
+    if rank == "D":
         emote = fetch_emote("D_Rank", None, client)
         return emote if emote else "D"
-    elif rank == "F":
+    if rank == "F":
         emote = fetch_emote("F_Rank", None, client)
         return emote if emote else "Fail"
-    else:
-        return False
+    return False
 
 
 def get_top(user, index, rb=False, ob=False):
@@ -665,20 +664,20 @@ def graph_bpm(map_link, mods, link_type):
 def get_map_link(link, **kwargs):
     if link.isnumeric():
         return int(link), "id"
-    elif link.endswith(".osu"):
+    if link.endswith(".osu"):
         return link, "url"
-    elif "osu.ppy.sh" in link:
+    if "osu.ppy.sh" in link:
         if "#osu/" in link:
             return int(link.split("#osu/")[-1]), "id"
-        elif "/b/" in link:
+        if "/b/" in link:
             return int(link.split("/b/")[-1]), "id"
-        elif "/osu/" in link:
+        if "/osu/" in link:
             return int(link.split("/osu/")[-1]), "id"
-        elif "/beatmaps/" in link:
+        if "/beatmaps/" in link:
             return int(link.split("/beatmaps/")[-1]), "id"
-        elif "/discussion/" in link:
+        if "/discussion/" in link:
             return int(link.split("/discussion/")[-1].split("/")[0]), "id"
-    elif link.endswith(".osz"):
+    if link.endswith(".osz"):
         return download_mapset(link, **kwargs), "path"
 
 
@@ -928,7 +927,7 @@ def get_strains(beatmap, mods, mode=""):
     strain_offset = math.floor(beatmap.hitobjects[0].time / strain_step) * strain_step - strain_step
     max_strain_time = strain_offset
 
-    for i in range(len(aim_strains)):
+    for i, _ in enumerate(aim_strains):
         star_strains.append(aim_strains[i] + speed_strains[i]
                             + abs(speed_strains[i] - aim_strains[i])
                             * OsuConsts.EXTREME_SCALING_FACTOR.value)
@@ -962,7 +961,7 @@ def calculate_strains(mode_type, hit_objects, speed_multiplier):
     interval_emd = math.ceil(hit_objects[0].time / strain_step) * strain_step
     max_strains = 0.0
 
-    for i in range(len(hit_objects)):
+    for i, _ in enumerate(hit_objects):
         while hit_objects[i].time > interval_emd:
             strains.append(max_strains)
             if i > 0:
@@ -1016,7 +1015,7 @@ def embed_play(play_stats, client):
     embed.set_thumbnail(url=f"https://b.ppy.sh/thumb/{play_stats.map_obj.beatmapset_id}l.jpg")
 
     play_results = f"{get_rank_emoji(play_stats.rank, client)} {separator} "
-    if len(play_stats.mods) > 0:
+    if play_stats.mods:
         play_results += f"+{','.join(sanitize_mods(play_stats.mods))} {separator} "
 
     if play_stats.lb > 0:
