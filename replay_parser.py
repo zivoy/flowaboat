@@ -258,9 +258,12 @@ class SliderCurve:
             else:
                 points_list = [points]
             paths = list()
-            for i in points_list:
-                nodes = np.asfortranarray(i).transpose()
-                paths.append(bezier.Curve.from_nodes(nodes))
+            if slider_type == "P":
+                paths.append(PerfectSlider(points))
+            else:
+                for i in points_list:
+                    nodes = np.asfortranarray(i).transpose()
+                    paths.append(bezier.Curve.from_nodes(nodes))
 
             curve = list()
             for i in paths:
@@ -311,6 +314,73 @@ def split_on_double(item_list):
         last = j
     split_list.append(item_list[l_index:])
     return split_list
+
+
+class PerfectSlider:
+    def __init__(self, points):
+        points = np.array(points)
+        self.center, self.radius = get_circumcircle(points)
+        min_theta = np.arctan2(points[0][1] - self.center[1], points[0][0] - self.center[0])
+        max_theta = np.arctan2(points[2][1] - self.center[1], points[2][0] - self.center[0])
+        pass_through = np.arctan2(points[1][1] - self.center[1], points[1][0] - self.center[0])
+
+        mi = (min_theta + np.pi * 2) % (np.pi * 2)
+        ma = (max_theta + np.pi * 2) % (np.pi * 2)
+        pa = (pass_through + np.pi * 2) % (np.pi * 2)
+
+        p2 = (points[2][1] - self.center[1], points[2][0] - self.center[0])
+        p1 = (points[0][1] - self.center[1], points[0][0] - self.center[0])
+        if not mi < pa < ma:
+            dist = np.arctan2(*p2) - np.arctan2(*p1)
+        else:
+            dist = np.pi * 2 - (np.arctan2(*p1) - np.arctan2(*p2))
+
+        self.min_theta = min_theta
+        self.length = abs(dist)
+        self.dist = dist
+
+    def evaluate(self, percentage):
+        theta = percentage * self.dist + self.min_theta
+        data = np.ndarray(shape=(2, 1), dtype=float)
+
+        data[0][0] = self.center[0] + self.radius * np.cos(theta)
+        data[1][0] = self.center[1] + self.radius * np.sin(theta)
+
+        return data
+
+    def evaluate_multi(self, s_v):
+        pn = np.array(list(map(self.evaluate, s_v)))
+
+        return pn.transpose()[0]
+
+
+def get_circumcircle(triangle):
+    assert triangle.shape == (3, 2)
+
+    line1 = perpendicular_line(triangle[0], triangle[1])
+    line2 = perpendicular_line(triangle[0], triangle[2])
+
+    coef1 = line1.coeffs
+    coef2 = line2.coeffs
+
+    x_center = (coef1[1] - coef2[1]) / (coef2[0] - coef1[0])
+    y_center = line1(x_center)
+    center = np.array([x_center, y_center])
+
+    dist = triangle[0] - center
+    radius = np.sqrt(dist[0] ** 2 + dist[1] ** 2)
+    return center, radius
+
+
+def perpendicular_line(point1, point2):
+    center = (point1 + point2) / 2
+    slope_diff = point1 - point2
+    if 0 in slope_diff:
+        slope_diff += 0.0000000001
+    slope = slope_diff[1] / slope_diff[0]
+    new_slope = -1 / slope
+    offset = center[1] - new_slope * center[0]
+    return np.poly1d([new_slope, offset])
 
 
 class ScoreReplay:
