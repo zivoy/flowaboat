@@ -352,127 +352,155 @@ class ScoreReplay:
         self.replay = replay
         self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
 
+        self.hit_window50 = 0
+        self.hit_window100 = 0
+        self.hit_window300 = 0
+
+        self.k1 = 1 << 0
+        self.k2 = 1 << 1
+
+        self.circle_radius = 0
+
+        self.speed = 1
+
+        self.spins_per_second = 0
+
+
     def generate_score(self, od, cs, speed=1):
         self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
         # calculate score and accuracy afterwords
 
-        hit_window50 = 150 + 50 * (5 - od) / 5
-        hit_window100 = 100 + 40 * (5 - od) / 5
-        hit_window300 = 50 + 30 * (5 - od) / 5
+        self.speed = speed
 
-        circle_radius = (512 / 16) * (1 - (0.7 * (cs - 5) / 5))
+        self.hit_window50 = 150 + 50 * (5 - od) / 5
+        self.hit_window100 = 100 + 40 * (5 - od) / 5
+        self.hit_window300 = 50 + 30 * (5 - od) / 5
+
+        self.circle_radius = (512 / 16) * (1 - (0.7 * (cs - 5) / 5))
 
         if od > 5:
-            spins_per_second = 5 + 2.5 * (od - 5) / 5
+            self.spins_per_second = 5 + 2.5 * (od - 5) / 5
         elif od < 5:
-            spins_per_second = 5 - 2 * (5 - od) / 5
+            self.spins_per_second = 5 - 2 * (5 - od) / 5
         else:
-            spins_per_second = 5
-
-        k1 = 1 << 0
-        k2 = 1 << 1
-
-        key1 = False
-        key2 = False
-        combo = 0.
+            self.spins_per_second = 5
 
         for i in self.objects:
             if i["type"] == "circle":
-                lower = self.replay[self.replay["offset"] > i["time"] - hit_window50]
-                upper = lower[lower["offset"] < i["time"] + hit_window50]
-                key1 = False
-                key2 = False
-                clicks = list()
-                for j in upper.iterrows():
-                    time_action = j[1]
-                    last_key1 = key1
-                    last_key2 = key2
-                    key1 = int(time_action["clicks"]) & k1
-                    key2 = int(time_action["clicks"]) & k2
-                    if (not last_key1 and key1) or (not last_key2 and key2):
-                        if np.sqrt((time_action["x pos"] - i["position"][0]) ** 2 +
-                                   (time_action["y pos"] - i["position"][1]) ** 2) <= circle_radius:
-                            if i["time"] - hit_window300 < time_action["offset"] < i["time"] + hit_window300:
-                                clicks.append(time_action["offset"] - i["time"])
-                            elif i["time"] - hit_window100 < time_action["offset"] < i["time"] + hit_window100:
-                                clicks.append(time_action["offset"] - i["time"])
-
-                            elif i["time"] - hit_window50 < time_action["offset"] < i["time"] + hit_window50:
-                                clicks.append(time_action["offset"] - i["time"])
-                        i["pressed"] = True
-                if i["pressed"]:
-                    closet_click = min([(abs(i), i) for i in clicks])
-                    if closet_click[0] < hit_window300:
-                        hit = 300.
-                    elif closet_click[0] < hit_window100:
-                        hit = 100.
-                    else:
-                        hit = 50
-                    combo += 1.
-                    offset = closet_click[1] + i["time"]
-                    deviance = closet_click[1]
-                    bonuses = 0.
-                else:
-                    combo = 0.
-                    offset = i["time"]
-                    hit = 0.
-                    deviance = np.nan
-                    bonuses = 0.
+                self.mark_circle(i)
 
             elif i["type"] == "spinner":
-                length = (i["end_time"] - i["time"]) / 1000
-                required_spins = np.floor(spins_per_second * length * .55)
-
-                lower = self.replay[self.replay["offset"] > i["time"]]
-                upper = lower[lower["offset"] < i["end_time"]]
-                hold = upper[upper["clicks"] != 0]
-
-                x_pos = hold.loc[:, "x pos"] - 512 / 2
-                y_pos = hold.loc[:, "y pos"] - 384 / 2
-                d_theta = np.arctan2(y_pos, x_pos).diff() / np.pi * 180
-                spins_index = (d_theta[abs(d_theta) > 200]).index
-                spins = hold.loc[spins_index]
-
-                rpm = pd.Series(name="rotations per minute")
-                last_revolution = i["time"]
-                for spin in spins.iterrows():
-                    rpm.at[spin[1]["offset"]] = spin[1]["offset"] - last_revolution
-                    last_revolution = spin[1]["offset"]
-                extra_spin = hold.iloc[-1]["offset"] - spins.iloc[-1]["offset"]
-
-                if len(rpm) >= required_spins:
-                    hit = 300.
-                    combo += 1.
-                    bonuses = 1000. * (len(rpm) - required_spins)
-                elif len(rpm) + extra_spin / 360 >= required_spins / 2 * .5 + required_spins / 2:
-                    hit = 100.
-                    combo += 1.
-                    bonuses = 0.
-                elif len(rpm) + extra_spin / 360 >= required_spins / 2:
-                    hit = 50.
-                    combo += 1.
-                    bonuses = 0.
-                else:
-                    combo = 0.
-                    hit = 0.
-                    bonuses = 0.
-
-                offset = i["time"]
-                deviance = 1000 / rpm * 60 * speed
+                self.mark_spinner(i)
 
 
 
             else:
-                combo = 0.
-                offset = 0.
+                combo = 0
                 hit = 0.
                 deviance = np.nan
                 bonuses = 0
 
-            self.score = self.score.append(pd.DataFrame(
-                [[offset, combo, hit, bonuses, deviance, i["type"]]],
-                columns=["offset", "combo", "hit", "bonuses", "displacement", "object"]), True)
+                self.score.at[len(self.score) + 1] = [i["time"], combo, hit, bonuses, deviance, i["type"]]
+
         return self.score
+
+    def mark_circle(self, hit_circle):
+        combo = self.get_combo()
+
+        lower = self.replay[self.replay["offset"] > hit_circle["time"] - self.hit_window50]
+        upper = lower[lower["offset"] < hit_circle["time"] + self.hit_window50]
+        key1 = False
+        key2 = False
+        clicks = list()
+        for j in upper.iterrows():
+            time_action = j[1]
+            last_key1 = key1
+            last_key2 = key2
+            key1 = int(time_action["clicks"]) & self.k1
+            key2 = int(time_action["clicks"]) & self.k2
+            if (not last_key1 and key1) or (not last_key2 and key2):
+                if np.sqrt((time_action["x pos"] - hit_circle["position"][0]) ** 2 +
+                           (time_action["y pos"] - hit_circle["position"][1]) ** 2) <= self.circle_radius:
+                    if hit_circle["time"] - self.hit_window300 < \
+                            time_action["offset"] < hit_circle["time"] + self.hit_window300:
+                        clicks.append(time_action["offset"] - hit_circle["time"])
+                    elif hit_circle["time"] - self.hit_window100 < \
+                            time_action["offset"] < hit_circle["time"] + self.hit_window100:
+                        clicks.append(time_action["offset"] - hit_circle["time"])
+
+                    elif hit_circle["time"] - self.hit_window50 < \
+                            time_action["offset"] < hit_circle["time"] + self.hit_window50:
+                        clicks.append(time_action["offset"] - hit_circle["time"])
+                hit_circle["pressed"] = True
+        if hit_circle["pressed"]:
+            closet_click = min([(abs(i), i) for i in clicks])
+            if closet_click[0] < self.hit_window300:
+                hit = 300.
+            elif closet_click[0] < self.hit_window100:
+                hit = 100.
+            else:
+                hit = 50
+            combo += 1.
+            offset = closet_click[1] + hit_circle["time"]
+            deviance = closet_click[1]
+            bonuses = 0.
+        else:
+            combo = 0.
+            offset = hit_circle["time"]
+            hit = 0.
+            deviance = np.nan
+            bonuses = 0.
+
+        self.score.at[len(self.score) + 1] = [offset, combo, hit, bonuses, deviance, hit_circle["type"]]
+
+    def mark_spinner(self, spinner):
+        combo = self.get_combo()
+
+        length = (spinner["end_time"] - spinner["time"]) / 1000
+        required_spins = np.floor(self.spins_per_second * length * .55)
+
+        lower = self.replay[self.replay["offset"] > spinner["time"]]
+        upper = lower[lower["offset"] < spinner["end_time"]]
+        hold = upper[upper["clicks"] != 0]
+
+        x_pos = hold.loc[:, "x pos"] - 512 / 2
+        y_pos = hold.loc[:, "y pos"] - 384 / 2
+        d_theta = np.arctan2(y_pos, x_pos).diff() / np.pi * 180
+        spins_index = (d_theta[abs(d_theta) > 200]).index
+        spins = hold.loc[spins_index]
+
+        rpm = pd.Series(name="rotations per minute")
+        last_revolution = spinner["time"]
+        for spin in spins.iterrows():
+            rpm.at[spin[1]["offset"]] = spin[1]["offset"] - last_revolution
+            last_revolution = spin[1]["offset"]
+        extra_spin = hold.iloc[-1]["offset"] - spins.iloc[-1]["offset"]
+
+        if len(rpm) >= required_spins:
+            hit = 300.
+            combo += 1.
+            bonuses = 1000. * (len(rpm) - required_spins)
+        elif len(rpm) + extra_spin / 360 >= required_spins / 2 * .5 + required_spins / 2:
+            hit = 100.
+            combo += 1.
+            bonuses = 0.
+        elif len(rpm) + extra_spin / 360 >= required_spins / 2:
+            hit = 50.
+            combo += 1.
+            bonuses = 0.
+        else:
+            combo = 0.
+            hit = 0.
+            bonuses = 0.
+
+        offset = spinner["time"]
+        deviance = 1000 / rpm * 60 * self.speed
+
+        self.score.at[len(self.score) + 1] = [offset, combo, hit, bonuses, deviance, spinner["type"]]
+
+    def get_combo(self):
+        previous_idx = max(0, len(self.score) - 1)
+        return self.score.iloc[previous_idx]["combo"] if not self.score.empty else 0
 
     def calculate_unstable_rate(self, speed=1):
         pass
