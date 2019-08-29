@@ -11,7 +11,7 @@ with open("./temp/664841/Hard.osu") as f:
 
 rep = replay_parser.ScoreReplay(mp, replay)
 
-a = rep.score(mp.od, mp.cs, 1.5)
+a = rep.generate_score(mp.od, mp.cs, 1.5)
 
 cir = a[a["object"] == "circle"]
 avg = cir.loc[:, "displacement"].sum() / len(cir)

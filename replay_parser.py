@@ -350,9 +350,10 @@ class ScoreReplay:
                                      "ticks": ticks, "end": False})
 
         self.replay = replay
+        self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
 
-    def score(self, od, cs, speed=1):
-        score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
+    def generate_score(self, od, cs, speed=1):
+        self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
         # calculate score and accuracy afterwords
 
         hit_window50 = 150 + 50 * (5 - od) / 5
@@ -425,38 +426,29 @@ class ScoreReplay:
                 lower = self.replay[self.replay["offset"] > i["time"]]
                 upper = lower[lower["offset"] < i["end_time"]]
                 hold = upper[upper["clicks"] != 0]
-                spins = pd.Series(name="completed spin")
-                last = 0
-                spin = 0
-                for j in hold.iterrows():
-                    time_action = j[1]
-                    xpos = time_action["x pos"] - 512 / 2
-                    ypos = time_action["y pos"] - 384 / 2
-                    spn = np.arctan2(ypos, xpos) * 180 / np.pi
-                    if spn < 0:
-                        spn += 360
-                    if abs(last - spn) > 120:  # fix for going over but limits rpm to 500
-                        spin += abs(last - spn)
-                    if spin >= 360:
-                        spin = spin % 360
-                        spins.at[time_action["offset"]] = time_action["offset"]
-                    last = spn
+
+                x_pos = hold.loc[:, "x pos"] - 512 / 2
+                y_pos = hold.loc[:, "y pos"] - 384 / 2
+                d_theta = np.arctan2(y_pos, x_pos).diff() / np.pi * 180
+                spins_index = (d_theta[abs(d_theta) > 200]).index
+                spins = hold.loc[spins_index]
 
                 rpm = pd.Series(name="rotations per minute")
                 last_revolution = i["time"]
-                for time, revelation in spins.items():
-                    rpm.at[time] = revelation - last_revolution
-                    last_revolution = revelation
+                for spin in spins.iterrows():
+                    rpm.at[spin[1]["offset"]] = spin[1]["offset"] - last_revolution
+                    last_revolution = spin[1]["offset"]
+                extra_spin = hold.iloc[-1]["offset"] - spins.iloc[-1]["offset"]
 
                 if len(rpm) >= required_spins:
                     hit = 300.
                     combo += 1.
                     bonuses = 1000. * (len(rpm) - required_spins)
-                elif len(rpm) + spin / 360 >= required_spins / 2 * .5 + required_spins / 2:
+                elif len(rpm) + extra_spin / 360 >= required_spins / 2 * .5 + required_spins / 2:
                     hit = 100.
                     combo += 1.
                     bonuses = 0.
-                elif len(rpm) + spin / 360 >= required_spins / 2:
+                elif len(rpm) + extra_spin / 360 >= required_spins / 2:
                     hit = 50.
                     combo += 1.
                     bonuses = 0.
@@ -477,10 +469,10 @@ class ScoreReplay:
                 deviance = np.nan
                 bonuses = 0
 
-            score = score.append(pd.DataFrame(
+            self.score = self.score.append(pd.DataFrame(
                 [[offset, combo, hit, bonuses, deviance, i["type"]]],
                 columns=["offset", "combo", "hit", "bonuses", "displacement", "object"]), True)
-        return score
+        return self.score
 
     def calculate_unstable_rate(self, speed=1):
         pass
