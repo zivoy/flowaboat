@@ -365,7 +365,6 @@ class ScoreReplay:
 
         self.spins_per_second = 0
 
-
     def generate_score(self, od, cs, speed=1):
         self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
         # calculate score and accuracy afterwords
@@ -395,10 +394,10 @@ class ScoreReplay:
 
 
             else:
-                combo = 0
+                combo = 0.
                 hit = 0.
                 deviance = np.nan
-                bonuses = 0
+                bonuses = 0.
 
                 self.score.at[len(self.score) + 1] = [i["time"], combo, hit, bonuses, deviance, i["type"]]
 
@@ -500,7 +499,7 @@ class ScoreReplay:
 
     def get_combo(self):
         previous_idx = max(0, len(self.score) - 1)
-        return self.score.iloc[previous_idx]["combo"] if not self.score.empty else 0
+        return self.score.iloc[previous_idx]["combo"] if not self.score.empty else 0.
 
     def calculate_unstable_rate(self, speed=1):
         pass
