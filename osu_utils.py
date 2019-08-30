@@ -690,17 +690,20 @@ def download_mapset(link_id=None, link=None):
     else:
         name = link.split('/')[-1].split(".osz")[0]
 
-    mapset = requests.get(link).content
+    mapset = requests.get(link)
+    headers = mapset.headers.get('content-type').lower()
 
-    if link_id is not None and 'File not found or inaccessible!' in mapset:  # here
+    if link_id is not None and "octet-stream" not in headers:
         link = f"https://osu.gatari.pw/d/{link_id}"
-        mapset = requests.get(link).content
-        if mapset == b"probably something went wrong, you can try to refresh page several times, it could help":  # here . check what you shjould have .
+        mapset = requests.get(link)
+        headers = mapset.headers.get('content-type').lower()
+        if "octet-stream" not in headers:
+            Log.error("Could not find beatmap:", link_id)
             raise NoBeatmap("Could not find beatmap")
 
     location = os.path.join(Config.osu_cache_path, name)
 
-    map_files = zipfile.ZipFile(io.BytesIO(mapset), "r")
+    map_files = zipfile.ZipFile(io.BytesIO(mapset.content), "r")
 
     osu_file = regex.compile(r".+\[(\D+)\]\.osu")
 

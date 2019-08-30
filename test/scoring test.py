@@ -18,6 +18,12 @@ avg = cir.loc[:, "displacement"].sum() / len(cir)
 revs = a.iloc[0].loc["displacement"]
 u = revs.sum() / len(revs)
 
+print("miss's", len(a[a["hit"] == 0]) == 0, len(a[a["hit"] == 0]))
+print("50's", len(a[a["hit"] == 50]) == 3, len(a[a["hit"] == 50]))
+print("100's", len(a[a["hit"] == 100]) == 17, len(a[a["hit"] == 100]))
+print("300's", len(a[a["hit"] == 300]) == 224, len(a[a["hit"] == 300]))
+print("combo", a["combo"].max() == 429, a["combo"].max())
+
 print(avg)
-print(a)
-print(u)
+# print(a)
+# print(u)
