@@ -11,6 +11,10 @@ import pandas as pd
 import requests
 
 
+class DegenerateTriangle(Exception):
+    pass
+
+
 def lzma_replay_to_df(lzma_byte_string):
     """
     Turn a lzma stream into a pandas dataframe of the replay
@@ -259,7 +263,12 @@ class SliderCurve:
                 points_list = [points]
             paths = list()
             if slider_type == "P":
-                paths.append(PerfectSlider(points))
+                try:
+                    paths.append(PerfectSlider(points))
+                except DegenerateTriangle:
+                    for i in points_list:
+                        nodes = np.asfortranarray(i).transpose()
+                        paths.append(bezier.Curve.from_nodes(nodes))
             else:
                 for i in points_list:
                     nodes = np.asfortranarray(i).transpose()
@@ -357,6 +366,20 @@ class PerfectSlider:
 def get_circumcircle(triangle):
     assert triangle.shape == (3, 2)
 
+    aSq = distance(triangle[1] - triangle[2]) ** 2
+    bSq = distance(triangle[0] - triangle[2]) ** 2
+    cSq = distance(triangle[0] - triangle[1]) ** 2
+
+    if almost_equals(aSq, 0) or almost_equals(bSq, 0) or almost_equals(cSq, 0):
+        raise DegenerateTriangle
+
+    s = aSq * (bSq + cSq - aSq)
+    t = bSq * (aSq + cSq - bSq)
+    u = cSq * (aSq + bSq - cSq)
+
+    if almost_equals(sum([s, u, t]), 0):
+        raise DegenerateTriangle
+
     line1 = perpendicular_line(triangle[0], triangle[1])
     line2 = perpendicular_line(triangle[0], triangle[2])
 
@@ -368,7 +391,7 @@ def get_circumcircle(triangle):
     center = np.array([x_center, y_center])
 
     dist = triangle[0] - center
-    radius = np.sqrt(dist[0] ** 2 + dist[1] ** 2)
+    radius = distance(dist)
     return center, radius
 
 
@@ -376,11 +399,23 @@ def perpendicular_line(point1, point2):
     center = (point1 + point2) / 2
     slope_diff = point1 - point2
     if 0 in slope_diff:
-        slope_diff += 0.0000000001
+        # slope_diff += 0.0000000001
+        raise DegenerateTriangle
     slope = slope_diff[1] / slope_diff[0]
     new_slope = -1 / slope
     offset = center[1] - new_slope * center[0]
     return np.poly1d([new_slope, offset])
+
+
+def almost_equals(value1, value2, acceptable_distance=None):
+    if acceptable_distance is None:
+        acceptable_distance = 1 * 10 ** -3
+
+    return abs(value1 - value2) <= acceptable_distance
+
+
+def distance(point):
+    return np.sqrt(point[0] ** 2 + point[1] ** 2)
 
 
 class ScoreReplay:
