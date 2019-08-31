@@ -436,7 +436,7 @@ class ScoreReplay:
         self.objects = list()
         for i in beatmap_obj.hitobjects:
             duration = [j for j in beat_durations if j <= i.time][-1]
-            msperb = [j for j in mspb if j <= i.time][-1]
+            msperb = [v for j, v in mspb.items() if j <= i.time][-1]
             if i.typestr() == "circle":
                 self.objects.append({"type": "circle", "time": i.time,
                                      "position": (i.data.pos.x, i.data.pos.y),
@@ -449,7 +449,7 @@ class ScoreReplay:
                 slider = SliderCurve([(i.data.pos.x, i.data.pos.y)]
                                      + [(a.x, a.y) for a in i.data.points], i.data.type)
 
-                num_of_ticks = beatmap_obj.tick_rate * slider_duration / msperb  # needs fixing todo
+                num_of_ticks = beatmap_obj.tick_rate * slider_duration / msperb
                 ticks_once = {i: False for i in percent_positions(int(num_of_ticks))}
                 ticks = {i + 1: ticks_once for i in range(i.data.repetitions)}
                 for tickset in ticks.copy():
@@ -477,16 +477,20 @@ class ScoreReplay:
         self.speed = 1
 
         self.spins_per_second = 0
+        self.compensate = replay["offset"].diff().median() / 2.5
 
-    def generate_score(self, od, cs, speed=1):
+    def generate_score(self, od, cs, speed=1, ms_compensate=None):
         self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
         # calculate score and accuracy afterwords
 
+        if ms_compensate is not None:
+            self.compensate = ms_compensate
+
         self.speed = speed
 
-        self.hit_window50 = 150 + 50 * (5 - od) / 5
-        self.hit_window100 = 100 + 40 * (5 - od) / 5
-        self.hit_window300 = 50 + 30 * (5 - od) / 5
+        self.hit_window50 = (150 + 50 * (5 - od) / 5) + self.compensate
+        self.hit_window100 = (100 + 40 * (5 - od) / 5) + self.compensate
+        self.hit_window300 = (50 + 30 * (5 - od) / 5) + self.compensate
 
         self.circle_radius = (512 / 16) * (1 - (0.7 * (cs - 5) / 5))
         self.follow_circle = (512 / 16) * (1 - (0.5 * (cs - 5) / 7)) * 10
@@ -520,7 +524,7 @@ class ScoreReplay:
 
         return self.score
 
-    def mark_circle(self, hit_circle, alternated_hit_window=1):
+    def mark_circle(self, hit_circle, alternated_hit_window=1.):
         combo = self.get_combo()
 
         lower = self.replay[self.replay["offset"] >= hit_circle["time"]
@@ -552,16 +556,16 @@ class ScoreReplay:
                     elif hit_circle["time"] - self.hit_window50 <= \
                             time_action["offset"] <= hit_circle["time"] + self.hit_window50:
                         clicks.append(time_action["offset"] - hit_circle["time"])
-                    elif hit_circle["time"] - self.hit_window50 - 1 > time_action["offset"]:
+                    elif hit_circle["time"] - self.hit_window50 > time_action["offset"]:
                         offset = time_action["offset"]
                         hit_circle["pressed"] = False
                         deviance = time_action["offset"] - hit_circle["time"]
                         break
         if hit_circle["pressed"]:
             closet_click = min([(abs(i), i) for i in clicks])
-            if closet_click[0] < self.hit_window300:
+            if closet_click[0] <= self.hit_window300:
                 hit = 300.
-            elif closet_click[0] < self.hit_window100:
+            elif closet_click[0] <= self.hit_window100:
                 hit = 100.
             else:
                 hit = 50
@@ -684,11 +688,11 @@ class ScoreReplay:
         if slider_parts.all():
             hit = 300.
         elif len(slider_parts[slider_parts]) >= len(slider_parts) / 2:
-            hit = 100
+            hit = 100.
         elif slider_parts.any():
-            hit = 50
+            hit = 50.
         else:
-            hit = 0
+            hit = 0.
 
         offset = slider["time"]
         deviance = slider_parts

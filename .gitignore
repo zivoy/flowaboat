@@ -18,3 +18,7 @@ temp/
 .ipynb_checkpoints/
 
 osu-tools/
+
+src/
+
+*TEMP_MPY*
