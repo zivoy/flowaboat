@@ -42,4 +42,7 @@ for i in np.arange(0, 30, .1):
                                           data["combo"].max(),
                                           cir.loc[:, "displacement"].sum() / len(cir),
                                           i]
+
+with open("./test/testdata.csv", "w") as fl:
+    fl.write(data_tests.to_csv(index=False))
 print(data_tests)

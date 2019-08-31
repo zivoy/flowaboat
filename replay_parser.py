@@ -1,6 +1,7 @@
 """
 Module for processing and handling replays
 """
+import asyncio
 import lzma
 from base64 import b64decode, b64encode
 from io import StringIO
@@ -433,16 +434,16 @@ class ScoreReplay:
                 duration = last_non * abs(i.ms_per_beat) / 100
             beat_durations[i.time] = duration
 
-        self.objects = list()
-        for i in beatmap_obj.hitobjects:
+        self.objects = {"circle": list(), "slider": list(), "spinner": list()}
+        for j, i in enumerate(beatmap_obj.hitobjects):
             duration = [j for j in beat_durations if j <= i.time][-1]
             msperb = [v for j, v in mspb.items() if j <= i.time][-1]
             if i.typestr() == "circle":
-                self.objects.append({"type": "circle", "time": i.time,
-                                     "position": (i.data.pos.x, i.data.pos.y),
-                                     "pressed": False})
+                self.objects["circle"].append((j + 1, {"time": i.time,
+                                                       "position": (i.data.pos.x, i.data.pos.y),
+                                                       "pressed": False}))
             elif i.typestr() == "spinner":
-                self.objects.append({"type": "spinner", "time": i.time, "end_time": i.data.end_time})
+                self.objects["spinner"].append((j + 1, {"time": i.time, "end_time": i.data.end_time}))
             else:
                 slider_duration = i.data.distance / (100.0 * beatmap_obj.sv) \
                                   * beat_durations[duration]
@@ -456,10 +457,10 @@ class ScoreReplay:
                     if tickset % 3 > 1:
                         ticks[tickset] = {1 - i: False for i in ticks[tickset]}
                 endings = {i + 1: False for i in range(i.data.repetitions)}
-                self.objects.append({"type": "slider", "time": i.time, "slider": slider,
-                                     "speed": (100.0 * beatmap_obj.sv) * beat_durations[duration],
-                                     "duration": slider_duration, "repetitions": i.data.repetitions,
-                                     "start": False, "ticks": ticks, "end": endings})
+                self.objects["slider"].append((j + 1, {"time": i.time, "slider": slider,
+                                                       "speed": (100.0 * beatmap_obj.sv) * beat_durations[duration],
+                                                       "duration": slider_duration, "repetitions": i.data.repetitions,
+                                                       "start": False, "ticks": ticks, "end": endings}))
 
         self.replay = replay
         self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
@@ -479,7 +480,10 @@ class ScoreReplay:
         self.spins_per_second = 0
         self.compensate = replay["offset"].diff().median() / 2.5
 
-    def generate_score(self, od, cs, speed=1, ms_compensate=None):
+    def generate_score(self, *args, **kwargs):
+        return asyncio.run(self.mark_all(*args, **kwargs))
+
+    async def mark_all(self, od, cs, speed=1, ms_compensate=None):
         self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
         # calculate score and accuracy afterwords
 
@@ -502,207 +506,185 @@ class ScoreReplay:
         else:
             self.spins_per_second = 5
 
-        for i in self.objects:
-            if i["type"] == "circle":
-                score_data = self.mark_circle(i)
+        circle_data, slider_data, spinner_data = \
+            await asyncio.gather(self.mark_circle(self.objects["circle"]),
+                                 self.mark_slider(self.objects["slider"]),
+                                 self.mark_spinner(self.objects["spinner"]))
 
-            elif i["type"] == "spinner":
-                score_data = self.mark_spinner(i)
+        self.score = pd.concat([circle_data, slider_data, spinner_data]).sort_index()
 
-            elif i["type"] == "slider":
-                score_data = self.mark_slider(i)
-
-            else:
-                combo = 0.
-                hit = 0.
-                deviance = np.nan
-                bonuses = 0.
-
-                score_data = [i["time"], combo, hit, bonuses, deviance, i["type"]]
-
-            self.score.at[len(self.score) + 1] = score_data
+        # generate bonus and combo
 
         return self.score
 
-    def mark_circle(self, hit_circle, alternated_hit_window=1.):
-        combo = self.get_combo()
+    async def mark_circle(self, hit_circles, alternated_hit_window=1.):
+        circles = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
+        for place_index, hit_circle in hit_circles:
+            lower = self.replay[self.replay["offset"] >= hit_circle["time"]
+                                - self.hit_window50 * alternated_hit_window]
+            upper = lower[lower["offset"] <= hit_circle["time"] + self.hit_window50]
+            key1 = False
+            key2 = False
+            offset = None
+            deviance = None
+            clicks = list()
+            for j in upper.iterrows():
+                time_action = j[1]
+                last_key1 = key1
+                last_key2 = key2
+                key1 = int(time_action["clicks"]) & self.k1
+                key2 = int(time_action["clicks"]) & self.k2
+                if (not last_key1 and key1) or (not last_key2 and key2):
+                    if np.sqrt((time_action["x pos"] - hit_circle["position"][0]) ** 2 +
+                               (time_action["y pos"] - hit_circle["position"][1]) ** 2) <= self.circle_radius:
+                        hit_circle["pressed"] = True
+                        if hit_circle["time"] - self.hit_window300 <= \
+                                time_action["offset"] <= hit_circle["time"] + self.hit_window300:
+                            clicks.append(time_action["offset"] - hit_circle["time"])
 
-        lower = self.replay[self.replay["offset"] >= hit_circle["time"]
-                            - self.hit_window50 * alternated_hit_window]
-        upper = lower[lower["offset"] <= hit_circle["time"] + self.hit_window50]
-        key1 = False
-        key2 = False
-        offset = None
-        deviance = None
-        clicks = list()
-        for j in upper.iterrows():
-            time_action = j[1]
-            last_key1 = key1
-            last_key2 = key2
-            key1 = int(time_action["clicks"]) & self.k1
-            key2 = int(time_action["clicks"]) & self.k2
-            if (not last_key1 and key1) or (not last_key2 and key2):
-                if np.sqrt((time_action["x pos"] - hit_circle["position"][0]) ** 2 +
-                           (time_action["y pos"] - hit_circle["position"][1]) ** 2) <= self.circle_radius:
-                    hit_circle["pressed"] = True
-                    if hit_circle["time"] - self.hit_window300 <= \
-                            time_action["offset"] <= hit_circle["time"] + self.hit_window300:
-                        clicks.append(time_action["offset"] - hit_circle["time"])
+                        elif hit_circle["time"] - self.hit_window100 <= \
+                                time_action["offset"] <= hit_circle["time"] + self.hit_window100:
+                            clicks.append(time_action["offset"] - hit_circle["time"])
 
-                    elif hit_circle["time"] - self.hit_window100 <= \
-                            time_action["offset"] <= hit_circle["time"] + self.hit_window100:
-                        clicks.append(time_action["offset"] - hit_circle["time"])
+                        elif hit_circle["time"] - self.hit_window50 <= \
+                                time_action["offset"] <= hit_circle["time"] + self.hit_window50:
+                            clicks.append(time_action["offset"] - hit_circle["time"])
+                        elif hit_circle["time"] - self.hit_window50 > time_action["offset"]:
+                            offset = time_action["offset"]
+                            hit_circle["pressed"] = False
+                            deviance = time_action["offset"] - hit_circle["time"]
+                            break
+            if hit_circle["pressed"]:
+                closet_click = min([(abs(i), i) for i in clicks])
+                if closet_click[0] <= self.hit_window300:
+                    hit = 300.
+                elif closet_click[0] <= self.hit_window100:
+                    hit = 100.
+                else:
+                    hit = 50
+                offset = closet_click[1] + hit_circle["time"]
+                deviance = closet_click[1]
+            else:
+                if offset is None:
+                    offset = hit_circle["time"]
+                hit = 0.
+                if deviance is None:
+                    deviance = np.nan
+            bonuses = 0.
+            combo = np.nan
 
-                    elif hit_circle["time"] - self.hit_window50 <= \
-                            time_action["offset"] <= hit_circle["time"] + self.hit_window50:
-                        clicks.append(time_action["offset"] - hit_circle["time"])
-                    elif hit_circle["time"] - self.hit_window50 > time_action["offset"]:
-                        offset = time_action["offset"]
-                        hit_circle["pressed"] = False
-                        deviance = time_action["offset"] - hit_circle["time"]
-                        break
-        if hit_circle["pressed"]:
-            closet_click = min([(abs(i), i) for i in clicks])
-            if closet_click[0] <= self.hit_window300:
+            circles.at[place_index] = [offset, combo, hit, bonuses, deviance, "circle"]
+        return circles
+
+    async def mark_spinner(self, spinners):
+        spinner_list = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
+        for place_index, spinner in spinners:
+            length = (spinner["end_time"] - spinner["time"]) / 1000
+            required_spins = np.floor(self.spins_per_second * length * .55)
+
+            lower = self.replay[self.replay["offset"] >= spinner["time"]]
+            upper = lower[lower["offset"] <= spinner["end_time"]]
+            hold = upper[upper["clicks"] != 0]
+
+            x_pos = hold.loc[:, "x pos"] - 512 / 2
+            y_pos = hold.loc[:, "y pos"] - 384 / 2
+            d_theta = np.arctan2(y_pos, x_pos).diff() / np.pi * 180
+            spins_index = (d_theta[abs(d_theta) > 200]).index
+            spins = hold.loc[spins_index]
+
+            rpm = pd.Series(name="rotations per minute")
+            last_revolution = spinner["time"]
+            for spin in spins.iterrows():
+                rpm.at[spin[1]["offset"]] = spin[1]["offset"] - last_revolution
+                last_revolution = spin[1]["offset"]
+            extra_spin = hold.iloc[-1]["offset"] - spins.iloc[-1]["offset"]
+
+            if len(rpm) >= required_spins:
                 hit = 300.
-            elif closet_click[0] <= self.hit_window100:
+                bonuses = 1000. * (len(rpm) - required_spins)
+            elif len(rpm) + extra_spin / 360 >= required_spins / 2 * .5 + required_spins / 2:
                 hit = 100.
+                bonuses = 0.
+            elif len(rpm) + extra_spin / 360 >= required_spins / 2:
+                hit = 50.
+                bonuses = 0.
             else:
-                hit = 50
-            combo += 1.
-            offset = closet_click[1] + hit_circle["time"]
-            deviance = closet_click[1]
-            bonuses = 0.
-        else:
-            combo = 0.
-            if offset is None:
-                offset = hit_circle["time"]
-            hit = 0.
-            if deviance is None:
-                deviance = np.nan
-            bonuses = 0.
+                hit = 0.
+                bonuses = 0.
 
-        return offset, combo, hit, bonuses, deviance, hit_circle["type"]
+            combo = np.nan
+            offset = spinner["time"]
+            deviance = 1000 / rpm * 60 * self.speed
+            spinner_list.at[place_index] = [offset, combo, hit, bonuses, deviance, "spinner"]
 
-    def mark_spinner(self, spinner):
-        combo = self.get_combo()
+        return spinner_list
 
-        length = (spinner["end_time"] - spinner["time"]) / 1000
-        required_spins = np.floor(self.spins_per_second * length * .55)
+    async def mark_slider(self, sliders):
+        slider_list = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
+        for place_index, slider in sliders:
+            slider_parts = pd.Series(name="data on slider")
 
-        lower = self.replay[self.replay["offset"] >= spinner["time"]]
-        upper = lower[lower["offset"] <= spinner["end_time"]]
-        hold = upper[upper["clicks"] != 0]
+            first_click = await asyncio.gather(
+                self.mark_circle([(0, {"type": "slider_start", "time": slider["time"],
+                                       "position": [i[0] for i in slider["slider"].get_point(0)],
+                                       "pressed": False})], 1.0075))
+            first_click = first_click[0]
+            if first_click.loc[0, "hit"] > 0 and 0 >= first_click.loc[0, "displacement"]:
+                slider["start"] = True
+            slider_parts.at["slider start"] = slider["start"]
 
-        x_pos = hold.loc[:, "x pos"] - 512 / 2
-        y_pos = hold.loc[:, "y pos"] - 384 / 2
-        d_theta = np.arctan2(y_pos, x_pos).diff() / np.pi * 180
-        spins_index = (d_theta[abs(d_theta) > 200]).index
-        spins = hold.loc[spins_index]
+            slider_start = self.replay[self.replay["offset"] >= slider["time"]]
+            slider_end = slider_start[slider_start["offset"] <= slider["time"]
+                                      + slider["duration"] * slider["repetitions"]]
+            for tickset in slider["ticks"]:
+                for tick in slider["ticks"][tickset]:
+                    # tick_lower_time = slider_end[slider_end["offset"] >= slider["time"]
+                    #                              + slider["duration"] * tick
+                    #                              - self.circle_radius / slider["speed"]]
+                    # tick_upper_time = tick_lower_time[tick_lower_time["offset"] <= slider["time"]
+                    #                                   + slider["duration"] * tick
+                    #                                   + self.circle_radius / slider["speed"]]
+                    tick_slice = get_action_at_time(slider_end, slider["time"]
+                                                    + slider["duration"] * tick)
 
-        rpm = pd.Series(name="rotations per minute")
-        last_revolution = spinner["time"]
-        for spin in spins.iterrows():
-            rpm.at[spin[1]["offset"]] = spin[1]["offset"] - last_revolution
-            last_revolution = spin[1]["offset"]
-        extra_spin = hold.iloc[-1]["offset"] - spins.iloc[-1]["offset"]
+                    if tick_slice["clicks"] > 0:
+                        position = slider["slider"].get_point(tick)
+                        if np.sqrt((tick_slice["x pos"] - position[0][0]) ** 2 +
+                                   (tick_slice["y pos"] - position[1][0]) ** 2) <= self.follow_circle:
+                            slider["ticks"][tickset][tick] = True
+                            slider_parts.at[f"tick {tickset}:{tick * 100:.0f}"] = slider["ticks"][tickset][tick]
+                            break
+                    slider_parts.at[f"{tickset}:{tick * 100:.0f}"] = slider["ticks"][tickset][tick]
 
-        if len(rpm) >= required_spins:
-            hit = 300.
-            combo += 1.
-            bonuses = 1000. * (len(rpm) - required_spins)
-        elif len(rpm) + extra_spin / 360 >= required_spins / 2 * .5 + required_spins / 2:
-            hit = 100.
-            combo += 1.
-            bonuses = 0.
-        elif len(rpm) + extra_spin / 360 >= required_spins / 2:
-            hit = 50.
-            combo += 1.
-            bonuses = 0.
-        else:
-            combo = 0.
-            hit = 0.
-            bonuses = 0.
+            for slider_edge in slider["end"]:
+                end_time = slider["time"] + slider["duration"] * slider_edge
+                position = slider["slider"].get_point(slider_edge % 2)
+                end_slice = get_action_at_time(slider_end, end_time)
+                if np.sqrt((end_slice["x pos"] - position[0][0]) ** 2 +
+                           (end_slice["y pos"] - position[1][0]) ** 2) <= self.follow_circle:
+                    if end_slice["clicks"]:
+                        slider["end"][slider_edge] = True
+                if slider_edge != len(slider["end"]):
+                    slider_parts.at["slider repeat"] = slider["end"][slider_edge]
+                else:
+                    slider_parts.at["slider end"] = slider["end"][len(slider["end"])]
 
-        offset = spinner["time"]
-        deviance = 1000 / rpm * 60 * self.speed
-
-        return [offset, combo, hit, bonuses, deviance, spinner["type"]]
-
-    def mark_slider(self, slider):
-        combo = self.get_combo()
-
-        slider_parts = pd.Series(name="data on slider")
-
-        first_click = self.mark_circle({"type": "slider_start", "time": slider["time"],
-                                        "position": [i[0] for i in slider["slider"].get_point(0)],
-                                        "pressed": False}, 1.0075)
-        if first_click[2] > 0 and 0 >= first_click[3]:
-            slider["start"] = True
-            combo += 1.
-        else:
-            combo = 0.
-        slider_parts.at["slider start"] = slider["start"]
-
-        slider_start = self.replay[self.replay["offset"] >= slider["time"]]
-        slider_end = slider_start[slider_start["offset"] <= slider["time"]
-                                  + slider["duration"] * slider["repetitions"]]
-        for tickset in slider["ticks"]:
-            for tick in slider["ticks"][tickset]:
-                # tick_lower_time = slider_end[slider_end["offset"] >= slider["time"]
-                #                              + slider["duration"] * tick
-                #                              - self.circle_radius / slider["speed"]]
-                # tick_upper_time = tick_lower_time[tick_lower_time["offset"] <= slider["time"]
-                #                                   + slider["duration"] * tick
-                #                                   + self.circle_radius / slider["speed"]]
-                tick_slice = get_action_at_time(slider_end, slider["time"]
-                                                + slider["duration"] * tick)
-
-                if tick_slice["clicks"] > 0:
-                    position = slider["slider"].get_point(tick)
-                    if np.sqrt((tick_slice["x pos"] - position[0][0]) ** 2 +
-                               (tick_slice["y pos"] - position[1][0]) ** 2) <= self.follow_circle:
-                        slider["ticks"][tickset][tick] = True
-                        combo += 1.
-                        slider_parts.at[f"tick {tickset}:{tick * 100:.0f}"] = slider["ticks"][tickset][tick]
-                        break
-                combo = 0.
-                slider_parts.at[f"{tickset}:{tick * 100:.0f}"] = slider["ticks"][tickset][tick]
-
-        for slider_edge in slider["end"]:
-            end_time = slider["time"] + slider["duration"] * slider_edge
-            position = slider["slider"].get_point(slider_edge % 2)
-            end_slice = get_action_at_time(slider_end, end_time)
-            if np.sqrt((end_slice["x pos"] - position[0][0]) ** 2 +
-                       (end_slice["y pos"] - position[1][0]) ** 2) <= self.follow_circle:
-                if end_slice["clicks"]:
-                    slider["end"][slider_edge] = True
-                    combo += 1.
-            if slider_edge != len(slider["end"]):
-                if not slider["end"][slider_edge]:
-                    combo = 0.
-                slider_parts.at["slider repeat"] = slider["end"][slider_edge]
+            if slider_parts.all():
+                hit = 300.
+            elif len(slider_parts[slider_parts]) >= len(slider_parts) / 2:
+                hit = 100.
+            elif slider_parts.any():
+                hit = 50.
             else:
-                slider_parts.at["slider end"] = slider["end"][len(slider["end"])]
+                hit = 0.
 
-        if slider_parts.all():
-            hit = 300.
-        elif len(slider_parts[slider_parts]) >= len(slider_parts) / 2:
-            hit = 100.
-        elif slider_parts.any():
-            hit = 50.
-        else:
-            hit = 0.
+            offset = slider["time"]
+            deviance = slider_parts
+            bonuses = 0.
+            combo = np.nan
+            slider_list.at[place_index] = [offset, combo, hit, bonuses, deviance, "slider"]
 
-        offset = slider["time"]
-        deviance = slider_parts
-        bonuses = 0.
-
-        return offset, combo, hit, bonuses, deviance, slider["type"]
-
-    def get_combo(self):
-        previous_idx = max(0, len(self.score) - 1)
-        return self.score.iloc[previous_idx]["combo"] if not self.score.empty else 0.
+        return slider_list
 
     def calculate_unstable_rate(self, speed=1):
         pass
