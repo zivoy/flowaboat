@@ -450,7 +450,7 @@ class ScoreReplay:
                 slider = SliderCurve([(i.data.pos.x, i.data.pos.y)]
                                      + [(a.x, a.y) for a in i.data.points], i.data.type)
 
-                num_of_ticks = beatmap_obj.tick_rate * slider_duration / msperb
+                num_of_ticks = beatmap_obj.tick_rate * slider_duration / beat_durations[duration]
                 ticks_once = {i: False for i in percent_positions(int(num_of_ticks))}
                 ticks = {i + 1: ticks_once for i in range(i.data.repetitions)}
                 for tickset in ticks.copy():
@@ -465,6 +465,7 @@ class ScoreReplay:
         self.replay = replay
         self.score = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
 
+        self.raw50 = 0
         self.hit_window50 = 0
         self.hit_window100 = 0
         self.hit_window300 = 0
@@ -492,6 +493,7 @@ class ScoreReplay:
 
         self.speed = speed
 
+        self.raw50 = (150 + 50 * (5 - od) / 5)
         self.hit_window50 = (150 + 50 * (5 - od) / 5) + self.compensate
         self.hit_window100 = (100 + 40 * (5 - od) / 5) + self.compensate
         self.hit_window300 = (50 + 30 * (5 - od) / 5) + self.compensate
@@ -511,17 +513,60 @@ class ScoreReplay:
                                  self.mark_slider(self.objects["slider"]),
                                  self.mark_spinner(self.objects["spinner"]))
 
-        self.score = pd.concat([circle_data, slider_data, spinner_data]).sort_index()
+        score = pd.concat([circle_data, slider_data, spinner_data]).sort_index()
 
-        # generate bonus and combo
+        combo = 0
+        for i, j in score.iterrows():
+            if j["object"] == "circle" or j["object"] == "spinner":
+                if j["hit"] >= 50:
+                    combo += 1
+                else:
+                    combo = 0
 
+            if j["object"] == "slider":
+                slider_parts = j["displacement"]
+                if slider_parts["slider start"]:
+                    combo += 1
+                else:
+                    combo = 0
+
+                if "slider repeats" in slider_parts:
+                    repeats = len(slider_parts["slider repeats"])
+                    does_repeat = True
+                else:
+                    repeats = 1
+                    does_repeat = False
+
+                index = 0
+                for repeat in range(repeats):
+                    if "slider ticks" in slider_parts:
+                        interval = int(len(slider_parts["slider ticks"]) / repeats)
+                        for tick in slider_parts["slider ticks"][index:interval]:
+                            if tick:
+                                combo += 1
+                            else:
+                                combo = 0
+                        index += interval
+
+                    if does_repeat:
+                        if slider_parts["slider repeats"].iloc[repeat]:
+                            combo += 1
+                        else:
+                            combo = 0
+
+                if slider_parts["slider end"]:
+                    combo += 1
+
+            score.loc[i]["combo"] = combo
+
+        self.score = score
         return self.score
 
-    async def mark_circle(self, hit_circles, alternated_hit_window=1.):
+    async def mark_circle(self, hit_circles, alternated_hit_window=0.):
         circles = pd.DataFrame(columns=["offset", "combo", "hit", "bonuses", "displacement", "object"])
         for place_index, hit_circle in hit_circles:
             lower = self.replay[self.replay["offset"] >= hit_circle["time"]
-                                - self.hit_window50 * alternated_hit_window]
+                                - self.hit_window50 + alternated_hit_window]
             upper = lower[lower["offset"] <= hit_circle["time"] + self.hit_window50]
             key1 = False
             key2 = False
@@ -627,9 +672,9 @@ class ScoreReplay:
             first_click = await asyncio.gather(
                 self.mark_circle([(0, {"type": "slider_start", "time": slider["time"],
                                        "position": [i[0] for i in slider["slider"].get_point(0)],
-                                       "pressed": False})], 1.0075))
+                                       "pressed": False})], self.raw50 * 1.0075))
             first_click = first_click[0]
-            if first_click.loc[0, "hit"] > 0 and 0 >= first_click.loc[0, "displacement"]:
+            if first_click.loc[0, "hit"] >= 50:  # and 0 >= first_click.loc[0, "displacement"]:
                 slider["start"] = True
             slider_parts.at["slider start"] = slider["start"]
 
@@ -652,9 +697,10 @@ class ScoreReplay:
                         if np.sqrt((tick_slice["x pos"] - position[0][0]) ** 2 +
                                    (tick_slice["y pos"] - position[1][0]) ** 2) <= self.follow_circle:
                             slider["ticks"][tickset][tick] = True
-                            slider_parts.at[f"tick {tickset}:{tick * 100:.0f}"] = slider["ticks"][tickset][tick]
-                            break
-                    slider_parts.at[f"{tickset}:{tick * 100:.0f}"] = slider["ticks"][tickset][tick]
+
+                    if "slider ticks" not in slider_parts:
+                        slider_parts.at["slider ticks"] = pd.Series()
+                    slider_parts["slider ticks"].at[f"{tickset}:{tick * 100:.0f}"] = slider["ticks"][tickset][tick]
 
             for slider_edge in slider["end"]:
                 end_time = slider["time"] + slider["duration"] * slider_edge
@@ -665,15 +711,18 @@ class ScoreReplay:
                     if end_slice["clicks"]:
                         slider["end"][slider_edge] = True
                 if slider_edge != len(slider["end"]):
-                    slider_parts.at["slider repeat"] = slider["end"][slider_edge]
+                    if "slider repeats" not in slider_parts:
+                        slider_parts.at["slider repeats"] = pd.Series()
+                    slider_parts["slider repeats"].at[slider_edge] = slider["end"][slider_edge]
                 else:
                     slider_parts.at["slider end"] = slider["end"][len(slider["end"])]
 
-            if slider_parts.all():
+            flat_slider = pd.Series(flatten(slider_parts))
+            if flat_slider.all():
                 hit = 300.
-            elif len(slider_parts[slider_parts]) >= len(slider_parts) / 2:
+            elif len(flat_slider[flat_slider]) >= len(flat_slider) / 2:
                 hit = 100.
-            elif slider_parts.any():
+            elif flat_slider.any():
                 hit = 50.
             else:
                 hit = 0.
@@ -696,3 +745,13 @@ def percent_positions(num_of_itms):
     for i in range(1, num_of_itms + 1):
         percentages.append(i / (num_of_itms + 1))
     return percentages
+
+
+def flatten(pandas_series):
+    itms = list()
+    for i in pandas_series:
+        if isinstance(i, pd.Series):
+            itms.extend(flatten(i))
+        else:
+            itms.append(i)
+    return itms
