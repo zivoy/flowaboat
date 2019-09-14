@@ -62,7 +62,7 @@ class HitCircle:
     :param fade_ms: when is it fully opaque
     """
 
-    def __init__(self, time, position, radius, color, border, ar_ms, fade_ms):
+    def __init__(self, time, position, radius, color, border, ar_ms, fade_ms, combo_num):
         self.appear = time - ar_ms
         self.disappear = time + (ar_ms / DIST_AFTER)
         self.action = time
@@ -73,6 +73,7 @@ class HitCircle:
         self.visable = False
         self.fade_ms = fade_ms
         self.ar_ms = ar_ms
+        self.num = combo_num
 
     def render(self, time):
         """
@@ -83,8 +84,10 @@ class HitCircle:
         alph = get_alpha(self, time)
         circle = gizeh.circle(self.radius - 5, xy=self.position,
                               stroke=(*self.border, alph), stroke_width=5, fill=(*self.color, alph))
+        num = gizeh.text(str(self.num), fontfamily="Impact", fontsize=self.radius,
+                              fill=(0, 0, 0, alph), xy=self.position)
         appr_circle = approach_circle(self, time)
-        return [circle, appr_circle]
+        return [circle, num, appr_circle]
 
 
 class Spinner:
@@ -153,7 +156,8 @@ class Slider:
     """
 
     def __init__(self, time, position, radius, distance, repetitions, slider_type,
-                 points, beat_duration, slider_vel, color, border, ar_ms, fade_ms, tick_rate):
+                 points, beat_duration, slider_vel, color, border, ar_ms, fade_ms, tick_rate,
+                 combo_num):
         slider_duration = distance / (100.0 * slider_vel) * beat_duration
         self.appear = time - ar_ms
         self.disappear = time + slider_duration * repetitions
@@ -171,6 +175,7 @@ class Slider:
         self.ar_ms = ar_ms
         self.tick_rate = tick_rate
         self.slider = SliderCurve([tuple(self.position)] + self.points, slider_type)
+        self.num = combo_num
 
     def slide(self, alpha):
         """
@@ -212,7 +217,10 @@ class Slider:
         slide = self.slide(alph)
         ball = self.ball(time, alph)
         appr_circle = approach_circle(self, time)
-        return [slide, appr_circle, ball]
+        numb = alph if time <= self.action else 0
+        num = gizeh.text(str(self.num), fontfamily="Impact", fontsize=self.radius,
+                              fill=(0, 0, 0, numb), xy=self.position)
+        return [slide, appr_circle, ball, num]
 
 
 def get_alpha(self, time):
