@@ -6,6 +6,7 @@ import arrow
 import discord
 import regex
 import requests
+import socket
 
 import commands
 
@@ -188,6 +189,33 @@ class Dict(dict):
     def __delitem__(self, key):
         super(Dict, self).__delitem__(key)
         del self.__dict__[key]
+
+
+class Broadcaster:
+    def __init__(self, socket):
+        self.socket = socket
+
+    def send(self, message, port=12345):
+        guild = Dict({"id": None, "name": None}) if message.guild is None else message.guild
+        channel = Dict({"id": message.channel.id, "name": "DM"}) if isinstance(message.channel, discord.DMChannel) \
+            else message.channel
+        package = {"sender":
+                       {"id": message.author.id,
+                        "name": message.author.name
+                        },
+                   "content": message.content,
+                   "guild": {"name": guild.name,
+                             "id": guild.id
+                             },
+                   "channel": {"name": channel.name,
+                               "id": channel.id
+                               }
+                   }
+        self.socket.sendto(json.dumps(package).encode(), ('255.255.255.255', port))
+
+    def receive(self, bytes_to_receive=1024):
+        rawMessage = self.socket.recvfrom(bytes_to_receive)[0]
+        return json.loads(rawMessage.decode())
 
 
 def sanitize(text):

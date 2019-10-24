@@ -1,7 +1,8 @@
-import asyncio, aiohttp, html, socket
+import asyncio, aiohttp, html
 import generateCommandMD
-from utils import sanitize, Log, Config, Users, help_me
+from utils import sanitize, Log, Config, Users, help_me, Broadcaster
 import commands
+from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 import discord
 
 # Config().load()
@@ -9,6 +10,8 @@ import discord
 
 
 client = discord.Client()
+conn = socket(AF_INET, SOCK_DGRAM)
+conn.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
 
 @client.event
@@ -16,6 +19,7 @@ async def on_message(message):
     if message.author == client.user:
         return
 
+    Broadcaster(conn).send(message)
     Log.log(f"{message.author.name}@{message.channel}: {message.content}")
 
     if message.content.startswith(Config.prefix):

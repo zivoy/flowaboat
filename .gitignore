@@ -8,6 +8,7 @@ logs
 # config and credentials
 config.json
 users.list
+serverSchedule.json
 
 #python cache
 __pycache__/

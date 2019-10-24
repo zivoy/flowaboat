@@ -285,22 +285,28 @@ class Replay:
 
         objects = list()
         col = -1
+        combo = 1
         for i in beatmap_obj.hitobjects:
+            combo += 1
             if i.objtype & (1 << 2):
                 col += 1
+                combo = 1
             if i.objtype & (1 << 4):
                 col += (16 >> 4)
+                combo = 1
             if i.objtype & (1 << 5):
                 col += (32 >> 4)
+                combo = 1
             if i.objtype & (1 << 6):
                 col += (64 >> 4)
+                combo = 1
             col = col % len(self.colors)
 
             duration = [j for j in self.beat_durations if j <= i.time][-1]
             if i.typestr() == "circle":
                 objects.append(HitCircle(i.time, (i.data.pos.x, i.data.pos.y),
                                          self.circle_radius, self.colors[col],
-                                         self.border, self.ar_ms, self.fade_ms))
+                                         self.border, self.ar_ms, self.fade_ms, combo))
             elif i.typestr() == "spinner":
                 objects.append(Spinner(i.time, i.data.end_time, self.border,
                                        self.spinner_radius, self.ar_ms, self.fade_ms))
@@ -309,7 +315,7 @@ class Replay:
                     Slider(i.time, (i.data.pos.x, i.data.pos.y), self.circle_radius,
                            i.data.distance, i.data.repetitions, i.data.type, i.data.points,
                            self.beat_durations[duration], beatmap_obj.sv, self.colors[col],
-                           self.border, self.ar_ms, self.fade_ms, self.tick_rate))
+                           self.border, self.ar_ms, self.fade_ms, self.tick_rate, combo))
         self.objects = objects[::-1]
 
         self.offset = 0
@@ -382,7 +388,7 @@ class Replay:
             ablnk = mpy.AudioClip(lambda x: 0, duration=aftr)
             snd = mpy.concatenate_audioclips([blnk, acl, ablnk])
             clip = clip.set_audio(snd.subclip(audio_start_offset, duration + audio_start_offset))
-            remove(audio)
+            #remove(audio)
 
         if name.endswith(".gif"):
             clip.write_gif(name, fps=fps)
