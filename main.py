@@ -12,6 +12,7 @@ import discord
 client = discord.Client()
 conn = socket(AF_INET, SOCK_DGRAM)
 conn.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+loop = asyncio.get_event_loop()
 
 
 @client.event
@@ -36,14 +37,13 @@ async def on_message(message):
             "client": client,
             "user_obj": Users.users[str(message.author.id)]
         }
-
         if command in commands.List.keys():
-            await getattr(commands, sanitize(command))().call(package)
+            loop.create_task(getattr(commands, sanitize(command))().call(package))
         else:
             found = False
             for i, j in commands.List.items():
                 if any([True for cm in j if cm.search(command)]):
-                    await getattr(commands, sanitize(i))().call(package)
+                    loop.create_task(getattr(commands, sanitize(i))().call(package))
                     found = True
                     break
             if not found:
