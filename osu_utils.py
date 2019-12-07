@@ -18,13 +18,13 @@ import regex
 import requests
 import seaborn as sns
 from PIL import Image
-from arrow.factory import ArrowParseWarning
+# from arrow.factory import ArrowParseWarning
 from matplotlib import pyplot as plt
 
 from utils import dict_string_to_nums, fetch_emote, Log, Config, date_form, \
     separator, UserNonexistent, Dict, format_nums, UserError, Api
 
-warnings.simplefilter("ignore", ArrowParseWarning)
+# warnings.simplefilter("ignore", ArrowParseWarning)
 
 osu_api = Api("https://osu.ppy.sh/api", 60, {"k": Config.credentials.osu_api_key})
 
@@ -991,7 +991,7 @@ def embed_play(play_stats, client):
     embed = discord.Embed(description=desc,
                           url=f"https://osu.ppy.sh/b/{play_stats.beatmap_id}",
                           title=f"{play_stats.map_obj.artist} – {play_stats.map_obj.title} [{play_stats.map_obj.version}]",
-                          color=0xbb5577)
+                          color=0xbb5577, inline=False)
 
     embed.set_author(url=f"https://osu.ppy.sh/u/{play_stats.user_id}",
                      name=f"{play_stats.username} – {play_stats.user_pp:,}pp "
@@ -1065,7 +1065,7 @@ def embed_play(play_stats, client):
     if play_stats.completion < 1:
         perfomacne += f"\n**{format_nums(play_stats.completion * 100, 2)}%** completion"
 
-    embed.add_field(name=play_results, value=perfomacne)
+    embed.add_field(name=play_results, value=perfomacne, inline=False)
 
     beatmap_info = f"{arrow.Arrow(2019, 1, 1).shift(seconds=play_stats.map_obj.total_length).format('mm:ss')} ~ " \
                    f"CS**{format_nums(play_stats.map_obj.cs, 1)}** " \
@@ -1082,6 +1082,6 @@ def embed_play(play_stats, client):
     beatmap_info += f"BPM ~ " \
                     f"**{format_nums(play_stats.stars, 2)}**★"
 
-    embed.add_field(name="Beatmap Information", value=beatmap_info)
+    embed.add_field(name="Beatmap Information", value=beatmap_info, inline=False)
 
     return embed
