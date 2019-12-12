@@ -2,6 +2,7 @@ import asyncio, aiohttp, html
 import generateCommandMD
 from utils import sanitize, Log, Config, Users, help_me, Broadcaster
 import commands
+import administrating
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 import discord
 
@@ -50,7 +51,10 @@ async def on_message(message):
                 await help_me(message, "help")
                 Log.log(f"{command} is not a valid command")
     elif Config.administer:
-        pass
+        for i, trigger in administrating.List.items():
+            trigBool, payload = trigger(message)
+            if trigBool:
+                await getattr(administrating, sanitize(i))().action(message)
 
 
 @client.event

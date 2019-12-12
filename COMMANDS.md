@@ -11,7 +11,7 @@
 - [o!od](#ood)
 - [o!osu](#oosu)
 - [o!recent](#orecent)
-- [o!schedule](#oschedule)
+- [o!set-muda](#oset-muda)
 - [o!top](#otop)
 ---
 ## o!ar
@@ -171,7 +171,7 @@ Sets your username for platform.
 
 #### Synonyms:
 
-`o!set-ign`, `o!set`
+`o!set-ign`, `o!set `
 
 ### Examples:
 
@@ -265,30 +265,19 @@ o!recentpass
 Returns your most recent pass.
 
 
-## o!schedule
-Schedule events.
+## o!set-muda
+set safe place for muda
 
-**Required variables**: `1`
+**Required variables**: `0`
 
-**Usage**: `o!schedule <command>`
+**Usage**: `o!set-muda `
 
-#### Synonyms:
-
-`o!sched`, `o!event`
-
-### Examples:
+### Example:
 
 ```
-o!sched init
+o!set-muda
 ```
-Sets the current channel as ping channel.
-
-
-
-```
-o!event new
-```
-Walks you through setting up a new event
+set as muda dump
 
 
 ## o!top
