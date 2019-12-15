@@ -1,4 +1,4 @@
-import os,json
+import os, json
 from utils import Log
 
 mudaId = "627115852944375808"
@@ -12,32 +12,33 @@ else:
     open("./mudaSafe", "w").close()
     allServers = dict()
 
+
 class Watcher:
-    name = "Muda Killer"
+    name = "badmuda"
     description = "Warns Users if they use the Muda bot in the wrong channel."
 
     def trigger(self, message_obj):
-        string,sender,server, channel = message_obj.content, message_obj.author.id, \
-                                 message_obj.guild.id, message_obj.channel.id
+        string, sender, server, channel = str(message_obj.content), str(message_obj.author.id), \
+                                          str(message_obj.guild.id), str(message_obj.channel.id)
 
         if server not in mudaWatchlist:
             mudaWatchlist[server] = dict()
 
-        if string.startswith(mudaCommand) or str(sender) == mudaId:
+        if string.startswith(mudaCommand) or sender == mudaId:
             if server in allServers:
                 if channel == allServers[server]:
                     return False, ""
                 else:
                     if string.startswith(mudaCommand) and sender not in mudaWatchlist[server]:
                         mudaWatchlist[server][channel] = sender
+                        Log.log("adding {} to watchlist".format(sender))
                         return False, ""
                     else:
                         if channel in mudaWatchlist[server]:
                             return True, [mudaWatchlist[server][channel], allServers[server]]
                         else:
                             return False, ""
-        else:
-            return False, ""
+        return False, ""
 
     async def action(self, message_obj, payload):
         msg = '**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**\n' \

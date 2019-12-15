@@ -17,12 +17,13 @@ class Command:
         message = package["message_obj"]
         server = message.guild.id
         channel = message.channel.id
-        with open("./mudaSafe", "r+") as serverList:  # will change
+        with open("./mudaSafe", "r") as serverList:  # will change
             try:
                 allServers = json.load(serverList)
             except:
                 allServers = dict()
-            allServers[server] = channel
+            allServers[server] = str(channel)
+        with open("./mudaSafe", "w") as serverList:
             json.dump(allServers, serverList, indent="  ", sort_keys=True)
         msg = "<#{0}> is now the default channel for {1}".format(channel, server)
         Log.log(msg)

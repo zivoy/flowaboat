@@ -51,10 +51,10 @@ async def on_message(message):
                 await help_me(message, "help")
                 Log.log(f"{command} is not a valid command")
     elif Config.administer:
-        for i, trigger in administrating.List.items():
-            trigBool, payload = trigger(message)
+        for adm in administrating.List:
+            trigBool, payload = adm.trigger(message)
             if trigBool:
-                await getattr(administrating, sanitize(i))().action(message)
+                await adm.action(message, payload)
 
 
 @client.event
