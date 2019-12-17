@@ -42,7 +42,7 @@ class Watcher:
 
     async def action(self, message_obj, payload):
         msg = '**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**\n' \
-              '<@{0}> this is a warning. you are in the wrong channel go to <#{1}>\n' \
+              '<@!{0}> this is a warning. you are in the wrong channel go to <#{1}>\n' \
               '**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**'.format(*payload)
         Log.log("{0} is in the wrong chat".format(payload[0]))
         await message_obj.channel.send(msg)

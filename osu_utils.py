@@ -13,7 +13,7 @@ import discord
 import matplotlib
 import numpy as np
 import pandas as pd
-import pyttanko as pytan
+import oppadc as oppa
 import regex
 import requests
 import seaborn as sns
@@ -27,8 +27,6 @@ from utils import dict_string_to_nums, fetch_emote, Log, Config, date_form, \
 # warnings.simplefilter("ignore", ArrowParseWarning)
 
 osu_api = Api("https://osu.ppy.sh/api", 60, {"k": Config.credentials.osu_api_key})
-
-parser = pytan.parser()
 
 
 class MapError(Exception):
@@ -74,39 +72,39 @@ class NoReplay(UserError):
 class OsuConsts(Enum):
     # "": 0,
     MODS = {
-        "NF": 2 ** 0,
-        "EZ": 2 ** 1,
-        "TD": 2 ** 2,
-        "HD": 2 ** 3,
-        "HR": 2 ** 4,
-        "SD": 2 ** 5,
-        "DT": 2 ** 6,
-        "RX": 2 ** 7,
-        "HT": 2 ** 8,
-        "NC": 2 ** 9,
-        "FL": 2 ** 10,
-        "AT": 2 ** 11,
-        "SO": 2 ** 12,
-        "AP": 2 ** 13,
-        "PF": 2 ** 14,
-        "4K": 2 ** 15,
-        "5K": 2 ** 16,
-        "6K": 2 ** 17,
-        "7K": 2 ** 18,
-        "8K": 2 ** 19,
-        "FI": 2 ** 20,
-        "RD": 2 ** 21,
-        "LM": 2 ** 22,
-        "TR": 2 ** 23,
-        "9K": 2 ** 24,
-        "10K": 2 ** 25,
-        "1K": 2 ** 26,
-        "3K": 2 ** 27,
-        "2K": 2 ** 28,
-        "V2": 2 ** 29
+        "NF": 1 << 0,
+        "EZ": 1 << 1,
+        "TD": 1 << 2,
+        "HD": 1 << 3,
+        "HR": 1 << 4,
+        "SD": 1 << 5,
+        "DT": 1 << 6,
+        "RX": 1 << 7,
+        "HT": 1 << 8,
+        "NC": 1 << 9,
+        "FL": 1 << 10,
+        "AT": 1 << 11,
+        "SO": 1 << 12,
+        "AP": 1 << 13,
+        "PF": 1 << 14,
+        "4K": 1 << 15,
+        "5K": 1 << 16,
+        "6K": 1 << 17,
+        "7K": 1 << 18,
+        "8K": 1 << 19,
+        "FI": 1 << 20,
+        "RD": 1 << 21,
+        "LM": 1 << 22,
+        "TR": 1 << 23,
+        "9K": 1 << 24,
+        "10K": 1 << 25,
+        "1K": 1 << 26,
+        "3K": 1 << 27,
+        "2K": 1 << 28,
+        "V2": 1 << 29
     }
 
-    R_MODS = {v: k for k, v in MODS.items()}
+    MODS_INT = {v: k for k, v in MODS.items()}
 
     DIFF_MODS = ["HR", "EZ", "DT", "HT", "NC", "FL", "HD", "NF"]
     TIME_MODS = ["DT", "HT", "NC"]
@@ -145,6 +143,10 @@ class OsuConsts(Enum):
 mods_re = regex.compile(rf"^({'|'.join(OsuConsts.MODS.value.keys())})+$")
 
 
+def calculate_acc(n300, n100, n50, nMiss):
+    return (50 * n50 + 100 * n100 + 300 * n300) / (300 * (nMiss + n50 + n100 + n300))
+
+
 class Play:
     def __init__(self, play_dict):
         dict_string_to_nums(play_dict)
@@ -156,11 +158,11 @@ class Play:
         self.count100 = play_dict["count100"]  # + play_dict["countkatu"]
         self.count300 = play_dict["count300"]  # + play_dict["countgeki"]
         self.perfect = play_dict["perfect"]
-        self.enabled_mods = parse_mods_string(pytan.mods_str(play_dict["enabled_mods"]))
+        self.enabled_mods = parse_mods_int(play_dict["enabled_mods"])
         self.user_id = play_dict["user_id"]
         self.date = arrow.get(play_dict["date"], date_form)
         self.rank = play_dict["rank"]
-        self.accuracy = pytan.acc_calc(self.count300, self.count100, self.count50, self.countmiss)
+        self.accuracy = calculate_acc(self.count300, self.count100, self.count50, self.countmiss)
 
         if "beatmap_id" in play_dict:
             self.beatmap_id = play_dict["beatmap_id"]
@@ -285,6 +287,25 @@ def parse_mods_string(mods):
     return list(set(matches))
 
 
+def parse_mods_int(mods):
+    if not mods:
+        return []
+    mod_list = list()
+    for i in OsuConsts.MODS_INT.value:
+        if i & mods:
+            mod_list.append(OsuConsts.MODS_INT.value[i])
+    return mod_list
+
+
+def get_mod_mask(mod_list):
+    res = 0
+    if isinstance(mod_list, str):
+        mod_list = parse_mods_string(mod_list)
+    for i in mod_list:
+        res += OsuConsts.MODS.value[i]
+    return res
+
+
 def sanitize_mods(mods):
     if "NC" in mods and "DT" in mods:
         mods.remove("DT")
@@ -306,7 +327,7 @@ def mod_int(mod_list):
     mod_list = set(mod_list)
     if "NC" in mod_list:
         mod_list.add("DT")
-    return pytan.mods_from_str("".join(filter(lambda x: x in OsuConsts.DIFF_MODS.value, mod_list)))
+    return get_mod_mask("".join(filter(lambda x: x in OsuConsts.DIFF_MODS.value, mod_list)))
 
 
 def get_user(user):
@@ -486,8 +507,7 @@ class MapStats:
             if raw_map == "":
                 raise BadLink
 
-        with io.StringIO(raw_map) as map_io:
-            bmp = parser.map(map_io)
+        bmp = oppa.OsuMap(raw_str=raw_map)#, auto_parse=True)
 
         if not bmp.hitobjects:
             raise BadMapFile
@@ -495,19 +515,19 @@ class MapStats:
         speed = speed_multiplier(mods)
 
         map_creator = get_user(bmp.creator)[0]
-        map_calc = pytan.diff_calc().calc(bmp, mod_int(mods))
+        stats = bmp.getStats(mod_int(mods))
         diff = CalculateMods(mods)
 
-        length = bmp.hitobjects[-1].time
-        change_list = [i for i in bmp.timing_points if i.change]
+        length = bmp.hitobjects[-1].starttime
+        change_list = [i for i in bmp.timingpoints if i.change]
         bpm_avg = list()
         bpm_list = list()
         for j, i in enumerate(change_list):
             if i.change:
                 if j + 1 == len(change_list):
-                    dur = length - i.time
+                    dur = length - i.starttime
                 else:
-                    dur = change_list[j + 1].time - i.time
+                    dur = change_list[j + 1].starttime - i.starttime
                 bpm_avg.append((1000 / i.ms_per_beat * 60) * dur)
                 bpm_list.append((1000 / i.ms_per_beat * 60))
 
@@ -519,7 +539,7 @@ class MapStats:
         self.version = bmp.version
         self.bpm_min = min(bpm_list) * speed
         self.bpm_max = max(bpm_list) * speed
-        self.total_length = (length - bmp.hitobjects[0].time) / 1000 / speed
+        self.total_length = (length - bmp.hitobjects[0].starttime) / 1000 / speed
         self.max_combo = None
         self.creator = bmp.creator
         self.creator_id = map_creator["user_id"]
@@ -535,9 +555,10 @@ class MapStats:
         self.mode = bmp.mode
 
         self.hit_objects = len(bmp.hitobjects)
-        self.count_normal = bmp.ncircles
-        self.count_slider = bmp.nsliders
-        self.count_spinner = bmp.nspinners
+        self.count_normal = bmp.amount_circle
+        self.count_slider = bmp.amount_slider
+        self.count_spinner = bmp.amount_spinner
+        bmp.getStats()
 
         if link_type == "id":
             self.approved = 0
@@ -575,11 +596,11 @@ class MapStats:
             self.leaderboard = []
 
         if self.max_combo is None:
-            self.max_combo = bmp.max_combo()
-        self.aim_stars = map_calc.aim
-        self.speed_stars = map_calc.speed
-        self.total = map_calc.total
-        self.bpm = sum(bpm_avg) / (length - bmp.hitobjects[0].time) * speed
+            self.max_combo = bmp.maxCombo()
+        self.aim_stars = stats.aim  # not sure if its aim or aim_diffeculty
+        self.speed_stars = stats.speed
+        self.total = stats.total
+        self.bpm = sum(bpm_avg) / (length - bmp.hitobjects[0].starttime) * speed
         self.beatmap = bmp
 
 
@@ -588,9 +609,9 @@ def graph_bpm(map_link, mods, link_type):
 
     Log.log(f"Graphing BPM for {map_obj.title}")
 
-    data = [(i.time / map_obj.speed_multiplier,
+    data = [(i.starttime / map_obj.speed_multiplier,
              1000 / i.ms_per_beat * 60 / map_obj.speed_multiplier)
-            for i in map_obj.beatmap.timing_points if i.change]
+            for i in map_obj.beatmap.timingpoints if i.change]
 
     chart_points = list()
     for i, j in enumerate(data):
@@ -599,7 +620,7 @@ def graph_bpm(map_link, mods, link_type):
             chart_points.append((j[0] - .01, last[1]))
         chart_points.append(j)
         if len(data) - 1 == i:
-            chart_points.append((map_obj.beatmap.hitobjects[-1].time / map_obj.speed_multiplier, j[1]))
+            chart_points.append((map_obj.beatmap.hitobjects[-1].starttime / map_obj.speed_multiplier, j[1]))
 
     points = pd.DataFrame(chart_points)
     points.columns = ["Time", "BPM"]
@@ -779,41 +800,18 @@ def stat_play(play):
         else:
             recent.unsubmitted = True
 
-    pp, _, _, _, acc = pytan.ppv2(
-        aim_stars=map_obj.aim_stars,
-        speed_stars=map_obj.speed_stars,
-        base_ar=map_obj.ar,
-        base_od=map_obj.od,
-        n100=play.count100,
-        n50=play.count50,
-        nmiss=play.countmiss,
-        mods=mod_int(play.enabled_mods),
-        combo=play.maxcombo,
-        ncircles=map_obj.count_normal,
-        nsliders=map_obj.count_spinner,
-        nobjects=map_obj.hit_objects,
-        max_combo=map_obj.max_combo)
-
-    pp_fc, _, _, _, acc_fc = pytan.ppv2(
-        aim_stars=map_obj.aim_stars,
-        speed_stars=map_obj.speed_stars,
-        base_ar=map_obj.ar,
-        base_od=map_obj.od,
-        n100=play.count100,
-        n50=play.count50,
-        mods=mod_int(play.enabled_mods),
-        ncircles=map_obj.count_normal,
-        nsliders=map_obj.count_spinner,
-        nobjects=map_obj.hit_objects,
-        max_combo=map_obj.max_combo)
+    pp = map_obj.beatmap.getPP(Mods=mod_int(play.enabled_mods), recalculate=True, combo=play.maxcombo,
+                               misses=play.countmiss, n300=play.count300, n100=play.count100, n50=play.count50)
+    pp_fc = map_obj.beatmap.getPP(Mods=mod_int(play.enabled_mods), n100=play.count100, n50=play.count50,
+                                  recalculate=True)
 
     recent.stars = map_obj.total
-    recent.pp_fc = pp_fc
-    recent.acc = acc
-    recent.acc_fc = acc_fc
+    recent.pp_fc = pp_fc.total_pp
+    recent.acc = pp.accuracy
+    recent.acc_fc = pp_fc.accuracy
 
     if recent.pp is None:
-        recent.pp = pp
+        recent.pp = pp.total_pp
 
     recent.replay = None
     if replay:
@@ -917,7 +915,7 @@ def avgpt(points, index):
 
 
 def get_strains(beatmap, mods, mode=""):
-    stars = pytan.diff_calc().calc(beatmap, mod_int(mods))
+    stars = beatmap.getStats(mod_int(mods))
 
     speed = speed_multiplier(mods)
 
@@ -927,7 +925,7 @@ def get_strains(beatmap, mods, mode=""):
     star_strains = list()
     max_strain = 0
     strain_step = OsuConsts.STRAIN_STEP.value * speed
-    strain_offset = math.floor(beatmap.hitobjects[0].time / strain_step) * strain_step - strain_step
+    strain_offset = math.floor(beatmap.hitobjects[0].starttime / strain_step) * strain_step - strain_step
     max_strain_time = strain_offset
 
     for i, _ in enumerate(aim_strains):
@@ -961,15 +959,15 @@ def get_strains(beatmap, mods, mode=""):
 def calculate_strains(mode_type, hit_objects, speed_multiplier):
     strains = list()
     strain_step = OsuConsts.STRAIN_STEP.value * speed_multiplier
-    interval_emd = math.ceil(hit_objects[0].time / strain_step) * strain_step
+    interval_emd = math.ceil(hit_objects[0].starttime / strain_step) * strain_step
     max_strains = 0.0
 
     for i, _ in enumerate(hit_objects):
-        while hit_objects[i].time > interval_emd:
+        while hit_objects[i].starttime > interval_emd:
             strains.append(max_strains)
             if i > 0:
                 decay = OsuConsts.DECAY_BASE.value[mode_type] ** \
-                        (interval_emd - hit_objects[i - 1].time) / 1000
+                        (interval_emd - hit_objects[i - 1].starttime) / 1000
                 max_strains = hit_objects[i - 1].strains[mode_type] * decay
             else:
                 max_strains = 0.0

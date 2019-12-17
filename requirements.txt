@@ -11,4 +11,4 @@ requests
 aiohttp
 regex
 arrow
--e git+http://github.com/zivoy/pyttanko.git#egg=pyttanko
+-e git+https://github.com/The-CJ/oppadc.py.git#egg=oppadc
