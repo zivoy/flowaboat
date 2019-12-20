@@ -803,7 +803,7 @@ def stat_play(play):
     pp = map_obj.beatmap.getPP(Mods=mod_int(play.enabled_mods), recalculate=True, combo=play.maxcombo,
                                misses=play.countmiss, n300=play.count300, n100=play.count100, n50=play.count50)
     pp_fc = map_obj.beatmap.getPP(Mods=mod_int(play.enabled_mods), n100=play.count100, n50=play.count50,
-                                  recalculate=True)
+                                  n300=play.count300+play.countmiss, recalculate=True)
 
     recent.stars = map_obj.total
     recent.pp_fc = pp_fc.total_pp
