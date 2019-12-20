@@ -1,5 +1,5 @@
-# Commands
-### Table Of Contents
+# Table Of Contents
+### Commands
 - [o!ar](#oar)
 - [o!bpm](#obpm)
 - [o!cs](#ocs)
@@ -13,6 +13,8 @@
 - [o!recent](#orecent)
 - [o!set-muda](#oset-muda)
 - [o!top](#otop)
+### Administrative functions
+- [badmuda](#badmuda)
 ---
 ## o!ar
 Calculate Approach Rate values and milliseconds with mods applied.
@@ -171,7 +173,7 @@ Sets your username for platform.
 
 #### Synonyms:
 
-`o!set-ign`, `o!set `
+`o!set-ign`, `o!set `, `o!ign `
 
 ### Examples:
 
@@ -304,4 +306,27 @@ Returns your #1 top play.
 o!top5 vaxei
 ```
 Returns Vaxei's #5 top play.
+
+---
+
+## badmuda
+Warns users if they use the Muda bot in the wrong channel.
+
+### Trigger:
+if a user posts anything starting with a `$` they will be put on a watchlist and if muda (627115852944375808) responds it will trigger admin function
+
+### Action:
+once triggered the message by muda will be deleted and replaced with a warning
+
+### Example:
+
+```
+$w
+```
+will result in
+```
+**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**
+<@!userID> this is a warning. you are in the wrong channel go to <#mudaHomeChannelID>
+**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**
+```
 
