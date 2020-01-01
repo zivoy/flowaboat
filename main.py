@@ -52,7 +52,7 @@ async def on_message(message):
                 Log.log(f"{command} is not a valid command")
     elif Config.administer:
         for adm in administrating.List:
-            trigBool, payload = adm.trigger(message)
+            trigBool, payload = adm.trigger(message, client)
             if trigBool:
                 await adm.action(message, payload)
 

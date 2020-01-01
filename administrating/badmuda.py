@@ -32,7 +32,7 @@ class Watcher:
         'action': warn.format("userID", "mudaHomeChannelID")
     }]
 
-    def trigger(self, message_obj):
+    def trigger(self, message_obj, _):
         string, sender, server, channel = str(message_obj.content), str(message_obj.author.id), \
                                           str(message_obj.guild.id), str(message_obj.channel.id)
 

@@ -15,6 +15,7 @@
 - [o!top](#otop)
 ### Administrative functions
 - [badmuda](#badmuda)
+- [bruh](#bruh)
 ---
 ## o!ar
 Calculate Approach Rate values and milliseconds with mods applied.
@@ -325,8 +326,28 @@ $w
 ```
 will result in
 ```
-**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**
+**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**
 <@!userID> this is a warning. you are in the wrong channel go to <#mudaHomeChannelID>
-**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**
+**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**
+```
+
+
+## bruh
+Reacts with the Bruh emoji when user types /bruh
+
+### Trigger:
+if a user says /bruh it will trigger the function
+
+### Action:
+once triggered the bot will react with Bruh emoji
+
+### Example:
+
+```
+/bruh
+```
+will result in
+```
+reacts with bruh
 ```
 
