@@ -10,6 +10,7 @@ import zipfile
 from enum import Enum
 from textwrap import wrap
 from time import strftime, gmtime, time
+from typing import Union, Tuple
 
 import arrow
 import bezier
@@ -17,13 +18,13 @@ import discord
 import matplotlib
 import numpy as np
 import pandas as pd
-import oppadc as oppa
 import regex
 import requests
 import seaborn as sns
 from PIL import Image
 # from arrow.factory import ArrowParseWarning
 from matplotlib import pyplot as plt
+import oppadc as oppa
 
 from utils import dict_string_to_nums, fetch_emote, Log, Config, DATE_FORM, \
     SEPARATOR, UserNonexistent, Dict, format_nums, UserError, Api
@@ -225,9 +226,12 @@ class Play:
         else:
             self.performance_points = None
 
+    def __eq__(self, other):
+        return self.date == other.date and self.user_id == other.user_id
+
 
 class CalculateMods:
-    def __init__(self, mods):
+    def __init__(self, mods: Union[list, str]):
         self.mods = mods
         if list(mods) != mods:
             self.mods = parse_mods_string(mods)
@@ -235,8 +239,8 @@ class CalculateMods:
         #     Log.log(mods.replace("+", ""))
         # Log.log(self.mods)
 
-    def ar(self, raw_ar):
-        ar_multiplier = 1
+    def ar(self, raw_ar: Union[float, int]) -> Tuple[float, float, list]:
+        ar_multiplier = 1.
 
         speed = speed_multiplier(self.mods)
 
@@ -266,8 +270,8 @@ class CalculateMods:
 
         return ar, ar_ms, self.mods
 
-    def cs(self, raw_cs):
-        cs_multiplier = 1
+    def cs(self, raw_cs: Union[float, int]) -> Tuple[float, list]:
+        cs_multiplier = 1.
 
         if "HR" in self.mods:
             cs_multiplier *= OsuConsts.HR_CS.value
@@ -278,9 +282,9 @@ class CalculateMods:
 
         return cs, self.mods
 
-    def od(self, raw_od):
-        od_multiplier = 1
-        speed = 1
+    def od(self, raw_od: Union[float, int]) -> Tuple[float, float, list]:
+        od_multiplier = 1.
+        speed = 1.
 
         if "HR" in self.mods:
             od_multiplier *= OsuConsts.HR_OD.value
@@ -303,8 +307,8 @@ class CalculateMods:
 
         return od, odms, self.mods
 
-    def hp(self, raw_hp):
-        hp_multiplier = 1
+    def hp(self, raw_hp: Union[float, int]) -> Tuple[float, list]:
+        hp_multiplier = 1.
 
         if "HR" in self.mods:
             hp_multiplier *= OsuConsts.HR_HP.value
@@ -316,7 +320,7 @@ class CalculateMods:
         return hp, self.mods
 
 
-def parse_mods_string(mods):
+def parse_mods_string(mods: str) -> list:
     if mods == '' or mods == "nomod":
         return []
     mods = mods.replace("+", "").upper()
@@ -328,7 +332,7 @@ def parse_mods_string(mods):
     return list(set(matches))
 
 
-def parse_mods_int(mods):
+def parse_mods_int(mods: int) -> list:
     if not mods:
         return []
     mod_list = list()
@@ -338,7 +342,7 @@ def parse_mods_int(mods):
     return mod_list
 
 
-def get_mod_mask(mod_list):
+def get_mod_mask(mod_list: Union[list, set]) -> int:
     res = 0
     if isinstance(mod_list, str):
         mod_list = parse_mods_string(mod_list)
@@ -347,7 +351,7 @@ def get_mod_mask(mod_list):
     return res
 
 
-def sanitize_mods(mods):
+def sanitize_mods(mods: Union[list, set]) -> Union[list, set]:
     if "NC" in mods and "DT" in mods:
         mods.remove("DT")
     if "PF" in mods and "SD" in mods:
@@ -355,8 +359,8 @@ def sanitize_mods(mods):
     return mods
 
 
-def speed_multiplier(mods):
-    speed = 1
+def speed_multiplier(mods: Union[list, set]) -> float:
+    speed = 1.
     if "DT" in mods or "NC" in mods:
         speed *= OsuConsts.DT_SPD.value
     elif "HT" in mods:
@@ -364,14 +368,14 @@ def speed_multiplier(mods):
     return speed
 
 
-def mod_int(mod_list):
+def mod_int(mod_list: Union[list, set]) -> int:
     mod_list = set(mod_list)
     if "NC" in mod_list:
         mod_list.add("DT")
     return get_mod_mask("".join(filter(lambda x: x in OsuConsts.DIFF_MODS.value, mod_list)))
 
 
-def get_user(user):
+def get_user(user: Union[int, str]) -> dict:
     response = OSU_API.get('/get_user', {"u": user})
     response = response.json()
 
@@ -388,7 +392,7 @@ def get_user(user):
     return response
 
 
-def get_leaderboard(beatmap_id, limit=100):
+def get_leaderboard(beatmap_id: Union[str, int], limit: int = 100) -> list:
     response = OSU_API.get('/get_scores', {"b": beatmap_id, "limit": limit}).json()
 
     if Config.debug:
@@ -404,7 +408,7 @@ def get_leaderboard(beatmap_id, limit=100):
     return response
 
 
-def get_user_map_best(beatmap_id, user, enabled_mods=0):
+def get_user_map_best(beatmap_id: Union[int, str], user: Union[int, str], enabled_mods: int = 0) -> list:
     response = OSU_API.get('/get_scores', {"b": beatmap_id, "u": user, "mods": enabled_mods}).json()
 
     if Config.debug:
@@ -413,14 +417,14 @@ def get_user_map_best(beatmap_id, user, enabled_mods=0):
     # if len(response) == 0:
     #     raise NoScore("Couldn't find user score for this beatmap")
 
-    for i, _ in enumerate(response):
-        response[i] = Play(response[i])
+    for i, j in enumerate(response):
+        response[i] = Play(j)
         response[i].beatmap_id = beatmap_id
 
     return response
 
 
-def get_user_best(user, limit=100):
+def get_user_best(user: Union[int, str], limit: int = 100) -> list:
     response = OSU_API.get('/get_user_best', {"u": user, "limit": limit})
     response = response.json()
 
@@ -430,13 +434,13 @@ def get_user_best(user, limit=100):
     if not response:
         raise NoPlays(f"No top plays found for {user}")
 
-    for i, _ in enumerate(response):
-        response[i] = Play(response[i])
+    for i, j in enumerate(response):
+        response[i] = Play(j)
 
     return response
 
 
-def get_user_recent(user, limit=10):
+def get_user_recent(user: Union[int, str], limit: int = 10) -> list:
     response = OSU_API.get('/get_user_recent', {"u": user, "limit": limit}).json()
 
     if Config.debug:
@@ -445,13 +449,13 @@ def get_user_recent(user, limit=10):
     if not response:
         raise NoPlays(f"No recent plays found for {user}")
 
-    for i, _ in enumerate(response):
-        response[i] = Play(response[i])
+    for i, j in enumerate(response):
+        response[i] = Play(j)
 
     return response
 
 
-def get_replay(beatmap_id, user_id, mods, mode):
+def get_replay(beatmap_id: Union[int, str], user_id: Union[int, str], mods: int, mode: int) -> str:
     response = OSU_API.get("/get_replay", {"b": beatmap_id, "u": user_id,
                                            "mods": mods, "m": mode}).json()
 
@@ -463,7 +467,7 @@ def get_replay(beatmap_id, user_id, mods, mode):
     return replay
 
 
-def get_rank_emoji(rank, client):
+def get_rank_emoji(rank: str, client: discord.Client) -> Union[bool, discord.Emoji]:
     if rank == "XH":
         emote = fetch_emote("XH_Rank", None, client)
         return emote if emote else "Silver SS"
@@ -494,7 +498,7 @@ def get_rank_emoji(rank, client):
     return False
 
 
-def get_top(user, index, rb=False, ob=False):
+def get_top(user: str, index: int, rb: bool = False, ob: bool = False) -> Play:
     index = min(max(index, 1), 100)
     limit = 100 if rb or ob else index
     response = get_user_best(user, limit)
@@ -512,7 +516,14 @@ def get_top(user, index, rb=False, ob=False):
     return recent_raw
 
 
-def get_recent(user, index):
+def get_recent(user: str, index: int) -> Play:
+    """
+    gets the users recent play by index
+
+    :param user: username of player
+    :param index: index to fetch
+    :return: Play object
+    """
     index = min(max(index, 1), 50)
     response = get_user_recent(user, index)
 
@@ -525,11 +536,12 @@ def get_recent(user, index):
 
 
 class MapStats:
-    def __init__(self, map_id, mods, link_type="id"):
+    def __init__(self, map_id: Union[str, int], mods: list, link_type: str = "id"):
         """
         get stats on map // map api
+
         :param map_id:
-        :param mods: mod **list**
+        :param mods: mod
         :param link_type: [id|map|path|url]
         :return: map data dict, map object with calculated values
         """
@@ -645,7 +657,15 @@ class MapStats:
         self.beatmap = bmp
 
 
-def graph_bpm(map_link, mods, link_type):
+def graph_bpm(map_link: Union[str, int], mods: list, link_type: str):
+    """
+    graphs the bpm changes on map
+
+    :param map_link: map link or id
+    :param mods: mods applied
+    :param link_type: is ita link or id
+    :return:
+    """
     map_obj = MapStats(map_link, mods, link_type)
 
     Log.log(f"Graphing BPM for {map_obj.title}")
@@ -724,7 +744,14 @@ def graph_bpm(map_link, mods, link_type):
     return image
 
 
-def get_map_link(link, **kwargs):
+def get_map_link(link: str, **kwargs) -> Tuple[Union[int, str, os.path], str]:
+    """
+    gets link type and corresponding value
+
+    :param link: a link or id
+    :param kwargs: for the case that its a osz file
+    :return: id or other identifier and str of type
+    """
     if link.isnumeric():
         return int(link), "id"
     if link.endswith(".osu"):
@@ -744,7 +771,14 @@ def get_map_link(link, **kwargs):
         return download_mapset(link, **kwargs), "path"
 
 
-def download_mapset(link_id=None, link=None):
+def download_mapset(link_id: Union[str, int] = None, link: str = None) -> os.path:
+    """
+    downloads an osu mapset
+
+    :param link_id: a map id
+    :param link: a direct link to osz file
+    :return: the path to downloaded folder
+    """
     if link_id is None and link is None:
         raise NoBeatmap("No beatmap provided")
     if link_id is not None:
@@ -782,7 +816,40 @@ def download_mapset(link_id=None, link=None):
     return location
 
 
-def stat_play(play):
+def stat_play(play: Play):
+    """
+    gets statistics on osu play and graph on play
+
+    :param play: a users play
+    :return: a dict with information on play keys -> [user_id,
+                                                        beatmap_id,
+                                                        rank,
+                                                        score,
+                                                        combo,
+                                                        count300,
+                                                        count100,
+                                                        count50,
+                                                        countmiss,
+                                                        mods,
+                                                        date,
+                                                        unsubmitted,
+                                                        performance_points,
+                                                        pb,
+                                                        lb,
+                                                        username,
+                                                        user_rank,
+                                                        user_pp,
+                                                        stars,
+                                                        pp_fc,
+                                                        acc,
+                                                        acc_fc,
+                                                        replay,
+                                                        completion,
+                                                        strain_bar,
+                                                        map_obj,
+                                                        {score_id,
+                                                        ur}]
+    """
     map_obj = MapStats(play.beatmap_id, play.enabled_mods, "id")
     if play.rank.upper() == "F":
         completion = (play.count300 + play.count100 + play.count50 + play.countmiss) \
@@ -794,7 +861,7 @@ def stat_play(play):
     try:
         user_leaderboard = get_user_best(play.user_id)
         map_leaderboard = map_obj.leaderboard
-        best_score = get_user_map_best(play.beatmap_id, play.user_id, play.enabled_mods)
+        best_score = get_user_map_best(play.beatmap_id, play.user_id, mod_int(play.enabled_mods))
         user = get_user(play.user_id)[0]
     except Exception as err:
         Log.error(err)
@@ -816,7 +883,7 @@ def stat_play(play):
         "mods": play.enabled_mods,
         "date": play.date,
         "unsubmitted": False,
-        "pp": play.performance_points
+        "performance_points": play.performance_points
     })
 
     recent.pb = 0
@@ -824,11 +891,11 @@ def stat_play(play):
     replay = 0
 
     for j, i in enumerate(user_leaderboard):
-        if compare_scores(i, play):
+        if i == play:
             recent.pb = j + 1
             break
     for j, i in enumerate(map_leaderboard):
-        if compare_scores(i, play):
+        if i == play:
             recent.lb = j + 1
             break
 
@@ -837,7 +904,7 @@ def stat_play(play):
     recent.user_pp = user["pp_raw"]
 
     if best_score:
-        if compare_scores(play, best_score):
+        if play == best_score:
             replay = best_score.replay_available
             recent.score_id = best_score.score_id
         else:
@@ -872,21 +939,22 @@ def stat_play(play):
     return recent
 
 
-def compare_scores(a, b):
-    if a.date != b.date:
-        return False
+def map_strain_graph(map_obj: oppa.OsuMap, mods: Union[list, set], progress: float = 1.,
+                     mode: str = "", width: float = 399., height: float = 40.,
+                     max_chunks: Union[int, float] = 100, low_cut: float = 30.):
+    """
+    generats a strains graph based on map
 
-    if a.user_id != b.user_id:
-        return False
-
-    return True
-
-
-def map_strain_graph(map_obj, mods, progress=1., mode="", width=399.,
-                     height=40., max_chunks=100, low_cut=30.):
-    width = float(width)
-    height = float(height)
-    low_cut = float(low_cut)
+    :param map_obj: map object
+    :param mods: mods applied
+    :param progress: how much of the map player finished
+    :param mode: [aim|speed] for type of strains to get
+    :param width: width of image
+    :param height: height of image
+    :param max_chunks: resolution to get out of map
+    :param low_cut: adds some beefing to the bottem
+    :return: an image in a bytesio object
+    """
     map_strains = get_strains(map_obj, mods, mode)
     strains, max_strain = map_strains["strains"], map_strains["max_strain"]
 
@@ -956,11 +1024,25 @@ def map_strain_graph(map_obj, mods, progress=1., mode="", width=399.,
     return image
 
 
-def avgpt(points, index):
-    return (points[index] + points[index + 1]) / 2
+def avgpt(points: Union[list, np.array], index: int) -> float:
+    """
+    get the average between current point and the next one
+    :param points: list of points
+    :param index: index
+    :return: average
+    """
+    return (points[index] + points[index + 1]) / 2.0
 
 
-def get_strains(beatmap, mods, mode=""):
+def get_strains(beatmap: oppa.OsuMap, mods: Union[list, set], mode: str = "") -> dict:
+    """
+    get all stains in map
+
+    :param beatmap: beatmap object
+    :param mods: mods used
+    :param mode: [aim|speed] for type of strains to get
+    :return: dict of strains keys -> [strains, max_strain, max_strain_time, max_strain_time_real, total]
+    """
     stars = beatmap.getStats(mod_int(mods))
 
     speed = speed_multiplier(mods)
@@ -1003,7 +1085,15 @@ def get_strains(beatmap, mods, mode=""):
     }
 
 
-def calculate_strains(mode_type, hit_objects, speed_multiplier):
+def calculate_strains(mode_type: int, hit_objects: list, speed_multiplier: float) -> list:
+    """
+    get strains of map at all times
+
+    :param mode_type: mode type [speed, aim]
+    :param hit_objects: list of hitobjects
+    :param speed_multiplier: the speed multiplier induced by mods
+    :return: list of strains
+    """
     strains = list()
     strain_step = OsuConsts.STRAIN_STEP.value * speed_multiplier
     interval_emd = math.ceil(hit_objects[0].starttime / strain_step) * strain_step
@@ -1029,7 +1119,14 @@ def calculate_strains(mode_type, hit_objects, speed_multiplier):
     return strains
 
 
-def embed_play(play_stats, client):
+def embed_play(play_stats: stat_play, client: discord.Client) -> discord.Embed:
+    """
+    generates status report embed from play
+
+    :param play_stats: user statistics on play
+    :param client:discord client of bot
+    :return: discord embed with play stats
+    """
     desc = ""
     if play_stats.pb:
         desc = f"**__#{play_stats.pb} Top Play!__**"

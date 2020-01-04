@@ -34,7 +34,7 @@ class Command:
 
         mods = args[2].upper() if len(args) > 2 else ""
 
-        new_ar, mod_list = osu_utils.CalculateMods(mods).ar(hp)
+        new_ar, ar_ms, mod_list = osu_utils.CalculateMods(mods).ar(hp)
 
         output = ""
 
@@ -46,6 +46,6 @@ class Command:
         new_ar = float(f"{new_ar:.2f}")
         if new_ar.is_integer():
             new_ar = int(new_ar)
-        output += f"HP{new_ar}"
+        output += f"HP{new_ar} ({ar_ms:.0f}ms)"
 
         await message.channel.send(output)
