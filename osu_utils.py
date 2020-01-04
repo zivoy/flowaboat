@@ -10,7 +10,7 @@ import zipfile
 from enum import Enum
 from textwrap import wrap
 from time import strftime, gmtime, time
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 
 import arrow
 import bezier
@@ -232,14 +232,25 @@ class Play:
 
 class CalculateMods:
     def __init__(self, mods: Union[list, str]):
+        """
+        calculates the modifications that happens to values when you apply mods
+
+        :param mods: mods to apply
+        """
         self.mods = mods
         if list(mods) != mods:
-            self.mods = parse_mods_string(mods)
+            self.mods: list = parse_mods_string(mods)
 
         #     Log.log(mods.replace("+", ""))
         # Log.log(self.mods)
 
     def ar(self, raw_ar: Union[float, int]) -> Tuple[float, float, list]:
+        """
+        calculates approach rate with mods allied to it
+
+        :param raw_ar: input ar
+        :return: outputs new ar and how long you have to react as well as mods applied
+        """
         ar_multiplier = 1.
 
         speed = speed_multiplier(self.mods)
@@ -271,6 +282,12 @@ class CalculateMods:
         return ar, ar_ms, self.mods
 
     def cs(self, raw_cs: Union[float, int]) -> Tuple[float, list]:
+        """
+        calculate the circle size with mod applied to it
+
+        :param raw_cs: input cs
+        :return: outputs new cs and mods applied to it
+        """
         cs_multiplier = 1.
 
         if "HR" in self.mods:
@@ -283,6 +300,12 @@ class CalculateMods:
         return cs, self.mods
 
     def od(self, raw_od: Union[float, int]) -> Tuple[float, float, list]:
+        """
+        calculates the overall difficulty with mods allied to it
+
+        :param raw_od: input od
+        :return: new od, how long you have to react in ms and mod allied
+        """
         od_multiplier = 1.
         speed = 1.
 
@@ -308,6 +331,12 @@ class CalculateMods:
         return od, odms, self.mods
 
     def hp(self, raw_hp: Union[float, int]) -> Tuple[float, list]:
+        """
+        calculates the hp with the mods applied
+
+        :param raw_hp: input hp
+        :return: outputs hp and mods applied to it
+        """
         hp_multiplier = 1.
 
         if "HR" in self.mods:
@@ -321,6 +350,12 @@ class CalculateMods:
 
 
 def parse_mods_string(mods: str) -> list:
+    """
+    turns mod str into mod list
+
+    :param mods: mod string
+    :return: mod list
+    """
     if mods == '' or mods == "nomod":
         return []
     mods = mods.replace("+", "").upper()
@@ -333,6 +368,12 @@ def parse_mods_string(mods: str) -> list:
 
 
 def parse_mods_int(mods: int) -> list:
+    """
+    turns bitwise flag into mod list
+
+    :param mods: mod int
+    :return: mod list
+    """
     if not mods:
         return []
     mod_list = list()
@@ -342,16 +383,13 @@ def parse_mods_int(mods: int) -> list:
     return mod_list
 
 
-def get_mod_mask(mod_list: Union[list, set]) -> int:
-    res = 0
-    if isinstance(mod_list, str):
-        mod_list = parse_mods_string(mod_list)
-    for i in mod_list:
-        res += OsuConsts.MODS.value[i]
-    return res
-
-
 def sanitize_mods(mods: Union[list, set]) -> Union[list, set]:
+    """
+    gets rid of mods that have similar effects
+
+    :param mods: mod list
+    :return: fixed mod list
+    """
     if "NC" in mods and "DT" in mods:
         mods.remove("DT")
     if "PF" in mods and "SD" in mods:
@@ -360,6 +398,12 @@ def sanitize_mods(mods: Union[list, set]) -> Union[list, set]:
 
 
 def speed_multiplier(mods: Union[list, set]) -> float:
+    """
+    gets the speed multiplier based on mods applied
+
+    :param mods: list of mods
+    :return: speed multiplier
+    """
     speed = 1.
     if "DT" in mods or "NC" in mods:
         speed *= OsuConsts.DT_SPD.value
@@ -368,14 +412,38 @@ def speed_multiplier(mods: Union[list, set]) -> float:
     return speed
 
 
-def mod_int(mod_list: Union[list, set]) -> int:
-    mod_list = set(mod_list)
+def mod_int(mod_list: Union[list, set, int]) -> int:
+    """
+    cleans and turns the list of mods into bitwise integer
+
+    :param mod_list: list of mods
+    :return: bitwise flag
+    """
+    if isinstance(mod_list, int):
+        return mod_list
+    elif isinstance(mod_list, str):
+        mod_list = parse_mods_string(mod_list)
+    else:
+        mod_list = set(mod_list)
     if "NC" in mod_list:
         mod_list.add("DT")
-    return get_mod_mask("".join(filter(lambda x: x in OsuConsts.DIFF_MODS.value, mod_list)))
+
+    mod_list = filter(lambda x: x in OsuConsts.DIFF_MODS.value, mod_list)
+
+    res = 0
+
+    for i in mod_list:
+        res += OsuConsts.MODS.value[i]
+    return res
 
 
 def get_user(user: Union[int, str]) -> dict:
+    """
+    gets users profile information
+
+    :param user: username
+    :return: dictionary containing the information
+    """
     response = OSU_API.get('/get_user', {"u": user})
     response = response.json()
 
@@ -392,7 +460,14 @@ def get_user(user: Union[int, str]) -> dict:
     return response
 
 
-def get_leaderboard(beatmap_id: Union[str, int], limit: int = 100) -> list:
+def get_leaderboard(beatmap_id: Union[str, int], limit: int = 100) -> List[Play]:
+    """
+    gets leader board for beatmap
+
+    :param beatmap_id: beatmap id
+    :param limit: number of items to get
+    :return: list of plays
+    """
     response = OSU_API.get('/get_scores', {"b": beatmap_id, "limit": limit}).json()
 
     if Config.debug:
@@ -408,7 +483,16 @@ def get_leaderboard(beatmap_id: Union[str, int], limit: int = 100) -> list:
     return response
 
 
-def get_user_map_best(beatmap_id: Union[int, str], user: Union[int, str], enabled_mods: int = 0) -> list:
+def get_user_map_best(beatmap_id: Union[int, str], user: Union[int, str],
+                      enabled_mods: int = 0) -> List[Play]:
+    """
+    gets users best play on map
+
+    :param beatmap_id: beatmap id
+    :param user: username
+    :param enabled_mods: mods used
+    :return: list of plays
+    """
     response = OSU_API.get('/get_scores', {"b": beatmap_id, "u": user, "mods": enabled_mods}).json()
 
     if Config.debug:
@@ -424,7 +508,14 @@ def get_user_map_best(beatmap_id: Union[int, str], user: Union[int, str], enable
     return response
 
 
-def get_user_best(user: Union[int, str], limit: int = 100) -> list:
+def get_user_best(user: Union[int, str], limit: int = 100) -> List[Play]:
+    """
+    gets users best plays
+
+    :param user: username
+    :param limit: number of items to fetch
+    :return: list of plays
+    """
     response = OSU_API.get('/get_user_best', {"u": user, "limit": limit})
     response = response.json()
 
@@ -440,7 +531,14 @@ def get_user_best(user: Union[int, str], limit: int = 100) -> list:
     return response
 
 
-def get_user_recent(user: Union[int, str], limit: int = 10) -> list:
+def get_user_recent(user: Union[int, str], limit: int = 10) -> List[Play]:
+    """
+    gets user most recent play by index
+
+    :param user: user name
+    :param limit: number of items to fetch
+    :return: list of plays
+    """
     response = OSU_API.get('/get_user_recent', {"u": user, "limit": limit}).json()
 
     if Config.debug:
@@ -455,7 +553,17 @@ def get_user_recent(user: Union[int, str], limit: int = 10) -> list:
     return response
 
 
-def get_replay(beatmap_id: Union[int, str], user_id: Union[int, str], mods: int, mode: int) -> str:
+def get_replay(beatmap_id: Union[int, str], user_id: Union[int, str],
+               mods: int, mode: int = 0) -> str:
+    """
+    gets the replay string of play
+
+    :param beatmap_id: beatmap id
+    :param user_id: username
+    :param mods: mods used on play
+    :param mode: mode played on
+    :return: base64 encoded replay string
+    """
     response = OSU_API.get("/get_replay", {"b": beatmap_id, "u": user_id,
                                            "mods": mods, "m": mode}).json()
 
@@ -467,7 +575,14 @@ def get_replay(beatmap_id: Union[int, str], user_id: Union[int, str], mods: int,
     return replay
 
 
-def get_rank_emoji(rank: str, client: discord.Client) -> Union[bool, discord.Emoji]:
+def get_rank_emoji(rank: str, client: discord.Client) -> Union[bool, discord.Emoji, str]:
+    """
+    gets the rank emoji
+
+    :param rank: rank to fetch
+    :param client: discord client
+    :return: emoji or name
+    """
     if rank == "XH":
         emote = fetch_emote("XH_Rank", None, client)
         return emote if emote else "Silver SS"
@@ -499,6 +614,15 @@ def get_rank_emoji(rank: str, client: discord.Client) -> Union[bool, discord.Emo
 
 
 def get_top(user: str, index: int, rb: bool = False, ob: bool = False) -> Play:
+    """
+    gets user top play
+
+    :param user: username
+    :param index: index to get
+    :param rb: sort by recent best
+    :param ob: sort by old best
+    :return: Play object
+    """
     index = min(max(index, 1), 100)
     limit = 100 if rb or ob else index
     response = get_user_best(user, limit)
@@ -927,7 +1051,7 @@ def stat_play(play: Play):
 
     recent.replay = None
     if replay:
-        recent.replay = get_replay(play.beatmap_id, play.user_id, play.enabled_mods, 0)
+        recent.replay = get_replay(play.beatmap_id, play.user_id, mod_int(play.enabled_mods), 0)
 
         recent.ur = 0
         # TODO: make osr parser for unstable rate
@@ -1041,7 +1165,8 @@ def get_strains(beatmap: oppa.OsuMap, mods: Union[list, set], mode: str = "") ->
     :param beatmap: beatmap object
     :param mods: mods used
     :param mode: [aim|speed] for type of strains to get
-    :return: dict of strains keys -> [strains, max_strain, max_strain_time, max_strain_time_real, total]
+    :return: dict of strains keys -> [strains, max_strain, max_strain_time,
+                                    max_strain_time_real, total]
     """
     stars = beatmap.getStats(mod_int(mods))
 
