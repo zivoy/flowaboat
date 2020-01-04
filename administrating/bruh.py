@@ -5,12 +5,12 @@ class Watcher:
     name = "bruh"
     description = "Reacts with the Bruh emoji when user types /bruh"
 
-    trigger_description = f"if a user says /bruh it will trigger the function"
+    trigger_description = "if a user says /bruh it will trigger the function"
 
     action_description = "once triggered the bot will react with Bruh emoji"
 
     examples = [{
-        'trigger': f"/bruh",
+        'trigger': "/bruh",
         'action': "reacts with bruh"
     }]
 
