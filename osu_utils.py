@@ -1,3 +1,7 @@
+"""
+all functions and utilities related to osu
+"""
+# TODO: break up into separate files and make it into a proper module
 import io
 import math
 import os
@@ -507,7 +511,7 @@ class MapStats:
             if raw_map == "":
                 raise BadLink
 
-        bmp = oppa.OsuMap(raw_str=raw_map)#, auto_parse=True)
+        bmp = oppa.OsuMap(raw_str=raw_map)  # , auto_parse=True)
 
         if not bmp.hitobjects:
             raise BadMapFile
@@ -620,7 +624,8 @@ def graph_bpm(map_link, mods, link_type):
             chart_points.append((j[0] - .01, last[1]))
         chart_points.append(j)
         if len(data) - 1 == i:
-            chart_points.append((map_obj.beatmap.hitobjects[-1].starttime / map_obj.speed_multiplier, j[1]))
+            chart_points.append((map_obj.beatmap.hitobjects[-1].starttime
+                                 / map_obj.speed_multiplier, j[1]))
 
     points = pd.DataFrame(chart_points)
     points.columns = ["Time", "BPM"]
@@ -743,7 +748,8 @@ def download_mapset(link_id=None, link=None):
 def stat_play(play):
     map_obj = MapStats(play.beatmap_id, play.enabled_mods, "id")
     if play.rank.upper() == "F":
-        completion = (play.count300 + play.count100 + play.count50 + play.countmiss) / map_obj.hit_objects
+        completion = (play.count300 + play.count100 + play.count50 + play.countmiss) \
+                     / map_obj.hit_objects
     else:
         completion = 1
 
@@ -800,10 +806,12 @@ def stat_play(play):
         else:
             recent.unsubmitted = True
 
-    pp = map_obj.beatmap.getPP(Mods=mod_int(play.enabled_mods), recalculate=True, combo=play.maxcombo,
-                               misses=play.countmiss, n300=play.count300, n100=play.count100, n50=play.count50)
-    pp_fc = map_obj.beatmap.getPP(Mods=mod_int(play.enabled_mods), n100=play.count100, n50=play.count50,
-                                  n300=play.count300+play.countmiss, recalculate=True)
+    pp = map_obj.beatmap.getPP(Mods=mod_int(play.enabled_mods), recalculate=True,
+                               combo=play.maxcombo, misses=play.countmiss,
+                               n300=play.count300, n100=play.count100, n50=play.count50)
+    pp_fc = map_obj.beatmap.getPP(Mods=mod_int(play.enabled_mods), n100=play.count100,
+                                  n50=play.count50, n300=play.count300 + play.countmiss,
+                                  recalculate=True)
 
     recent.stars = map_obj.total
     recent.pp_fc = pp_fc.total_pp
@@ -837,7 +845,8 @@ def compare_scores(a, b):
     return True
 
 
-def map_strain_graph(map_obj, mods, progress=1., mode="", width=399., height=40., max_chunks=100, low_cut=30.):
+def map_strain_graph(map_obj, mods, progress=1., mode="", width=399.,
+                     height=40., max_chunks=100, low_cut=30.):
     width = float(width)
     height = float(height)
     low_cut = float(low_cut)
@@ -853,7 +862,8 @@ def map_strain_graph(map_obj, mods, progress=1., mode="", width=399., height=40.
 
     x = np.linspace(0, width, num=len(strains_chunks))
     y = np.minimum(low_cut,
-                   height * 0.125 + height * .875 - np.array([i / max_strain for i in strains_chunks]) * height * .875)
+                   height * 0.125 + height * .875 - np.array([i / max_strain for i in
+                                                              strains_chunks]) * height * .875)
 
     x = np.insert(x, 0, 0)
     x = np.insert(x, 0, 0)
@@ -868,8 +878,7 @@ def map_strain_graph(map_obj, mods, progress=1., mode="", width=399., height=40.
     for i in range(1, len(y) - 1):
         node = np.asfortranarray([
             [avgpt(x, i - 1), x[i], avgpt(x, i)],
-            [avgpt(y, i - 1), y[i], avgpt(y, i)]]
-        )
+            [avgpt(y, i - 1), y[i], avgpt(y, i)]])
         curves.append(
             bezier.Curve(node, degree=2)
         )
@@ -925,7 +934,8 @@ def get_strains(beatmap, mods, mode=""):
     star_strains = list()
     max_strain = 0
     strain_step = OsuConsts.STRAIN_STEP.value * speed
-    strain_offset = math.floor(beatmap.hitobjects[0].starttime / strain_step) * strain_step - strain_step
+    strain_offset = math.floor(beatmap.hitobjects[0].starttime / strain_step) \
+                    * strain_step - strain_step
     max_strain_time = strain_offset
 
     for i, _ in enumerate(aim_strains):
@@ -988,7 +998,8 @@ def embed_play(play_stats, client):
         desc = f"**__#{play_stats.pb} Top Play!__**"
     embed = discord.Embed(description=desc,
                           url=f"https://osu.ppy.sh/b/{play_stats.beatmap_id}",
-                          title=f"{play_stats.map_obj.artist} – {play_stats.map_obj.title} [{play_stats.map_obj.version}]",
+                          title=f"{play_stats.map_obj.artist} – {play_stats.map_obj.title} "
+                                f"[{play_stats.map_obj.version}]",
                           color=0xbb5577, inline=False)
 
     embed.set_author(url=f"https://osu.ppy.sh/u/{play_stats.user_id}",
@@ -1028,7 +1039,8 @@ def embed_play(play_stats, client):
 
     if play_stats.pp_fc > play_stats.pp:
         perfomacne = f"**{'*' if play_stats.unsubmitted else ''}{format_nums(play_stats.pp, 2):,}" \
-                     f"pp**{'*' if play_stats.unsubmitted else ''} ➔ {format_nums(play_stats.pp_fc, 2):,}pp for " \
+                     f"pp**{'*' if play_stats.unsubmitted else ''} ➔" \
+                     f" {format_nums(play_stats.pp_fc, 2):,}pp for " \
                      f"{format_nums(play_stats.acc_fc, 2)}% FC {SEPARATOR} "
     else:
         perfomacne = f"**{format_nums(play_stats.pp, 2):,}pp** {SEPARATOR} "
@@ -1065,14 +1077,16 @@ def embed_play(play_stats, client):
 
     embed.add_field(name=play_results, value=perfomacne, inline=False)
 
-    beatmap_info = f"{arrow.Arrow(2019, 1, 1).shift(seconds=play_stats.map_obj.total_length).format('mm:ss')} ~ " \
-                   f"CS**{format_nums(play_stats.map_obj.cs, 1)}** " \
-                   f"AR**{format_nums(play_stats.map_obj.ar, 1)}** " \
-                   f"OD**{format_nums(play_stats.map_obj.od, 1)}** " \
-                   f"HP**{format_nums(play_stats.map_obj.hp, 1)}** ~ "
+    beatmap_info = \
+        f"{arrow.Arrow(2019, 1, 1).shift(seconds=play_stats.map_obj.total_length).format('mm:ss')}" \
+        f" ~ CS**{format_nums(play_stats.map_obj.cs, 1)}** " \
+        f"AR**{format_nums(play_stats.map_obj.ar, 1)}** " \
+        f"OD**{format_nums(play_stats.map_obj.od, 1)}** " \
+        f"HP**{format_nums(play_stats.map_obj.hp, 1)}** ~ "
 
     if play_stats.map_obj.bpm_min != play_stats.map_obj.bpm_max:
-        beatmap_info += f"{format_nums(play_stats.map_obj.bpm_min, 1)}-{format_nums(play_stats.map_obj.bpm_max, 1)} " \
+        beatmap_info += f"{format_nums(play_stats.map_obj.bpm_min, 1)}-" \
+                        f"{format_nums(play_stats.map_obj.bpm_max, 1)} " \
                         f"(**{format_nums(play_stats.map_obj.bpm, 1)}**) "
     else:
         beatmap_info += f"**{format_nums(play_stats.map_obj.bpm, 1)}** "

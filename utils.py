@@ -416,7 +416,7 @@ def get_user(args: list, ign: str, platfrom: str) -> str:
     return name
 
 
-def fetch_emote(emote_name: str, guild: discord.Guild, client: discord.Client) \
+def fetch_emote(emote_name: str, guild: Union[None, discord.Guild], client: discord.Client) \
         -> Union[bool, discord.Emoji]:
     """
     find an emote from its name in all servers the bot is part of
