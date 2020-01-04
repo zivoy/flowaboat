@@ -868,7 +868,7 @@ def graph_bpm(map_link: Union[str, int], mods: list, link_type: str):
     return image
 
 
-def get_map_link(link: str, **kwargs) -> Tuple[Union[int, str, os.path], str]:
+def get_map_link(link: str, **kwargs) -> Tuple[Union[int, str], str]:
     """
     gets link type and corresponding value
 
@@ -895,7 +895,7 @@ def get_map_link(link: str, **kwargs) -> Tuple[Union[int, str, os.path], str]:
         return download_mapset(link, **kwargs), "path"
 
 
-def download_mapset(link_id: Union[str, int] = None, link: str = None) -> os.path:
+def download_mapset(link_id: Union[str, int] = None, link: str = None) -> str:
     """
     downloads an osu mapset
 
