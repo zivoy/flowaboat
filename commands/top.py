@@ -1,5 +1,6 @@
 import osu_utils
-from utils import *
+from utils import Log, DIGITS, help_me,UserNonexistent, get_user, Users
+import discord
 
 
 class Command:

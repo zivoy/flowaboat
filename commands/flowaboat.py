@@ -1,4 +1,5 @@
-from utils import *
+from utils import Config
+import discord
 
 
 class Command:

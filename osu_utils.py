@@ -30,50 +30,73 @@ from utils import dict_string_to_nums, fetch_emote, Log, Config, DATE_FORM, \
 
 # warnings.simplefilter("ignore", ArrowParseWarning)
 
-osu_api = Api("https://osu.ppy.sh/api", 60, {"k": Config.credentials.osu_api_key})
+OSU_API = Api("https://osu.ppy.sh/api", 60, {"k": Config.credentials.osu_api_key})
 
 
 class MapError(Exception):
-    pass
+    """
+    general errors related to maps
+    """
 
 
 class BadLink(MapError):
-    pass
+    """
+    error in the case that the map link was invalid
+    """
 
 
 class BadMapFile(MapError):
-    pass
+    """
+    error in the case that the map file was invalid
+    """
 
 
 class BadId(MapError):
-    pass
+    """
+    error in the case that the map id was invalid
+    """
 
 
 class NoPlays(UserError):
-    pass
+    """
+    error in the case that the user has no plays on map
+    """
 
 
 class BadMapObject(MapError):
-    pass
+    """
+    error in the case that the map object is invalid
+    """
 
 
 class NoLeaderBoard(MapError):
-    pass
+    """
+    error in the case that the there was no leader board found for map
+    """
 
 
 class NoBeatmap(MapError):
-    pass
+    """
+    error in the case that there was no beatmap
+    """
 
 
 class NoScore(UserError):
-    pass
+    """
+    error in the case that the user does not have a score on map
+    """
 
 
 class NoReplay(UserError):
-    pass
+    """
+    error in the case that the user has no replay on the map
+    """
 
 
 class OsuConsts(Enum):
+    """
+    all constants related to osu
+    """
     # "": 0,
     MODS = {
         "NF": 1 << 0,
@@ -144,15 +167,29 @@ class OsuConsts(Enum):
     DECAY_WEIGHT = 0.9
 
 
-mods_re = regex.compile(rf"^({'|'.join(OsuConsts.MODS.value.keys())})+$")
+MODS_RE = regex.compile(rf"^({'|'.join(OsuConsts.MODS.value.keys())})+$")
 
 
-def calculate_acc(n300, n100, n50, nMiss):
+def calculate_acc(n300: int, n100: int, n50: int, nMiss: int) -> float:
+    """
+    calculate the acc based on number of hits
+
+    :param n300: number of 300s
+    :param n100: number of 100s
+    :param n50: number of 50s
+    :param nMiss: number of misses
+    :return: accuracy
+    """
     return (50 * n50 + 100 * n100 + 300 * n300) / (300 * (nMiss + n50 + n100 + n300))
 
 
 class Play:
-    def __init__(self, play_dict):
+    def __init__(self, play_dict: dict):
+        """
+        organises the dict response from osu api into object
+
+        :param play_dict: dict from api
+        """
         dict_string_to_nums(play_dict)
 
         self.score = play_dict["score"]
@@ -184,9 +221,9 @@ class Play:
             self.score_id = ""
 
         if "pp" in play_dict:
-            self.pp = play_dict["pp"]
+            self.performance_points = play_dict["pp"]
         else:
-            self.pp = None
+            self.performance_points = None
 
 
 class CalculateMods:
@@ -283,7 +320,7 @@ def parse_mods_string(mods):
     if mods == '' or mods == "nomod":
         return []
     mods = mods.replace("+", "").upper()
-    mods_included = mods_re.match(mods)
+    mods_included = MODS_RE.match(mods)
     if mods_included is None:
         Log.error(f"Mods not valid: {mods}")
         return []  # None
@@ -335,7 +372,7 @@ def mod_int(mod_list):
 
 
 def get_user(user):
-    response = osu_api.get('/get_user', {"u": user})
+    response = OSU_API.get('/get_user', {"u": user})
     response = response.json()
 
     if Config.debug:
@@ -352,7 +389,7 @@ def get_user(user):
 
 
 def get_leaderboard(beatmap_id, limit=100):
-    response = osu_api.get('/get_scores', {"b": beatmap_id, "limit": limit}).json()
+    response = OSU_API.get('/get_scores', {"b": beatmap_id, "limit": limit}).json()
 
     if Config.debug:
         Log.log(response)
@@ -368,7 +405,7 @@ def get_leaderboard(beatmap_id, limit=100):
 
 
 def get_user_map_best(beatmap_id, user, enabled_mods=0):
-    response = osu_api.get('/get_scores', {"b": beatmap_id, "u": user, "mods": enabled_mods}).json()
+    response = OSU_API.get('/get_scores', {"b": beatmap_id, "u": user, "mods": enabled_mods}).json()
 
     if Config.debug:
         Log.log(response)
@@ -384,7 +421,7 @@ def get_user_map_best(beatmap_id, user, enabled_mods=0):
 
 
 def get_user_best(user, limit=100):
-    response = osu_api.get('/get_user_best', {"u": user, "limit": limit})
+    response = OSU_API.get('/get_user_best', {"u": user, "limit": limit})
     response = response.json()
 
     if Config.debug:
@@ -400,7 +437,7 @@ def get_user_best(user, limit=100):
 
 
 def get_user_recent(user, limit=10):
-    response = osu_api.get('/get_user_recent', {"u": user, "limit": limit}).json()
+    response = OSU_API.get('/get_user_recent', {"u": user, "limit": limit}).json()
 
     if Config.debug:
         Log.log(response)
@@ -415,7 +452,7 @@ def get_user_recent(user, limit=10):
 
 
 def get_replay(beatmap_id, user_id, mods, mode):
-    response = osu_api.get("/get_replay", {"b": beatmap_id, "u": user_id,
+    response = OSU_API.get("/get_replay", {"b": beatmap_id, "u": user_id,
                                            "mods": mods, "m": mode}).json()
 
     if "error" in response:
@@ -584,7 +621,7 @@ class MapStats:
             self.audio_unavailable = 0
 
             mods_applied = mod_int(mods)
-            map_web = osu_api.get("/get_beatmaps", {"b": map_id, "mods": mods_applied}).json()
+            map_web = OSU_API.get("/get_beatmaps", {"b": map_id, "mods": mods_applied}).json()
             if not map_web:
                 raise BadId
             dict_string_to_nums(map_web[0])
@@ -779,7 +816,7 @@ def stat_play(play):
         "mods": play.enabled_mods,
         "date": play.date,
         "unsubmitted": False,
-        "pp": play.pp
+        "pp": play.performance_points
     })
 
     recent.pb = 0
@@ -818,8 +855,8 @@ def stat_play(play):
     recent.acc = pp.accuracy
     recent.acc_fc = pp_fc.accuracy
 
-    if recent.pp is None:
-        recent.pp = pp.total_pp
+    if recent.performance_points is None:
+        recent.performance_points = pp.total_pp
 
     recent.replay = None
     if replay:
@@ -1037,20 +1074,21 @@ def embed_play(play_stats, client):
                     f"{format_nums(play_stats.acc, 2)}% {SEPARATOR} " \
                     f"{play_stats.date.humanize()}"
 
-    if play_stats.pp_fc > play_stats.pp:
-        perfomacne = f"**{'*' if play_stats.unsubmitted else ''}{format_nums(play_stats.pp, 2):,}" \
+    if play_stats.pp_fc > play_stats.performance_points:
+        perfomacne = f"**{'*' if play_stats.unsubmitted else ''}" \
+                     f"{format_nums(play_stats.performance_points, 2):,}" \
                      f"pp**{'*' if play_stats.unsubmitted else ''} ➔" \
                      f" {format_nums(play_stats.pp_fc, 2):,}pp for " \
                      f"{format_nums(play_stats.acc_fc, 2)}% FC {SEPARATOR} "
     else:
-        perfomacne = f"**{format_nums(play_stats.pp, 2):,}pp** {SEPARATOR} "
+        perfomacne = f"**{format_nums(play_stats.performance_points, 2):,}pp** {SEPARATOR} "
 
     if play_stats.combo < play_stats.map_obj.max_combo:
         perfomacne += f"{play_stats.combo:,}/{play_stats.map_obj.max_combo:,}x"
     else:
         perfomacne += f"{play_stats.map_obj.max_combo:,}x"
 
-    if play_stats.pp_fc > play_stats.pp:
+    if play_stats.pp_fc > play_stats.performance_points:
         perfomacne += "\n"
     elif play_stats.ur or play_stats.count100 or play_stats.count50 or play_stats.countmiss:
         perfomacne += f" {SEPARATOR} "
@@ -1078,7 +1116,7 @@ def embed_play(play_stats, client):
     embed.add_field(name=play_results, value=perfomacne, inline=False)
 
     beatmap_info = \
-        f"{arrow.Arrow(2019, 1, 1).shift(seconds=play_stats.map_obj.total_length).format('mm:ss')}" \
+        f"{arrow.Arrow(2019, 1, 1).shift(seconds=play_stats.map_obj.total_length).format('mm:ss')}"\
         f" ~ CS**{format_nums(play_stats.map_obj.cs, 1)}** " \
         f"AR**{format_nums(play_stats.map_obj.ar, 1)}** " \
         f"OD**{format_nums(play_stats.map_obj.od, 1)}** " \

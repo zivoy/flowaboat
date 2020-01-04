@@ -1,7 +1,8 @@
 from time import time
 
 import osu_utils
-from utils import *
+from utils import Log, SEPARATOR, UserNonexistent, get_user, help_me
+import discord
 
 
 class Command:

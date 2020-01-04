@@ -1,5 +1,5 @@
 import osu_utils
-from utils import *
+from utils import Log, help_me
 
 
 class Command:
