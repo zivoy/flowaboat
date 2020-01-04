@@ -37,7 +37,7 @@ class Command:
             await message.channel.send("User does not exist")
             return
 
-        index = digits.match(args[0])
+        index = DIGITS.match(args[0])
 
         if index is None:
             index = 1

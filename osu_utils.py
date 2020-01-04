@@ -21,8 +21,8 @@ from PIL import Image
 # from arrow.factory import ArrowParseWarning
 from matplotlib import pyplot as plt
 
-from utils import dict_string_to_nums, fetch_emote, Log, Config, date_form, \
-    separator, UserNonexistent, Dict, format_nums, UserError, Api
+from utils import dict_string_to_nums, fetch_emote, Log, Config, DATE_FORM, \
+    SEPARATOR, UserNonexistent, Dict, format_nums, UserError, Api
 
 # warnings.simplefilter("ignore", ArrowParseWarning)
 
@@ -160,7 +160,7 @@ class Play:
         self.perfect = play_dict["perfect"]
         self.enabled_mods = parse_mods_int(play_dict["enabled_mods"])
         self.user_id = play_dict["user_id"]
-        self.date = arrow.get(play_dict["date"], date_form)
+        self.date = arrow.get(play_dict["date"], DATE_FORM)
         self.rank = play_dict["rank"]
         self.accuracy = calculate_acc(self.count300, self.count100, self.count50, self.countmiss)
 
@@ -341,7 +341,7 @@ def get_user(user):
         raise UserNonexistent(f"Couldn't find user: {user}")
 
     for i, _ in enumerate(response):
-        response[i]["join_date"] = arrow.get(response[i]["join_date"], date_form)
+        response[i]["join_date"] = arrow.get(response[i]["join_date"], DATE_FORM)
         dict_string_to_nums(response[i])
 
     return response
@@ -586,9 +586,9 @@ class MapStats:
             dict_string_to_nums(map_web[0])
             for i, j in map_web[0].items():
                 setattr(self, i, j)
-            self.submit_date = arrow.get(self.submit_date, date_form)
-            self.approved_date = arrow.get(self.approved_date, date_form)
-            self.last_update = arrow.get(self.last_update, date_form)
+            self.submit_date = arrow.get(self.submit_date, DATE_FORM)
+            self.approved_date = arrow.get(self.approved_date, DATE_FORM)
+            self.last_update = arrow.get(self.last_update, DATE_FORM)
 
         try:
             self.leaderboard = get_leaderboard(map_id)
@@ -1010,28 +1010,28 @@ def embed_play(play_stats, client):
         ranked_text = "Loved"
 
     embed.set_footer(icon_url=f"https://a.ppy.sh/{play_stats.map_obj.creator_id}?{int(time())}",
-                     text=f"Mapped by {play_stats.map_obj.creator} {separator} {ranked_text} on "
+                     text=f"Mapped by {play_stats.map_obj.creator} {SEPARATOR} {ranked_text} on "
                           f"{play_stats.map_obj.approved_date.format('D MMMM YYYY')}")
 
     embed.set_thumbnail(url=f"https://b.ppy.sh/thumb/{play_stats.map_obj.beatmapset_id}l.jpg")
 
-    play_results = f"{get_rank_emoji(play_stats.rank, client)} {separator} "
+    play_results = f"{get_rank_emoji(play_stats.rank, client)} {SEPARATOR} "
     if play_stats.mods:
-        play_results += f"+{','.join(sanitize_mods(play_stats.mods))} {separator} "
+        play_results += f"+{','.join(sanitize_mods(play_stats.mods))} {SEPARATOR} "
 
     if play_stats.lb > 0:
-        play_results += f"r#{play_stats.lb} {separator} "
+        play_results += f"r#{play_stats.lb} {SEPARATOR} "
 
-    play_results += f"{play_stats.score:,} {separator} " \
-                    f"{format_nums(play_stats.acc, 2)}% {separator} " \
+    play_results += f"{play_stats.score:,} {SEPARATOR} " \
+                    f"{format_nums(play_stats.acc, 2)}% {SEPARATOR} " \
                     f"{play_stats.date.humanize()}"
 
     if play_stats.pp_fc > play_stats.pp:
         perfomacne = f"**{'*' if play_stats.unsubmitted else ''}{format_nums(play_stats.pp, 2):,}" \
                      f"pp**{'*' if play_stats.unsubmitted else ''} ➔ {format_nums(play_stats.pp_fc, 2):,}pp for " \
-                     f"{format_nums(play_stats.acc_fc, 2)}% FC {separator} "
+                     f"{format_nums(play_stats.acc_fc, 2)}% FC {SEPARATOR} "
     else:
-        perfomacne = f"**{format_nums(play_stats.pp, 2):,}pp** {separator} "
+        perfomacne = f"**{format_nums(play_stats.pp, 2):,}pp** {SEPARATOR} "
 
     if play_stats.combo < play_stats.map_obj.max_combo:
         perfomacne += f"{play_stats.combo:,}/{play_stats.map_obj.max_combo:,}x"
@@ -1041,19 +1041,19 @@ def embed_play(play_stats, client):
     if play_stats.pp_fc > play_stats.pp:
         perfomacne += "\n"
     elif play_stats.ur or play_stats.count100 or play_stats.count50 or play_stats.countmiss:
-        perfomacne += f" {separator} "
+        perfomacne += f" {SEPARATOR} "
 
     if play_stats.count100 > 0:
         perfomacne += f"{play_stats.count100}x100"
 
     if play_stats.count50 > 0:
         if play_stats.count100 > 0:
-            perfomacne += f" {separator} "
+            perfomacne += f" {SEPARATOR} "
         perfomacne += f"{play_stats.count50}x50"
 
     if play_stats.countmiss > 0:
         if play_stats.count100 > 0 or play_stats.count50 > 0:
-            perfomacne += f" {separator} "
+            perfomacne += f" {SEPARATOR} "
         perfomacne += f"{play_stats.countmiss}xMiss"
 
     if play_stats.ur is not None and play_stats.ur > 0:

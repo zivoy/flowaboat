@@ -33,7 +33,7 @@ class Command:
             await message.channel.send("User does not exist")
             return
 
-        index = digits.match(args[0])
+        index = DIGITS.match(args[0])
 
         rb = True if args[0] == "rb" or args[0] == "recentbest" else False
         ob = True if args[0] == "ob" or args[0] == "oldbest" else False

@@ -1,3 +1,7 @@
+"""
+all functions and utility's for flowaboat
+"""
+
 import json
 import os
 from time import sleep
@@ -7,26 +11,43 @@ import discord
 import regex
 import requests
 import socket
+from typing import Union
 
 import commands
 
 
 class UserError(Exception):
-    pass
+    """
+    class used to handel general user errors
+    """
 
 
 class UserNonexistent(UserError):
-    pass
+    """
+    error for nonexistent user
+    """
 
 
 class Api:
-    def __init__(self, base_url, max_requests_per_minute, params=dict()):
+    def __init__(self, base_url: str, max_requests_per_minute: int = 60, params: dict = None):
+        """
+        expansion on the requests api that allows to limit requests and store base url as object
+
+        :param params: any default parameters (a.e api key)
+        :param base_url: base url that requests expand on
+        :param max_requests_per_minute: maximum number of requests per minute
+        """
+        if params is None:
+            params = dict()
         self.url = base_url
         self.params = params
         self.max_requests = max_requests_per_minute
         self.actions = list()
 
     def clear_queue(self):
+        """
+        clears queue
+        """
         for i in self.actions.copy():
             if (arrow.utcnow() - i).seconds >= 60:
                 self.actions.pop(0)
@@ -34,6 +55,13 @@ class Api:
                 break
 
     def get(self, url, params=None, **kwargs):
+        """
+        make get requests to api
+
+        :param url: expands on base url
+        :param params: parameter dictionary
+        :return: requests response
+        """
         self.clear_queue()
 
         if len(self.actions) <= self.max_requests:
@@ -45,15 +73,29 @@ class Api:
                 params = self.params
             self.actions.append(arrow.utcnow())
             return requests.get(url, params, **kwargs)
-        else:
-            sleep(max(60.1 - (arrow.utcnow() - self.actions[0]).seconds, 0))
-            return self.get(url, params, **kwargs)
+
+        sleep(max(60.1 - (arrow.utcnow() - self.actions[0]).seconds, 0))
+        return self.get(url, params, **kwargs)
 
 
 class JasonFile:
+    """
+    class for handling the importing and exporting json files to classes
+    """
     file = ""
 
-    def open_dir(self, obj, skip=list(), itms=dict()):
+    def open_dir(self, obj, skip=None, itms=None):
+        """
+        get values out of class and make it a dict
+
+        :param obj: class object
+        :param skip: values to skip
+        :param itms: expand on a dict
+        """
+        if itms is None:
+            itms = dict()
+        if skip is None:
+            skip = list()
         for i in dir(self):
             if i in skip:
                 pass
@@ -65,6 +107,12 @@ class JasonFile:
         return itms
 
     def close_dir(self, obj, info):
+        """
+        but all values into class from dict
+
+        :param obj: class object
+        :param info: dict
+        """
         for i, j in info.items():
             if not isinstance(getattr(obj, i), type):
                 setattr(obj, i, j)
@@ -72,6 +120,9 @@ class JasonFile:
                 self.close_dir(getattr(obj, i), info[i])
 
     def load(self):
+        """
+        reads all values from json file into object class
+        """
         if not os.path.isfile(self.file):
             # os.mknod(self.file)
             open(self.file, "w").close()
@@ -80,38 +131,55 @@ class JasonFile:
             self.close_dir(self.__class__, json.load(configs))
 
     def save(self):
+        """
+        saves object class into json file
+        """
         with open(self.file, "w") as outfile:
             json.dump(self.open_dir(self.__class__, ["file"]), outfile, indent="  ", sort_keys=True)
 
 
+# todo: make for multi server compatibility
 class Config(JasonFile):
+    """
+    stores server settings
+    """
     file = "config.json"
 
-    prefix = ""
-    debug = False
-    administer = ""
-    osu_cache_path = ""
-    pp_path = ""
+    prefix: str = ""
+    debug: bool = False
+    administer: bool = False
+    osu_cache_path: str = ""
+    pp_path: str = ""
 
     class credentials:
-        bot_token = ""
-        discord_client_id = ""
-        osu_api_key = ""
-        twitch_client_id = ""
-        pexels_key = ""
-        last_fm_key = ""
+        bot_token: str = ""
+        discord_client_id: str = ""
+        osu_api_key: str = ""
+        twitch_client_id: str = ""
+        pexels_key: str = ""
+        last_fm_key: str = ""
 
     class logsCredentials:
-        rawPassword = ""
-        encPassword = ""
+        rawPassword: str = ""
+        encPassword: str = ""
 
 
+# todo: have each user be its separate file // maybe also pickling
 class Users(JasonFile):
+    """
+    stores some information on users
+    """
     file = "users.list"
 
     users = dict()
 
-    def add_user(self, uuid, osu_ign="", steam_ign=""):
+    def add_user(self, uuid: str, osu_ign: str = "", steam_ign: str = ""):
+        """
+        add new user
+        :param uuid: discord id
+        :param osu_ign: osu name
+        :param steam_ign: steam name
+        """
         uuid = str(uuid)
         if uuid not in self.users:
             self.users[uuid] = {"osu_ign": osu_ign, "steam_ign": steam_ign,
@@ -121,12 +189,29 @@ class Users(JasonFile):
                                 "last_message": None}
             self.save()
 
-    def set(self, uuid, item, value):
+    def set(self, uuid: str, item, value):
+        """
+        updates user data
+        :param uuid: discord id
+        :param item: item to change
+        :param value: value to be set to
+        """
         self.users[str(uuid)][item] = value
         self.save()
 
-    def update_last_message(self, user, map_link, map_type, mods,
-                            completion, accuracy, user_ign, replay):
+    def update_last_message(self, user: str, map_link, map_type: str, mods: list,
+                            completion: float, accuracy: float, user_ign: str, replay):
+        """
+        updates last message sent by user
+        :param user: user id
+        :param map_link: any linking data to map correspond with appropriate type
+        :param map_type: id|map|path|url
+        :param mods: mods used
+        :param completion: % completion
+        :param accuracy: acc on map
+        :param user_ign: users osu ign
+        :param replay: encoded replay string (if available)
+        """
         self.set(user, "last_beatmap",
                  {"map": (map_link, map_type), "mods": mods,
                   "completion": completion, "accuracy": accuracy,
@@ -143,19 +228,38 @@ Users().load()
 #
 
 
+# todo: implement livelogs
 class Log:
+    """
+    logging functions
+    """
+
     @staticmethod
     def log(*args):
+        """
+        log
+
+        :param args: anything that has to be logged
+        """
         msg = f"{arrow.utcnow().isoformat()}: " + " ".join([str(i) for i in args])
         print(msg)
 
     @staticmethod
     def error(*args):
+        """
+        log any errors
+
+        :param args: any error for logging
+        """
         msg = f"{arrow.utcnow().isoformat()} -- ERROR -- : " + " ".join([str(i) for i in args])
         print(msg)
 
 
 class Dict(dict):
+    """
+    dict class that allows dot notation
+    """
+
     def __init__(self, *args, **kwargs):
         super(Dict, self).__init__(*args, **kwargs)
         for arg in args:
@@ -191,14 +295,15 @@ class Dict(dict):
         del self.__dict__[key]
 
 
+# TODO: work this out for detaching the procces from main loop
 class Broadcaster:
     def __init__(self, socket):
         self.socket = socket
 
     def send(self, message, port=12345):
         guild = Dict({"id": None, "name": None}) if message.guild is None else message.guild
-        channel = Dict({"id": message.channel.id, "name": "DM"}) if isinstance(message.channel, discord.DMChannel) \
-            else message.channel
+        channel = Dict({"id": message.channel.id, "name": "DM"}) \
+            if isinstance(message.channel, discord.DMChannel) else message.channel
         package = {"sender":
                        {"id": message.author.id,
                         "name": message.author.name
@@ -218,7 +323,13 @@ class Broadcaster:
         return json.loads(rawMessage.decode())
 
 
-def sanitize(text):
+def sanitize(text: str) -> str:
+    """
+    remove all spacial characters from text
+
+    :param text: input text
+    :return: clean text
+    """
     meta_characters = ["\\", "^", "$", "{", "}", "[",
                        "]", "(", ")", ".", "*", "+",
                        "?", "|", "<", ">", "-", "&",
@@ -232,6 +343,12 @@ def sanitize(text):
 
 
 def command_help(command):
+    """
+    formats a discord embed for information on a command
+
+    :param command: command to get info on
+    :return: discord embed
+    """
     for i, j in commands.List.items():
         if command == i or any([True for cm in j if cm.search(command)]):
             command = getattr(commands, sanitize(i))()
@@ -265,11 +382,25 @@ def command_help(command):
     return discord.Embed(title="ERROR", description="Command not found")
 
 
-async def help_me(message_obj, command):
+async def help_me(message_obj: discord.Message, command: str):
+    """
+    get help on command and post embed
+
+    :param message_obj: a discord message object
+    :param command: command to get help on
+    """
     await getattr(commands, "help")().call({"message_obj": message_obj, "args": ["", command]})
 
 
-def get_user(args, ign, platfrom):
+def get_user(args: list, ign: str, platfrom: str) -> str:
+    """
+    extracts the users ign from input list or from the value provided
+
+    :param args: the input list
+    :param ign: the name if known
+    :param platfrom: from what platfrom is the ign osu|steam
+    :return: ign
+    """
     name = " ".join(args[1:])
 
     if ign and not name:
@@ -285,7 +416,16 @@ def get_user(args, ign, platfrom):
     return name
 
 
-def fetch_emote(emote_name, guild, client):
+def fetch_emote(emote_name: str, guild: discord.Guild, client: discord.Client) \
+        -> Union[bool, discord.Emoji]:
+    """
+    find an emote from its name in all servers the bot is part of
+
+    :param emote_name: the name of the emote
+    :param guild: a specific guild to search
+    :param client: discord client object
+    :return: discord emote
+    """
     e_lists = []
     if guild:
         e_lists.extend(guild.emojis)
@@ -297,9 +437,15 @@ def fetch_emote(emote_name, guild, client):
     return valid[0]
 
 
-def dict_string_to_nums(dictionary):
+def dict_string_to_nums(dictionary: dict) -> dict:
+    """
+    turns all strings that are numbers into numbers inside a dict
+
+    :param dictionary: dict
+    :return: dict
+    """
     for i, j in dictionary.items():
-        if type(j) == str and j.replace(".", "", 1).isnumeric():
+        if isinstance(j, str) and j.replace(".", "", 1).isnumeric():
             num = float(j)
             if num.is_integer():
                 num = int(num)
@@ -308,15 +454,22 @@ def dict_string_to_nums(dictionary):
     return dictionary
 
 
-def format_nums(number, decimals):
+def format_nums(number: Union[float, int], decimals: int) -> Union[int, float]:
+    """
+    rounds to a number of decimals and if possible makes  a integer from float
+
+    :param number: input number
+    :param decimals: decimals to round to
+    :return: integer or float
+    """
     if round(float(number), decimals).is_integer():
         return int(f"{number:.0f}")
-    else:
-        return float(f"{number:.{decimals}f}")
+
+    return float(f"{number:.{decimals}f}")
 
 
-separator = "✦"
+SEPARATOR = "✦"
 
-digits = regex.compile(r"^\D+(\d+)$")
+DIGITS = regex.compile(r"^\D+(\d+)$")
 
-date_form = "YYYY-MM-DD hh:mm:ss"
+DATE_FORM = "YYYY-MM-DD hh:mm:ss"

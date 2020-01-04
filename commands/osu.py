@@ -66,7 +66,7 @@ class Command:
                 },
                 "footer": {
                     "text": f"Playing for {profile['join_date'].humanize(only_distance=True)} "
-                    f"{separator} Joined on {profile['join_date'].format('D MMMM YYYY')}"
+                    f"{SEPARATOR} Joined on {profile['join_date'].format('D MMMM YYYY')}"
                 },
                 "fields": [
                     {
