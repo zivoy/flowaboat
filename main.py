@@ -17,11 +17,12 @@ conn.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
 @client.event
 async def on_message(message):
+    Log.log(f"{message.author.name}@{message.channel}: {message.content}")
+
     if message.author == client.user:
         return
 
     Broadcaster(conn).send(message)
-    Log.log(f"{message.author.name}@{message.channel}: {message.content}")
 
     if message.content.startswith(Config.prefix):
         Users().load()

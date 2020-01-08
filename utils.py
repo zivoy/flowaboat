@@ -11,7 +11,7 @@ import discord
 import regex
 import requests
 import socket
-from typing import Union
+from typing import Union, Optional
 
 import commands
 
@@ -392,7 +392,7 @@ async def help_me(message_obj: discord.Message, command: str):
     await getattr(commands, "help")().call({"message_obj": message_obj, "args": ["", command]})
 
 
-def get_user(args: list, ign: str, platfrom: str) -> str:
+def get_user(args: list, ign: Optional[str], platfrom: str) -> str:
     """
     extracts the users ign from input list or from the value provided
 
@@ -468,7 +468,7 @@ def format_nums(number: Union[float, int], decimals: int) -> Union[int, float]:
     return float(f"{number:.{decimals}f}")
 
 
-SEPARATOR = "✦"
+SEPARATOR = "※"  # "✦"
 
 DIGITS = regex.compile(r"^\D+(\d+)$")
 

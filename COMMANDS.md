@@ -12,10 +12,12 @@
 - [o!osu](#oosu)
 - [o!recent](#orecent)
 - [o!set-muda](#oset-muda)
+- [o!statme](#ostatme)
 - [o!top](#otop)
 ### Administrative functions
 - [badmuda](#badmuda)
 - [bruh](#bruh)
+- [when pinged](#when pinged)
 ---
 ## o!ar
 Calculate Approach Rate values and milliseconds with mods applied.
@@ -89,10 +91,6 @@ Show information about this bot.
 **Required variables**: `0`
 
 **Usage**: `o!flowaboat `
-
-#### Synonyms:
-
-`o!info`
 
 ### Example:
 
@@ -287,6 +285,32 @@ o!set-muda
 set as muda dump
 
 
+## o!statme
+Show data on your user
+
+**Required variables**: `0`
+
+**Usage**: `o!statme [username]`
+
+#### Synonyms:
+
+`o!me`, `o!info`, `o!stat`
+
+### Examples:
+
+```
+o!me
+```
+Returns your information and stats.
+
+
+
+```
+o!info tmanti
+```
+Returns tmanti's stats.
+
+
 ## o!top
 Show a specific top play.
 
@@ -353,5 +377,25 @@ once triggered the bot will react with Bruh emoji
 will result in
 ```
 reacts with bruh
+```
+
+
+## when pinged
+bot gives information on itself when its pinged
+
+### Trigger:
+taging the bot in message
+
+### Action:
+will return information on the bot
+
+### Example:
+
+```
+@bot_name
+```
+will result in
+```
+returns flowaboat page
 ```
 

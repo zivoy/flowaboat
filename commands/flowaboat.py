@@ -11,7 +11,7 @@ class Command:
         "run": "flowaboat",
         "result": "Tells you about flowaboat."
     }]
-    synonyms = ["info"]
+    synonyms = []
 
     async def call(self, package):
         message = package["message_obj"]

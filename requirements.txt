@@ -1,3 +1,4 @@
+scikit-image
 gizeh
 moviepy
 Pillow
