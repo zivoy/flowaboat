@@ -11,7 +11,7 @@ class Command:
         'run': "set-muda",
         'result': "set as muda dump"
     }]
-    synonyms = []
+    synonyms = ["setmuda", "mudainit", "muda-init"]
 
     async def call(self, package):
         message = package["message_obj"]

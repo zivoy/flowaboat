@@ -199,7 +199,7 @@ class Users(JasonFile):
         self.users[str(uuid)][item] = value
         self.save()
 
-    def update_last_message(self, user: str, map_link, map_type: str, mods: list,
+    def update_last_message(self, user: Union[str,int], map_link, map_type: str, mods: list,
                             completion: float, accuracy: float, user_ign: str, replay):
         """
         updates last message sent by user

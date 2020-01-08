@@ -41,11 +41,11 @@ class Command:
         if len(mod_list) > 0:
             if hp.is_integer():
                 hp = int(hp)
-            output += f"HP{hp}+{''.join(mod_list).upper()} -> "
+            output += f"AR{hp}+{''.join(mod_list).upper()} -> "
 
         new_ar = float(f"{new_ar:.2f}")
         if new_ar.is_integer():
             new_ar = int(new_ar)
-        output += f"HP{new_ar} ({ar_ms:.0f}ms)"
+        output += f"AR{new_ar} ({ar_ms:.0f}ms)"
 
         await message.channel.send(output)

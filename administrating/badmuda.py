@@ -23,13 +23,15 @@ class Watcher:
 
     action_description = "once triggered the message by muda will be deleted and replaced with a warning"
 
-    warn = '**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**\n' \
+    lengthMes = "@{0} this is a warning. you are in the wrong channel go to #{1}"
+
+    warn = '**{2}**\n' \
            '<@!{0}> this is a warning. you are in the wrong channel go to <#{1}>\n' \
-           '**!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!**'
+           '**{2}**'
 
     examples = [{
         'trigger': f"{mudaCommand}w",
-        'action': warn.format("userID", "mudaHomeChannelID")
+        'action': warn.format("userID", "mudaHomeChannelID", "!"*84)
     }]
 
     def trigger(self, message_obj, _):
@@ -50,7 +52,8 @@ class Watcher:
                         return False, ""
                     else:
                         if channel in mudaWatchlist[server]:
-                            return True, [mudaWatchlist[server][channel], allServers[server]]
+                            length = len(self.lengthMes.format(message_obj.author.name, message_obj.channel.name))
+                            return True, [mudaWatchlist[server][channel], allServers[server], "!"*int(length*1.05)]
                         else:
                             return False, ""
         return False, ""

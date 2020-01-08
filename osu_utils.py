@@ -421,7 +421,7 @@ def mod_int(mod_list: Union[list, set, int]) -> int:
     """
     if isinstance(mod_list, int):
         return mod_list
-    elif isinstance(mod_list, str):
+    if isinstance(mod_list, str):
         mod_list = parse_mods_string(mod_list)
     else:
         mod_list = set(mod_list)

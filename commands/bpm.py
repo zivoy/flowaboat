@@ -29,7 +29,7 @@ class Command:
 
         if len(args) > 1 and not args[1].startswith("+"):
             map_link, map_type = osu_utils.get_map_link(args[1])
-            Users().update_last_message(message.author.id, map_link, map_type, mods, 1, 1)
+            Users().update_last_message(message.author.id, map_link, map_type, mods, 1, 1, user_data["osu_ign"], None)
         else:
             map_link, map_type = user_data["last_beatmap"]["map"]
             if not mods:
