@@ -17,7 +17,7 @@
 ### Administrative functions
 - [badmuda](#badmuda)
 - [bruh](#bruh)
-- [when pinged](#when%20pinged)
+- [when pinged](#when-pinged)
 ---
 ## o!ar
 Calculate Approach Rate values and milliseconds with mods applied.
