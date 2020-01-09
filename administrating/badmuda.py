@@ -45,24 +45,21 @@ class Watcher:
             if server in allServers:
                 if channel == allServers[server]:
                     return False, ""
-                else:
-                    if string.startswith(self.mudaCommand) and sender not in mudaWatchlist[server]:
-                        mudaWatchlist[server][channel] = sender
-                        Log.log("adding {} to watchlist".format(sender))
-                        return False, ""
-                    else:
-                        if channel in mudaWatchlist[server]:
-                            length = len(self.lengthMes.format(message_obj.author.name, message_obj.channel.name))
-                            return True, [mudaWatchlist[server][channel], allServers[server], "!"*int(length*1.05)]
-                        else:
-                            return False, ""
+
+                if string.startswith(self.mudaCommand) and sender not in mudaWatchlist[server]:
+                    mudaWatchlist[server][channel] = sender
+                    Log.log("adding {} to watchlist".format(sender))
+                    return False, ""
+
+                if channel in mudaWatchlist[server]:
+                    length = len(self.lengthMes.format(message_obj.author.name, message_obj.channel.name))
+                    return True, [mudaWatchlist[server][channel], allServers[server], "!"*int(length*1.05)]
+
+                return False, ""
         return False, ""
 
     async def action(self, message_obj, payload):
-        self.warn.format(*payload)
+        msg = self.warn.format(*payload)
         Log.log("{0} is in the wrong chat".format(payload[0]))
         await message_obj.channel.send(msg)
-        try:
-            await message_obj.delete()
-        except:
-            pass
+        await message_obj.delete()

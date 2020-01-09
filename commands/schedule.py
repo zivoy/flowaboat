@@ -1,5 +1,5 @@
 from utils import arrow, Log, help_me, json, Broadcaster, DATE_FORM, DiscordInteractive
-from socket import  socket, AF_INET, SOCK_DGRAM
+from socket import socket, AF_INET, SOCK_DGRAM
 
 interact = DiscordInteractive().interact
 
@@ -17,7 +17,7 @@ class Command:
             'run': "event new",
             'result': "Walks you through setting up a new event"
         }]
-    synonyms = ["sched","event"]
+    synonyms = ["sched", "event"]
 
     async def call(self, package):
         message, args, user_data = package["message_obj"], package["args"], package["user_obj"]
@@ -47,15 +47,14 @@ class Command:
         start = None
         end = None
 
-
         liss = socket(AF_INET, SOCK_DGRAM)
-        liss.bind(('',12345))
+        liss.bind(('', 12345))
         listner = Broadcaster(liss)
         interact(message.channel.send, "is the new event a:\n>>> `(1)` one time event\n`(2)` recurring event")
         while True:
             uInput = listner.receive()
             Log.log("input is", uInput)
-            if is_by_author(message, uInput):
+            if Broadcaster.is_by_author(message, uInput):
                 if uInput["content"].isnumeric():
                     num = int(uInput["content"])
                     if num == 1:
@@ -74,25 +73,5 @@ class Command:
         interact(message.channel.send, "The")
         while True:
             uInput = listner.receive()
-            if is_by_author(message, uInput):
-                if uInput["content"].isnumeric():
-                    num = int(uInput["content"])
-                    if num == 1:
-                        repeats = 0
-                        break
-                    elif num == 2:
-                        repeats = True
-                        break
-                    else:
-                        interact(message.channel.send, "`1` or `2`")
-                        continue
-                else:
-                    interact(message.channel.send, "Please choose a number")
-                    continue
-
-
-def is_by_author(original, new):
-    guild = None if original.guild is None else original.guild.id
-    channel = original.channel.id
-    name = original.author.id
-    return new["guild"]["id"] == guild and channel == new["channel"]["id"] and new["sender"]["id"] == name
+            if Broadcaster.is_by_author(message, uInput):
+                interact(message.channel.send, "bye")

@@ -10,7 +10,7 @@ import arrow
 import discord
 import regex
 import requests
-import socket
+from socket import socket
 from typing import Union, Optional
 import asyncio
 
@@ -259,6 +259,8 @@ class Log:
 class Dict(dict):
     """
     dict class that allows dot notation
+
+    ex: dictObj.value
     """
 
     def __init__(self, *args, **kwargs):
@@ -296,10 +298,9 @@ class Dict(dict):
         del self.__dict__[key]
 
 
-# TODO: work this out for detaching the procces from main loop
 class Broadcaster:
-    def __init__(self, socket):
-        self.socket = socket
+    def __init__(self, connection_socket):
+        self.socket: socket = connection_socket
 
     def send(self, message, port=12345):
         guild = Dict({"id": None, "name": None}) if message.guild is None else message.guild
@@ -321,7 +322,14 @@ class Broadcaster:
 
     def receive(self, bytes_to_receive=1024):
         rawMessage = self.socket.recvfrom(bytes_to_receive)[0]
-        return json.loads(rawMessage.decode())
+        return Dict(json.loads(rawMessage.decode()))
+
+    @staticmethod
+    def is_by_author(original, new):
+        guild = None if original.guild is None else original.guild.id
+        channel = original.channel.id
+        name = original.author.id
+        return new["guild"]["id"] == guild and channel == new["channel"]["id"] and new["sender"]["id"] == name
 
 
 class DiscordInteractive:
