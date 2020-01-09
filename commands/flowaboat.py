@@ -23,7 +23,7 @@ class Command:
             url="https://yt3.ggpht.com/a/AGF-l78A7VJcEml4nmoU7xP7bXRbnukYxDy0t1UiKQ=s288-c-k-c0xffffffff-no-rj-mo")
         embed.set_author(name="flowaboat", url="https://github.com/zivoy/flowaboat")
         embed.add_field(name="GitHub Repo", value="https://github.com/zivoy/flowaboat")
-        embed.add_field(name="Commands", value="Not all commands supported yet \n \
-        https://github.com/zivoy/flowaboat/blob/pythonized/COMMANDS.md")
+        embed.add_field(name="Commands", value="https://github.com/zivoy/flowaboat/blob/pythonized/COMMANDS.md \n"
+                                               "more commands to be added")
         embed.add_field(name="Prefix", value=f"The command prefix on this bot is `{Config.prefix}`.")
         await message.channel.send(embed=embed)

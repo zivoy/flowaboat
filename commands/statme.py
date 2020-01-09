@@ -37,13 +37,13 @@ class Command:
                 username = int(name)
             else:
                 for i in client.users:
-                    if i.name == name:
+                    if i.name.lower() == name.lower():
                         user = i
                         username = i.id
                         break
                 if username is None:
                     for i in message.guild.members:
-                        if i.nick == name:
+                        if i.nick.lower() == name.lower():
                             user = i
                             username = i.id
                             break
@@ -68,10 +68,6 @@ class Command:
             "thumbnail": {
                 "url": str(user.avatar_url)
             },
-            "author": {
-                "name": str(user),#f"{user.name}#{user.discriminator}",
-                "icon_url": str(user.avatar_url)
-            },
             "footer": {
                 "text": f"On Discord since {get(user.created_at).humanize()} "
                 f"{SEPARATOR} Joined on {get(user.created_at).format('dddd[,] MMMM Do YYYY [@] h:mm:ss A [UTC]')}"
@@ -95,10 +91,11 @@ class Command:
         if member is not None:
             embed.add_field(name="Status", value=stat_names[member.status.name], inline=True)
             if member.nick:
-                title = "Nickname"
                 if message.guild.id != member.guild.id:
                     title = f"Nickname in {member.guild.name}"
-                embed.add_field(name=title, value=member.nick, inline=True)
+                    embed.add_field(name=title, value=member.nick, inline=True)
+                else:
+                    embed.set_author(name=f"{str(user)} {SEPARATOR} {member.nick}", icon_url=str(user.avatar_url))
 
             if member.joined_at:
                 embed.add_field(name=f"Joined {member.guild.name} on",
@@ -116,11 +113,14 @@ class Command:
                 roles = member.roles[1:]
                 rls = map(lambda x: x.id, roles)
                 embed.add_field(name=f"Roles [{len(roles)}]",
-                                value=", ".join([f"<@&{i}>" for i in rls]), inline=True)
+                                value=", ".join([f"<@&{i}>" for i in rls][::-1]), inline=True)
 
             if member.activity.state:
                 embed.add_field(name="Message",
                                 value=member.activity.state, inline=True)
+
+        if not embed.author:
+            embed.set_author(name=str(user), icon_url=str(user.avatar_url))
 
         Log.log(f"stating {user.name}")
         await message.channel.send(embed=embed)
