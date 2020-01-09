@@ -87,6 +87,7 @@ class Command:
                     await message.channel.send("Please choose a number")
                     continue
 
+
 def is_by_author(original, new):
     guild = None if original.guild is None else original.guild.id
     channel = original.channel.id
