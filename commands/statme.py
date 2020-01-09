@@ -63,7 +63,9 @@ class Command:
 
         logo = user.avatar_url_as(format="png", static_format='png', size=64)
         picture = interact(logo.read)
-        img = io.imread(picture, plugin='imageio')[:, :, :-1]
+        img = io.imread(picture, plugin='imageio')
+        if img.shape[2] < 3:
+            img = img[:, :, :-1]
         average = img.mean(axis=0).mean(axis=0)
         avgInt = list(map(int, map(round, average)))
         color = "0x{0:02x}{1:02x}{2:02x}".format(*avgInt)
@@ -120,7 +122,7 @@ class Command:
                 embed.add_field(name=f"Roles [{len(roles)}]",
                                 value=", ".join([f"<@&{i}>" for i in rls][::-1]), inline=True)
 
-            if member.activity.state:
+            if member.activity is not None and member.activity.state:
                 embed.add_field(name="Message",
                                 value=member.activity.state, inline=True)
 
