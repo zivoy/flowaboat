@@ -332,10 +332,11 @@ class DiscordInteractive:
     loop: Optional[asyncio.AbstractEventLoop] = None
 
     def interact(self, command, *args, **kwargs):
-        asyncio.run_coroutine_threadsafe(self.__executor(command, *args, **kwargs), self.loop)
+        future = asyncio.run_coroutine_threadsafe(self.__executor(command, *args, **kwargs), self.loop)
+        return future.result(600)
 
     async def __executor(self, command, *args, **kwargs):
-        await command(*args, **kwargs)
+        return await command(*args, **kwargs)
 
 
 def sanitize(text: str) -> str:

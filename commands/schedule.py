@@ -53,12 +53,10 @@ class Command:
         listner = Broadcaster(liss)
         interact(message.channel.send, "is the new event a:\n>>> `(1)` one time event\n`(2)` recurring event")
         while True:
-            Log.log("line 54 schedule")
             uInput = listner.receive()
             Log.log("input is", uInput)
-            Log.log("dddd")
             if is_by_author(message, uInput):
-                if isinstance(uInput["content"], int):
+                if uInput["content"].isnumeric():
                     num = int(uInput["content"])
                     if num == 1:
                         repeats = 0
@@ -77,7 +75,7 @@ class Command:
         while True:
             uInput = listner.receive()
             if is_by_author(message, uInput):
-                if isinstance(uInput["content"], int):
+                if uInput["content"].isnumeric():
                     num = int(uInput["content"])
                     if num == 1:
                         repeats = 0
@@ -97,4 +95,4 @@ def is_by_author(original, new):
     guild = None if original.guild is None else original.guild.id
     channel = original.channel.id
     name = original.author.id
-    return new["guild"]["id"] == guild and channel == new["guild"]["id"] and new["sender"]["id"] == name
+    return new["guild"]["id"] == guild and channel == new["channel"]["id"] and new["sender"]["id"] == name
