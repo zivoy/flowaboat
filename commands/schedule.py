@@ -51,7 +51,10 @@ class Command:
         listner = Broadcaster(liss)
         await message.channel.send("is the new event a:\n>>> `(1)` one time event\n`(2)` recurring event")
         while True:
+            Log.log("line 54 schedule")
             uInput = listner.receive()
+            Log.log("input is", uInput)
+            Log.log("dddd")
             if is_by_author(message, uInput):
                 if isinstance(uInput["content"], int):
                     num = int(uInput["content"])
