@@ -1,5 +1,7 @@
-from utils import Config
+from utils import Config, DiscordInteractive
 import discord
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -26,4 +28,4 @@ class Command:
         embed.add_field(name="Commands", value="https://github.com/zivoy/flowaboat/blob/pythonized/COMMANDS.md \n"
                                                "more commands to be added")
         embed.add_field(name="Prefix", value=f"The command prefix on this bot is `{Config.prefix}`.")
-        await message.channel.send(embed=embed)
+        interact(message.channel.send, embed=embed)

@@ -1,8 +1,10 @@
 from time import time
 
 import osu_utils
-from utils import Log, SEPARATOR, UserNonexistent, get_user, help_me
+from utils import Log, SEPARATOR, UserNonexistent, get_user, help_me, DiscordInteractive
 import discord
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -32,13 +34,13 @@ class Command:
         try:
             user = get_user(args, user_data["osu_ign"], "osu")
         except UserNonexistent:
-            await message.channel.send("User does not exist")
+            interact(message.channel.send, "User does not exist")
             return
 
         try:
             user_profile = osu_utils.get_user(user)
         except UserNonexistent as err:
-            await message.channel.send(err)
+            interact(message.channel.send, err)
             return
 
         profile = user_profile[0]
@@ -107,4 +109,4 @@ class Command:
                 ]
             })
 
-        await message.channel.send(embed=embed)
+        interact(message.channel.send, embed=embed)

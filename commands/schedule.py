@@ -1,5 +1,7 @@
-from utils import arrow, Log, help_me, json, Broadcaster, DATE_FORM
+from utils import arrow, Log, help_me, json, Broadcaster, DATE_FORM, DiscordInteractive
 from socket import  socket, AF_INET, SOCK_DGRAM
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -12,8 +14,8 @@ class Command:
         'result': "Sets the current channel as ping channel."
     },
         {
-        'run': "event new",
-        'result': "Walks you through setting up a new event"
+            'run': "event new",
+            'result': "Walks you through setting up a new event"
         }]
     synonyms = ["sched","event"]
 
@@ -27,11 +29,11 @@ class Command:
 
         elif args[1] == "init":
             self.pingServer(message.guild.id, message.channel.id)
-            await message.channel.send(f"{message.channel} is now the pin ping channel for {message.guild.name}")
+            interact(message.channel.send, f"{message.channel} is now the pin ping channel for {message.guild.name}")
             return
 
         elif args[1] == "new":
-            await self.newEvent(message)
+            self.newEvent(message)
             return
 
     def pingServer(self, server, channel):
@@ -40,7 +42,7 @@ class Command:
             srvs["pingPlace"][server] = channel
             json.dump(srvs, serverList, indent="  ", sort_keys=True)
 
-    async def newEvent(self, message):
+    def newEvent(self, message):
         repeats = None
         start = None
         end = None
@@ -49,7 +51,7 @@ class Command:
         liss = socket(AF_INET, SOCK_DGRAM)
         liss.bind(('',12345))
         listner = Broadcaster(liss)
-        await message.channel.send("is the new event a:\n>>> `(1)` one time event\n`(2)` recurring event")
+        interact(message.channel.send, "is the new event a:\n>>> `(1)` one time event\n`(2)` recurring event")
         while True:
             Log.log("line 54 schedule")
             uInput = listner.receive()
@@ -65,13 +67,13 @@ class Command:
                         repeats = True
                         break
                     else:
-                        await message.channel.send("`1` or `2`")
+                        interact(message.channel.send, "`1` or `2`")
                         continue
                 else:
-                    await message.channel.send("Please choose a number")
+                    interact(message.channel.send, "Please choose a number")
                     continue
 
-        await message.channel.send("The")
+        interact(message.channel.send, "The")
         while True:
             uInput = listner.receive()
             if is_by_author(message, uInput):
@@ -84,10 +86,10 @@ class Command:
                         repeats = True
                         break
                     else:
-                        await message.channel.send("`1` or `2`")
+                        interact(message.channel.send, "`1` or `2`")
                         continue
                 else:
-                    await message.channel.send("Please choose a number")
+                    interact(message.channel.send, "Please choose a number")
                     continue
 
 

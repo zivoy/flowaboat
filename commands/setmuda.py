@@ -1,5 +1,7 @@
 import json
-from utils import Log
+from utils import Log, DiscordInteractive
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -27,4 +29,4 @@ class Command:
             json.dump(allServers, serverList, indent="  ", sort_keys=True)
         msg = "<#{0}> is now the default channel for {1}".format(channel, server)
         Log.log(msg)
-        await message.channel.send(msg)
+        interact(message.channel.send, msg)

@@ -1,6 +1,7 @@
-import asyncio, aiohttp, html
+import asyncio
+# aiohttp, html  # these might be needed
 import generateCommandMD
-from utils import sanitize, Log, Config, Users, help_me, Broadcaster
+from utils import sanitize, Log, Config, Users, help_me, Broadcaster, DiscordInteractive
 import commands
 import administrating
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
@@ -11,12 +12,14 @@ from typing import Optional
 # Config().load()
 # Users().load()
 
+generateCommandMD.generate()
 
 client = discord.Client()
 conn = socket(AF_INET, SOCK_DGRAM)
 conn.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
 commandsLoop: Optional[asyncio.AbstractEventLoop] = None
+
 
 @client.event
 async def on_message(message):
@@ -44,15 +47,13 @@ async def on_message(message):
 
         comm: Optional[commands.templateClass] = None
         if command in commands.List.keys():
-            # await getattr(commands, sanitize(command))().call(package)
-            comm = getattr(commands, command)()
+            comm = getattr(commands, sanitize(command))()
 
         else:
             found = False
             for i, j in commands.List.items():
                 if any([True for cm in j if cm.search(command)]):
-                    # await getattr(commands, sanitize(i))().call(package)
-                    comm = getattr(commands, i)()
+                    comm = getattr(commands, sanitize(i))()
                     found = True
                     break
 
@@ -65,8 +66,8 @@ async def on_message(message):
 
     elif Config.administer:
         for adm in administrating.List:
-            trigBool, payload = adm.trigger(message, client)
-            if trigBool:
+            trig_bool, payload = adm.trigger(message, client)
+            if trig_bool:
                 await adm.action(message, payload)
 
 
@@ -75,16 +76,28 @@ def start_background_loop(loop: asyncio.AbstractEventLoop) -> None:
     loop.run_forever()
 
 
+workerThread: Optional[Thread] = None
+
+
 @client.event
 async def on_ready():
-    global commandsLoop
+    global commandsLoop, workerThread
     Log.log('Logged in as')
     Log.log(client.user.name)
     Log.log(client.user.id)
     Log.log('------')
+    DiscordInteractive.loop = asyncio.get_event_loop()  # message loop
     commandsLoop = asyncio.new_event_loop()
-    t = Thread(target=start_background_loop, args=(commandsLoop,), daemon=True)
-    t.start()
+    workerThread = Thread(target=start_background_loop, args=(commandsLoop,), daemon=True)
+    workerThread.start()
+
+
+@client.event
+async def on_disconnect():
+    global workerThread
+    Log.error("disconnected")
+    if workerThread is not None and workerThread.is_alive():
+        workerThread = None
 
 if __name__ == "__main__":
     client.run(Config.credentials.bot_token)
