@@ -1,6 +1,8 @@
 import osu_utils
-from utils import Log, help_me, Users
+from utils import Log, help_me, Users, DiscordInteractive
 import discord
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -43,5 +45,5 @@ class Command:
         bpm_graph = osu_utils.graph_bpm(map_link, mods, map_type)
 
         Log.log("Posting Graph")
-        await message.channel.send(file=discord.File(bpm_graph, "BPM_Graph.png"))
+        interact(message.channel.send, file=discord.File(bpm_graph, "BPM_Graph.png"))
         bpm_graph.close()

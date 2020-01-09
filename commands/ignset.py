@@ -1,4 +1,6 @@
-from utils import Log, sanitize, help_me, Users
+from utils import Log, sanitize, help_me, Users, DiscordInteractive
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -45,4 +47,4 @@ class Command:
 
         msg = f"successfully set {author} {args[1]} name set to {ign}"
         Log.log(msg)
-        await message.channel.send(msg)
+        interact(message.channel.send, msg)

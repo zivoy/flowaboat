@@ -1,4 +1,6 @@
-from utils import Log
+from utils import Log, DiscordInteractive
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -16,4 +18,4 @@ class Command:
         message = package["message_obj"]
         msg = 'Hello {0.author.mention}'.format(message)
         Log.log(msg)
-        await message.channel.send(msg)
+        interact(message.channel.send, msg)

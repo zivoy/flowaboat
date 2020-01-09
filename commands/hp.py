@@ -1,5 +1,7 @@
 import osu_utils
-from utils import Log, help_me
+from utils import Log, help_me, DiscordInteractive
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -48,4 +50,4 @@ class Command:
             new_hp = int(new_hp)
         output += f"HP{new_hp}"
 
-        await message.channel.send(output)
+        interact(message.channel.send, output)

@@ -1,5 +1,7 @@
 import osu_utils
-from utils import Log, help_me
+from utils import Log, help_me, DiscordInteractive
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -49,4 +51,4 @@ class Command:
             new_od = int(new_od)
         output += f"OD{new_od} ({od_ms:.0f}ms)"
 
-        await message.channel.send(output)
+        interact(message.channel.send, output)

@@ -1,8 +1,10 @@
-from utils import Log, SEPARATOR
+from utils import Log, SEPARATOR, DiscordInteractive
 import discord
 from arrow import get
 from typing import List
 from skimage import io
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -50,14 +52,15 @@ class Command:
         if username:
             user = client.get_user(username)
             if user is None:
-                user = await client.fetch_user(username)
+                user = interact(client.fetch_user, username)
                 if user is None:
                     unknown_user = f"[{name}] user not found"
                     Log.error(unknown_user)
-                    await message.channel.send(f"> {unknown_user}")
+                    interact(message.channel.send, f"> {unknown_user}")
                     return
 
-        picture = await user.avatar_url_as(format="png", static_format='png', size=64).read()
+        logo = user.avatar_url_as(format="png", static_format='png', size=64)
+        picture = interact(logo.read)
         img = io.imread(picture, plugin='imageio')[:, :, :-1]
         average = img.mean(axis=0).mean(axis=0)
         avgInt = list(map(int, map(round, average)))
@@ -123,4 +126,4 @@ class Command:
             embed.set_author(name=str(user), icon_url=str(user.avatar_url))
 
         Log.log(f"stating {user.name}")
-        await message.channel.send(embed=embed)
+        interact(message.channel.send, embed=embed)

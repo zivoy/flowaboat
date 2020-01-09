@@ -12,6 +12,7 @@ import regex
 import requests
 import socket
 from typing import Union, Optional
+import asyncio
 
 import commands
 
@@ -321,6 +322,21 @@ class Broadcaster:
     def receive(self, bytes_to_receive=1024):
         rawMessage = self.socket.recvfrom(bytes_to_receive)[0]
         return json.loads(rawMessage.decode())
+
+
+class DiscordInteractive:
+    """
+    run a command on the main async loop
+    useful for discord interaction channel
+    """
+    loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def interact(self, command, *args, **kwargs):
+        future = asyncio.run_coroutine_threadsafe(self.__executor(command, *args, **kwargs), self.loop)
+        return future.result(600)
+
+    async def __executor(self, command, *args, **kwargs):
+        return await command(*args, **kwargs)
 
 
 def sanitize(text: str) -> str:

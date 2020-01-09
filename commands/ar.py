@@ -1,5 +1,7 @@
 import osu_utils
-from utils import Log, help_me
+from utils import Log, help_me, DiscordInteractive
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -23,7 +25,6 @@ class Command:
             hp = float(args[1])
         except ValueError:
             msg = f"{args[1]} is not a valid ar"
-            # await message.channel.send(msg)
             Log.error(msg)
             await help_me(message, self.command)
             return
@@ -48,4 +49,4 @@ class Command:
             new_ar = int(new_ar)
         output += f"AR{new_ar} ({ar_ms:.0f}ms)"
 
-        await message.channel.send(output)
+        interact(message.channel.send, output)

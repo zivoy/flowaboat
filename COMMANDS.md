@@ -11,6 +11,7 @@
 - [o!od](#ood)
 - [o!osu](#oosu)
 - [o!recent](#orecent)
+- [o!schedule](#oschedule)
 - [o!set-muda](#oset-muda)
 - [o!statme](#ostatme)
 - [o!top](#otop)
@@ -264,6 +265,32 @@ Returns respektive's most recent score.
 o!recentpass
 ```
 Returns your most recent pass.
+
+
+## o!schedule
+Schedule events.
+
+**Required variables**: `1`
+
+**Usage**: `o!schedule <command>`
+
+#### Synonyms:
+
+`o!sched`, `o!event`
+
+### Examples:
+
+```
+o!sched init
+```
+Sets the current channel as ping channel.
+
+
+
+```
+o!event new
+```
+Walks you through setting up a new event
 
 
 ## o!set-muda

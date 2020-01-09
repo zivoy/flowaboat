@@ -1,4 +1,6 @@
-from utils import Log, Config, help_me, command_help
+from utils import Log, Config, help_me, command_help, DiscordInteractive
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -23,4 +25,4 @@ class Command:
             await help_me(message, self.command)
             return
 
-        await message.channel.send(embed=embed)
+        interact(message.channel.send, embed=embed)
