@@ -1,6 +1,8 @@
 import osu_utils
-from utils import Log, DIGITS, help_me,UserNonexistent, get_user, Users
+from utils import Log, DIGITS, help_me,UserNonexistent, get_user, Users, DiscordInteractive
 import discord
+
+interact = DiscordInteractive().interact
 
 
 class Command:
@@ -31,7 +33,7 @@ class Command:
         try:
             user = get_user(args, user_data["osu_ign"], "osu")
         except UserNonexistent:
-            await message.channel.send("User does not exist")
+            interact(message.channel.send, "User does not exist")
             return
 
         index = DIGITS.match(args[0])
@@ -47,13 +49,13 @@ class Command:
         try:
             top_play = osu_utils.get_top(user, index, rb, ob)
         except osu_utils.NoPlays as err:
-            await message.channel.send(err)
+            interact(message.channel.send, err)
             return
 
         try:
             play_data = osu_utils.stat_play(top_play)
         except Exception as err:
-            await message.channel.send(err)
+            interact(message.channel.send, err)
             Log.error(err)
             return
 
@@ -63,5 +65,5 @@ class Command:
         embed = osu_utils.embed_play(play_data, client)
         graph = discord.File(play_data.strain_bar, "strains_bar.png")
 
-        await message.channel.send(file=graph, embed=embed)
+        interact(message.channel.send, file=graph, embed=embed)
         Log.log(f"Returning top play #{play_data.pb} for {user}")
