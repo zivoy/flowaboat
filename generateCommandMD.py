@@ -10,13 +10,13 @@ def generate(server=0):
     markdown += "### Commands"
 
     for command in commands.List:
-        markdown += f"\n- [{Config.prefix}{command}](#{sanitize(Config.prefix)}{command})"
-
+        markdown += f"\n- [{Config.prefix}{command}](#{sanitize(Config.prefix)}{command.replace(' ', '-')})"
+    
     markdown += "\n### Administrative functions"
 
     for adm in administrating.List:
-        markdown += f"\n- [{adm.name}](#{sanitize(adm.name)})"
-
+        markdown += f"\n- [{adm.name}](#{sanitize(adm.name).replace(' ', '-')})"
+        
     markdown += "\n---"
 
     for command in commands.List:
