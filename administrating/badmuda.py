@@ -1,4 +1,6 @@
-import os, json
+import json
+import os
+
 from utils import Log
 
 mudaWatchlist = dict()
@@ -31,7 +33,7 @@ class Watcher:
 
     examples = [{
         'trigger': f"{mudaCommand}w",
-        'action': warn.format("userID", "mudaHomeChannelID", "!"*84)
+        'action': warn.format("userID", "mudaHomeChannelID", "!" * 84)
     }]
 
     def trigger(self, message_obj, _):
@@ -53,7 +55,7 @@ class Watcher:
 
                 if channel in mudaWatchlist[server]:
                     length = len(self.lengthMes.format(message_obj.author.name, message_obj.channel.name))
-                    return True, [mudaWatchlist[server][channel], allServers[server], "!"*int(length*1.05)]
+                    return True, [mudaWatchlist[server][channel], allServers[server], "!" * int(length * 1.05)]
 
                 return False, ""
         return False, ""

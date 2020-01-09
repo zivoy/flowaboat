@@ -1,8 +1,10 @@
-from utils import Log, SEPARATOR, DiscordInteractive
+from typing import List
+
 import discord
 from arrow import get
-from typing import List
 from skimage import io
+
+from utils import Log, SEPARATOR, DiscordInteractive
 
 interact = DiscordInteractive().interact
 
@@ -17,9 +19,9 @@ class Command:
         "result": "Returns your information and stats."
     },
         {
-        'run': "info tmanti",
-        'result': "Returns tmanti's stats."
-    }]
+            'run': "info tmanti",
+            'result': "Returns tmanti's stats."
+        }]
     synonyms = ["me", "info", "stat"]
 
     async def call(self, package):
@@ -73,7 +75,7 @@ class Command:
             },
             "footer": {
                 "text": f"On Discord since {get(user.created_at).humanize()} "
-                f"{SEPARATOR} Joined on {get(user.created_at).format('dddd[,] MMMM Do YYYY [@] h:mm:ss A [UTC]')}"
+                        f"{SEPARATOR} Joined on {get(user.created_at).format('dddd[,] MMMM Do YYYY [@] h:mm:ss A [UTC]')}"
             }
         })
         embed.add_field(name="ID", value=user.id, inline=True)

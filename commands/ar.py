@@ -14,9 +14,9 @@ class Command:
         'result': "Returns AR of AR8 with DT applied."
     },
         {
-        'run': "ar 6.4 +EZ",
-        'result': "Returns AR of AR6.4 with EZ applied."
-    }]
+            'run': "ar 6.4 +EZ",
+            'result': "Returns AR of AR6.4 with EZ applied."
+        }]
     synonyms = []
 
     async def call(self, package):

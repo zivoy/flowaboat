@@ -1,6 +1,7 @@
+import discord
+
 import osu_utils
 from utils import Log, help_me, UserNonexistent, get_user, DIGITS, Users, DiscordInteractive
-import discord
 
 interact = DiscordInteractive().interact
 
@@ -11,18 +12,18 @@ class Command:
     argsRequired = 0
     usage = "[username]"
     examples = [
-            {
-                "run": "recent nathan_on_osu",
-                "result": "Returns nathan on osu's most recent score."
-            },
-            {
-                "run": "recent3 respektive",
-                "result": "Returns respektive's most recent score."
-            },
-            {
-                "run": "recentpass",
-                "result": "Returns your most recent pass."
-            }]
+        {
+            "run": "recent nathan_on_osu",
+            "result": "Returns nathan on osu's most recent score."
+        },
+        {
+            "run": "recent3 respektive",
+            "result": "Returns respektive's most recent score."
+        },
+        {
+            "run": "recentpass",
+            "result": "Returns your most recent pass."
+        }]
     synonyms = [r"recent\d+", "rs", "recentpass", "rp"]
 
     async def call(self, package):

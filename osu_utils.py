@@ -5,7 +5,6 @@ all functions and utilities related to osu
 import io
 import math
 import os
-import warnings
 import zipfile
 from enum import Enum
 from textwrap import wrap
@@ -17,6 +16,7 @@ import bezier
 import discord
 import matplotlib
 import numpy as np
+import oppadc as oppa
 import pandas as pd
 import regex
 import requests
@@ -24,7 +24,6 @@ import seaborn as sns
 from PIL import Image
 # from arrow.factory import ArrowParseWarning
 from matplotlib import pyplot as plt
-import oppadc as oppa
 
 from utils import dict_string_to_nums, fetch_emote, Log, Config, DATE_FORM, \
     SEPARATOR, UserNonexistent, Dict, format_nums, UserError, Api
@@ -1338,7 +1337,7 @@ def embed_play(play_stats: stat_play, client: discord.Client) -> discord.Embed:
     embed.add_field(name=play_results, value=perfomacne, inline=False)
 
     beatmap_info = \
-        f"{arrow.Arrow(2019, 1, 1).shift(seconds=play_stats.map_obj.total_length).format('mm:ss')}"\
+        f"{arrow.Arrow(2019, 1, 1).shift(seconds=play_stats.map_obj.total_length).format('mm:ss')}" \
         f" ~ CS**{format_nums(play_stats.map_obj.cs, 1)}** " \
         f"AR**{format_nums(play_stats.map_obj.ar, 1)}** " \
         f"OD**{format_nums(play_stats.map_obj.od, 1)}** " \

@@ -1,5 +1,5 @@
-import commands
 import administrating
+import commands
 from utils import Config, sanitize
 
 
@@ -11,17 +11,17 @@ def generate(server=0):
 
     for command in commands.List:
         markdown += f"\n- [{Config.prefix}{command}](#{sanitize(Config.prefix)}{command.replace(' ', '-')})"
-    
+
     markdown += "\n### Administrative functions"
 
     for adm in administrating.List:
         markdown += f"\n- [{adm.name}](#{sanitize(adm.name).replace(' ', '-')})"
-        
+
     markdown += "\n---"
 
     for command in commands.List:
         command = getattr(commands, sanitize(command))()
-        markdown +=\
+        markdown += \
             f"\n## {Config.prefix}{command.command}\n" \
             f"{command.description}\n\n" \
             f"**Required variables**: `{command.argsRequired}`\n\n" \

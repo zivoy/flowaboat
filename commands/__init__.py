@@ -1,7 +1,10 @@
 from os import listdir
+
 from regex import compile
+
 from utils import sanitize
 from .__template import Command as templateClass
+
 List = dict()
 
 for i in listdir("./commands"):

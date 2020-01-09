@@ -14,9 +14,9 @@ class Command:
         'result': "Returns CS of AR8 with HR applied."
     },
         {
-        'run': "cs 8.3 +EZ",
-        'result': "Returns CS of AR8.3 with EZ applied."
-    }]
+            'run': "cs 8.3 +EZ",
+            'result': "Returns CS of AR8.3 with EZ applied."
+        }]
     synonyms = []
 
     async def call(self, package):

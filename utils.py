@@ -2,17 +2,17 @@
 all functions and utility's for flowaboat
 """
 
+import asyncio
 import json
 import os
+from socket import socket
 from time import sleep
+from typing import Union, Optional
 
 import arrow
 import discord
 import regex
 import requests
-from socket import socket
-from typing import Union, Optional
-import asyncio
 
 import commands
 
@@ -200,7 +200,7 @@ class Users(JasonFile):
         self.users[str(uuid)][item] = value
         self.save()
 
-    def update_last_message(self, user: Union[str,int], map_link, map_type: str, mods: list,
+    def update_last_message(self, user: Union[str, int], map_link, map_type: str, mods: list,
                             completion: float, accuracy: float, user_ign: str, replay):
         """
         updates last message sent by user

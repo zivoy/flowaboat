@@ -1,6 +1,7 @@
+import discord
+
 import osu_utils
 from utils import Log, help_me, Users, DiscordInteractive
-import discord
 
 interact = DiscordInteractive().interact
 

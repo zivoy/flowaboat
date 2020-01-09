@@ -2,7 +2,6 @@
 Module for rendering replays
 """
 import subprocess
-from os import remove
 
 import gizeh
 import moviepy.editor as mpy
@@ -85,7 +84,7 @@ class HitCircle:
         circle = gizeh.circle(self.radius - 5, xy=self.position,
                               stroke=(*self.border, alph), stroke_width=5, fill=(*self.color, alph))
         num = gizeh.text(str(self.num), fontfamily="Impact", fontsize=self.radius,
-                              fill=(0, 0, 0, alph), xy=self.position)
+                         fill=(0, 0, 0, alph), xy=self.position)
         appr_circle = approach_circle(self, time)
         return [circle, num, appr_circle]
 
@@ -219,7 +218,7 @@ class Slider:
         appr_circle = approach_circle(self, time)
         numb = alph if time <= self.action else 0
         num = gizeh.text(str(self.num), fontfamily="Impact", fontsize=self.radius,
-                              fill=(0, 0, 0, numb), xy=self.position)
+                         fill=(0, 0, 0, numb), xy=self.position)
         return [slide, appr_circle, ball, num]
 
 
@@ -388,7 +387,7 @@ class Replay:
             ablnk = mpy.AudioClip(lambda x: 0, duration=aftr)
             snd = mpy.concatenate_audioclips([blnk, acl, ablnk])
             clip = clip.set_audio(snd.subclip(audio_start_offset, duration + audio_start_offset))
-            #remove(audio)
+            # remove(audio)
 
         if name.endswith(".gif"):
             clip.write_gif(name, fps=fps)

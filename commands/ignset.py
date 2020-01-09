@@ -13,9 +13,9 @@ class Command:
         "result": "Sets your osu! username to nathan on osu."
     },
         {
-        "run": "set steam flyingpigoftheapocalypse",
-        "result": "Sets your steam username to flyingpigoftheapocalypse."
-    }]
+            "run": "set steam flyingpigoftheapocalypse",
+            "result": "Sets your steam username to flyingpigoftheapocalypse."
+        }]
     synonyms = ["set-ign", "set ", "ign "]
 
     async def call(self, package):

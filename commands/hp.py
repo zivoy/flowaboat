@@ -14,9 +14,9 @@ class Command:
         'result': "Returns HP of AR8 with HR applied."
     },
         {
-        'run': "hp 7 +EZ",
-        'result': "Returns HP of AR6.4 with EZ applied."
-    }]
+            'run': "hp 7 +EZ",
+            'result': "Returns HP of AR6.4 with EZ applied."
+        }]
     synonyms = []
 
     async def call(self, package):

@@ -1,13 +1,15 @@
 import asyncio
+from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
+from threading import Thread
+from typing import Optional
+
+import discord
+
+import administrating
+import commands
 # aiohttp, html  # these might be needed
 import generateCommandMD
 from utils import sanitize, Log, Config, Users, help_me, Broadcaster, DiscordInteractive
-import commands
-import administrating
-from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
-import discord
-from threading import Thread
-from typing import Optional
 
 # Config().load()
 # Users().load()
@@ -98,6 +100,7 @@ async def on_disconnect():
     Log.error("disconnected")
     if workerThread is not None and workerThread.is_alive():
         workerThread = None
+
 
 if __name__ == "__main__":
     client.run(Config.credentials.bot_token)

@@ -1,8 +1,9 @@
 from time import time
 
+import discord
+
 import osu_utils
 from utils import Log, SEPARATOR, UserNonexistent, get_user, help_me, DiscordInteractive
-import discord
 
 interact = DiscordInteractive().interact
 
@@ -17,9 +18,9 @@ class Command:
         "result": "Returns your osu! stats."
     },
         {
-        'run': "osu nathan_on_osu",
-        'result': "Returns nathan on osu's osu! stats."
-    }]
+            'run': "osu nathan_on_osu",
+            'result': "Returns nathan on osu's osu! stats."
+        }]
     synonyms = []
 
     async def call(self, package):
@@ -63,13 +64,13 @@ class Command:
                 },
                 "author": {
                     "name": f"{profile['username']} – {float(profile['pp_raw']):,.2f}pp (#{int(profile['pp_rank']):,}) "
-                    f"({profile['country']}#{int(profile['pp_country_rank']):,})",
+                            f"({profile['country']}#{int(profile['pp_country_rank']):,})",
                     "icon_url": f"https://a.ppy.sh/{profile['user_id']}?{int(time())}",
                     "url": f"https://osu.ppy.sh/u/{profile['user_id']}"
                 },
                 "footer": {
                     "text": f"Playing for {profile['join_date'].humanize(only_distance=True)} "
-                    f"{SEPARATOR} Joined on {profile['join_date'].format('D MMMM YYYY')}"
+                            f"{SEPARATOR} Joined on {profile['join_date'].format('D MMMM YYYY')}"
                 },
                 "fields": [
                     {
