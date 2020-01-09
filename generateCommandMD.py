@@ -7,12 +7,12 @@ markdown = "# Table Of Contents\n"
 markdown += "### Commands"
 
 for command in commands.List:
-    markdown += f"\n- [{Config.prefix}{command}](#{sanitize(Config.prefix)}{command})"
+    markdown += f"\n- [{Config.prefix}{command}](#{sanitize(Config.prefix)}{command.replace(' ', '%20')})"
 
 markdown += "\n### Administrative functions"
 
 for adm in administrating.List:
-    markdown += f"\n- [{adm.name}](#{sanitize(adm.name)})"
+    markdown += f"\n- [{adm.name}](#{sanitize(adm.name).replace(' ', '%20')})"
 
 markdown += "\n---"
 
