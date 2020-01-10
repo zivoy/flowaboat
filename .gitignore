@@ -6,9 +6,7 @@ logs
 *.err
 
 # config and credentials
-config.json
-users.list
-serverSchedule.json
+config/
 
 #python cache
 __pycache__/
@@ -23,5 +21,3 @@ osu-tools/
 src/
 
 *TEMP_MPY*
-
-mudaSafe

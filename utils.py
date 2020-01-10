@@ -17,6 +17,10 @@ import requests
 import commands
 
 
+if not os.path.exists("./config"):
+    os.mkdir("./config")
+
+
 class UserError(Exception):
     """
     class used to handel general user errors
@@ -144,7 +148,7 @@ class Config(JasonFile):
     """
     stores server settings
     """
-    file = "config.json"
+    file = "./config/config.json"
 
     prefix: str = ""
     debug: bool = False
@@ -170,7 +174,7 @@ class Users(JasonFile):
     """
     stores some information on users
     """
-    file = "users.list"
+    file = "./config/users.list"
 
     users = dict()
 
@@ -302,7 +306,7 @@ class Broadcaster:
     def __init__(self, connection_socket):
         self.socket: socket = connection_socket
 
-    def send(self, message, port=12345):
+    def send(self, message: discord.Message, port=12345):
         guild = Dict({"id": None, "name": None}) if message.guild is None else message.guild
         channel = Dict({"id": message.channel.id, "name": "DM"}) \
             if isinstance(message.channel, discord.DMChannel) else message.channel
@@ -311,6 +315,7 @@ class Broadcaster:
                         "name": message.author.name
                         },
                    "content": message.content,
+                   "message_id": message.id,
                    "guild": {"name": guild.name,
                              "id": guild.id
                              },

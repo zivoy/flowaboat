@@ -5,11 +5,13 @@ from utils import Log
 
 mudaWatchlist = dict()
 
-if os.path.exists("./mudaSafe"):
-    with open("./mudaSafe", "r") as serverList:
+muda_file = "./config/mudaSafe"
+
+if os.path.exists(muda_file):
+    with open(muda_file, "r") as serverList:
         allServers = json.load(serverList)
 else:
-    open("./mudaSafe", "w").close()
+    open(muda_file, "w").close()
     allServers = dict()
 
 

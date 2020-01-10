@@ -1,13 +1,42 @@
 from socket import socket, AF_INET, SOCK_DGRAM
+import datetime
+from typing import Optional
+from threading import Thread
+import pickle
+import os.path
 
 from utils import Log, help_me, json, Broadcaster, DiscordInteractive
 
 interact = DiscordInteractive().interact
 
+pickle_file = "./config/schedule.pickle"
+
+
+def load_events():
+    global events
+    if not os.path.isfile('filename.txt'):
+        save_events()
+    with open(pickle_file, "rb") as pkl:
+        events = pickle.load(pkl).sort()
+
+
+def save_events():
+    with open(pickle_file, "wb") as pkl:
+        pickle.dump(events, pkl)
+
+
+events = list()
+load_events()
+
 
 class Command:
     command = "schedule"
-    description = "Schedule events."
+    description = "Schedule events.\n```\nPossible Commands:" \
+                  "\n\tinit -- Sets the current channel as ping channel." \
+                  "\n\tnew  -- Walks you through setting up a new event." \
+                  "\n\tlist -- Lists all events." \
+                  "\n\tdel  -- Deletes event" \
+                  "\n\tedit -- Walks you through the process of editing an event\n```"
     argsRequired = 1
     usage = "<command>"
     examples = [{
@@ -28,13 +57,25 @@ class Command:
             await help_me(message, self.command)
             return
 
-        elif args[1] == "init":
+        if args[1].lower() == "init":
             self.pingServer(message.guild.id, message.channel.id)
             interact(message.channel.send, f"{message.channel} is now the pin ping channel for {message.guild.name}")
             return
 
-        elif args[1] == "new":
+        if args[1].lower() == "new":
             self.newEvent(message)
+            return
+
+        if args[1].lower() == "list":
+            #todo
+            return
+
+        if args[1].lower() == "edit":
+            #todo
+            return
+
+        if args[1].lower() == "del":
+            #todo
             return
 
     def pingServer(self, server, channel):
@@ -76,3 +117,33 @@ class Command:
             uInput = listner.receive()
             if Broadcaster.is_by_author(message, uInput):
                 interact(message.channel.send, "bye")
+
+
+class Event:
+    def __init__(self, description: str, time_of_event: datetime.datetime,
+                 repeat_after_days: Optional[int] = None, end_on: Optional[datetime.datetime] = None):
+        self.description: str = description
+        self.time_of_event: datetime.datetime = time_of_event
+        self.repeat_after_days: Optional[int] = repeat_after_days
+        self.end_on: Optional[datetime.datetime] = end_on
+
+    def still_occurs(self, date: datetime.datetime):
+        return date > self.time_of_event
+
+    def make_next(self):
+        if self.repeat_after_days is not None:
+            new_date = self.time_of_event + datetime.timedelta(days=self.repeat_after_days)
+            next_event = Event(self.description, new_date,
+                               self.repeat_after_days, self.end_on)
+            if self.end_on is not None:
+                if new_date <= self.end_on:
+                    return next_event
+                return None
+            return next_event
+        return None
+
+    def __lt__(self, other):
+        return self.time_of_event < other.time_of_event
+
+    def __ne__(self, other):
+        return self.time_of_event != other.time_of_event

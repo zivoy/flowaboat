@@ -269,6 +269,14 @@ Returns your most recent pass.
 
 ## o!schedule
 Schedule events.
+```
+Possible Commands:
+	init -- Sets the current channel as ping channel.
+	new  -- Walks you through setting up a new event.
+	list -- Lists all events.
+	del  -- Deletes event
+	edit -- Walks you through the process of editing an event
+```
 
 **Required variables**: `1`
 
