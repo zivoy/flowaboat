@@ -1,6 +1,5 @@
 import json
 import os
-from typing import Union
 
 
 class JasonFile:
@@ -70,23 +69,23 @@ class Config(JasonFile):
     """
     file = "./config/config.json"
 
-    prefix: str = ""
-    debug: bool = False
-    administer: bool = False
-    osu_cache_path: str = ""
-    pp_path: str = ""
+    prefix = ""
+    debug = False
+    administer = False
+    osu_cache_path = ""
+    pp_path = ""
 
     class credentials:
-        bot_token: str = ""
-        discord_client_id: str = ""
-        osu_api_key: str = ""
-        twitch_client_id: str = ""
-        pexels_key: str = ""
-        last_fm_key: str = ""
+        bot_token = ""
+        discord_client_id = ""
+        osu_api_key = ""
+        twitch_client_id = ""
+        pexels_key = ""
+        last_fm_key = ""
 
     class logsCredentials:
-        rawPassword: str = ""
-        encPassword: str = ""
+        rawPassword = ""
+        encPassword = ""
 
 
 # todo: have each user be its separate file // maybe also pickling
@@ -98,7 +97,7 @@ class Users(JasonFile):
 
     users = dict()
 
-    def add_user(self, uuid: str, osu_ign: str = "", steam_ign: str = ""):
+    def add_user(self, uuid, osu_ign="", steam_ign=""):
         """
         add new user
         :param uuid: discord id
@@ -114,7 +113,7 @@ class Users(JasonFile):
                                 "last_message": None}
             self.save()
 
-    def set(self, uuid: str, item, value):
+    def set(self, uuid, item, value):
         """
         updates user data
         :param uuid: discord id
@@ -124,8 +123,7 @@ class Users(JasonFile):
         self.users[str(uuid)][item] = value
         self.save()
 
-    def update_last_message(self, user: Union[str, int], map_link, map_type: str, mods: list,
-                            completion: float, accuracy: float, user_ign: str, replay):
+    def update_last_message(self, user, map_link, map_type, mods, completion, accuracy, user_ign, replay):
         """
         updates last message sent by user
         :param user: user id

@@ -1,5 +1,3 @@
-from typing import Union, List
-
 import arrow
 
 from utils import DATE_FORM
@@ -10,7 +8,7 @@ from ..osu import OSU_API
 from ..utils import Log, dict_string_to_nums
 
 
-def get_user(user: Union[int, str]) -> dict:
+def get_user(user):
     """
     gets users profile information
 
@@ -33,7 +31,7 @@ def get_user(user: Union[int, str]) -> dict:
     return response
 
 
-def get_leaderboard(beatmap_id: Union[str, int], limit: int = 100) -> List[Play]:
+def get_leaderboard(beatmap_id, limit=100):
     """
     gets leader board for beatmap
 
@@ -56,8 +54,7 @@ def get_leaderboard(beatmap_id: Union[str, int], limit: int = 100) -> List[Play]
     return response
 
 
-def get_user_map_best(beatmap_id: Union[int, str], user: Union[int, str],
-                      enabled_mods: int = 0) -> List[Play]:
+def get_user_map_best(beatmap_id, user, enabled_mods=0):
     """
     gets users best play on map
 
@@ -81,7 +78,7 @@ def get_user_map_best(beatmap_id: Union[int, str], user: Union[int, str],
     return response
 
 
-def get_user_best(user: Union[int, str], limit: int = 100) -> List[Play]:
+def get_user_best(user, limit=100):
     """
     gets users best plays
 
@@ -104,7 +101,7 @@ def get_user_best(user: Union[int, str], limit: int = 100) -> List[Play]:
     return response
 
 
-def get_user_recent(user: Union[int, str], limit: int = 10) -> List[Play]:
+def get_user_recent(user, limit=10):
     """
     gets user most recent play by index
 
@@ -126,8 +123,7 @@ def get_user_recent(user: Union[int, str], limit: int = 10) -> List[Play]:
     return response
 
 
-def get_replay(beatmap_id: Union[int, str], user_id: Union[int, str],
-               mods: int, mode: int = 0) -> str:
+def get_replay(beatmap_id, user_id, mods, mode=0):
     """
     gets the replay string of play
 
@@ -148,7 +144,7 @@ def get_replay(beatmap_id: Union[int, str], user_id: Union[int, str],
     return replay
 
 
-def get_top(user: str, index: int, rb: bool = False, ob: bool = False) -> Play:
+def get_top(user, index, rb=False, ob=False):
     """
     gets user top play
 
@@ -175,7 +171,7 @@ def get_top(user: str, index: int, rb: bool = False, ob: bool = False) -> Play:
     return recent_raw
 
 
-def get_recent(user: str, index: int) -> Play:
+def get_recent(user, index):
     """
     gets the users recent play by index
 

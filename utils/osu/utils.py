@@ -2,9 +2,7 @@ import io
 import math
 import os
 import zipfile
-from typing import Union, Tuple
 
-import discord
 import regex
 import requests
 
@@ -15,7 +13,7 @@ from ..osu import OsuConsts, MODS_RE
 from ..utils import Log
 
 
-def parse_mods_string(mods: str) -> list:
+def parse_mods_string(mods):
     """
     turns mod str into mod list
 
@@ -33,7 +31,7 @@ def parse_mods_string(mods: str) -> list:
     return list(set(matches))
 
 
-def parse_mods_int(mods: int) -> list:
+def parse_mods_int(mods):
     """
     turns bitwise flag into mod list
 
@@ -49,7 +47,7 @@ def parse_mods_int(mods: int) -> list:
     return mod_list
 
 
-def sanitize_mods(mods: Union[list, set]) -> Union[list, set]:
+def sanitize_mods(mods):
     """
     gets rid of mods that have similar effects
 
@@ -63,7 +61,7 @@ def sanitize_mods(mods: Union[list, set]) -> Union[list, set]:
     return mods
 
 
-def mod_int(mod_list: Union[list, set, int]) -> int:
+def mod_int(mod_list):
     """
     cleans and turns the list of mods into bitwise integer
 
@@ -88,7 +86,7 @@ def mod_int(mod_list: Union[list, set, int]) -> int:
     return res
 
 
-def get_map_link(link: str, **kwargs) -> Tuple[Union[int, str], str]:
+def get_map_link(link, **kwargs):
     """
     gets link type and corresponding value
 
@@ -115,7 +113,7 @@ def get_map_link(link: str, **kwargs) -> Tuple[Union[int, str], str]:
         return download_mapset(link, **kwargs), "path"
 
 
-def calculate_acc(n300: int, n100: int, n50: int, nMiss: int) -> float:
+def calculate_acc(n300, n100, n50, nMiss):
     """
     calculate the acc based on number of hits
 
@@ -128,7 +126,7 @@ def calculate_acc(n300: int, n100: int, n50: int, nMiss: int) -> float:
     return (50 * n50 + 100 * n100 + 300 * n300) / (300 * (nMiss + n50 + n100 + n300))
 
 
-def speed_multiplier(mods: Union[list, set]) -> float:
+def speed_multiplier(mods):
     """
     gets the speed multiplier based on mods applied
 
@@ -143,7 +141,7 @@ def speed_multiplier(mods: Union[list, set]) -> float:
     return speed
 
 
-def get_rank_emoji(rank: str, client: discord.Client) -> Union[bool, discord.Emoji, str]:
+def get_rank_emoji(rank, client):
     """
     gets the rank emoji
 
@@ -182,7 +180,7 @@ def get_rank_emoji(rank: str, client: discord.Client) -> Union[bool, discord.Emo
 
 
 class CalculateMods:
-    def __init__(self, mods: Union[list, str]):
+    def __init__(self, mods):
         """
         calculates the modifications that happens to values when you apply mods
 
@@ -195,7 +193,7 @@ class CalculateMods:
         #     Log.log(mods.replace("+", ""))
         # Log.log(self.mods)
 
-    def ar(self, raw_ar: Union[float, int]) -> Tuple[float, float, list]:
+    def ar(self, raw_ar):
         """
         calculates approach rate with mods allied to it
 
@@ -232,7 +230,7 @@ class CalculateMods:
 
         return ar, ar_ms, self.mods
 
-    def cs(self, raw_cs: Union[float, int]) -> Tuple[float, list]:
+    def cs(self, raw_cs):
         """
         calculate the circle size with mod applied to it
 
@@ -250,7 +248,7 @@ class CalculateMods:
 
         return cs, self.mods
 
-    def od(self, raw_od: Union[float, int]) -> Tuple[float, float, list]:
+    def od(self, raw_od):
         """
         calculates the overall difficulty with mods allied to it
 
@@ -281,7 +279,7 @@ class CalculateMods:
 
         return od, odms, self.mods
 
-    def hp(self, raw_hp: Union[float, int]) -> Tuple[float, list]:
+    def hp(self, raw_hp):
         """
         calculates the hp with the mods applied
 
@@ -300,7 +298,7 @@ class CalculateMods:
         return hp, self.mods
 
 
-def download_mapset(link_id: Union[str, int] = None, link: str = None) -> str:
+def download_mapset(link_id=None, link=None):
     """
     downloads an osu mapset
 

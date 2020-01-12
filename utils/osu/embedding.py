@@ -4,12 +4,11 @@ import arrow
 import discord
 
 from utils import SEPARATOR
-from .stating import stat_play
 from .utils import get_rank_emoji, sanitize_mods
 from ..utils import format_nums
 
 
-def embed_play(play_stats: stat_play, client: discord.Client) -> discord.Embed:
+def embed_play(play_stats, client):
     """
     generates status report embed from play
 

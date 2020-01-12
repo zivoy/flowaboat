@@ -5,8 +5,9 @@ from .utils import calculate_acc, parse_mods_int
 from ..utils import dict_string_to_nums
 
 
+# todo see if i can move it out of its own separate file and back into stating
 class Play:
-    def __init__(self, play_dict: dict):
+    def __init__(self, play_dict):
         """
         organises the dict response from osu api into object
 
@@ -20,7 +21,7 @@ class Play:
         self.count50 = play_dict["count50"]
         self.count100 = play_dict["count100"]  # + play_dict["countkatu"]
         self.count300 = play_dict["count300"]  # + play_dict["countgeki"]
-        self.perfect = play_dict["perfect"]
+        self.perfect = bool(play_dict["perfect"])
         self.enabled_mods = parse_mods_int(play_dict["enabled_mods"])
         self.user_id = play_dict["user_id"]
         self.date = arrow.get(play_dict["date"], DATE_FORM)
@@ -33,19 +34,19 @@ class Play:
             self.beatmap_id = 0
 
         if "replay_available" in play_dict:
-            self.replay_available = play_dict["replay_available"]
+            self.replay_available = bool(play_dict["replay_available"])
         else:
-            self.replay_available = 0
+            self.replay_available = False
 
         if "score_id" in play_dict:
             self.score_id = play_dict["score_id"]
         else:
-            self.score_id = ""
+            self.score_id = 0
 
         if "pp" in play_dict:
             self.performance_points = play_dict["pp"]
         else:
-            self.performance_points = None
+            self.performance_points = 0.
 
     def __eq__(self, other):
         return self.date == other.date and self.user_id == other.user_id

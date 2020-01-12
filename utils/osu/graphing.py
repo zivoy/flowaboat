@@ -2,7 +2,6 @@ import io
 import math
 from textwrap import wrap
 from time import strftime, gmtime
-from typing import Union
 
 import bezier
 import matplotlib
@@ -99,9 +98,7 @@ def graph_bpm(map_obj):
     return image
 
 
-def map_strain_graph(map_strains, progress: float = 1.,
-                     width: float = 399., height: float = 40.,
-                     max_chunks: Union[int, float] = 100, low_cut: float = 30.):
+def map_strain_graph(map_strains, progress=1., width=399., height=40., max_chunks=100, low_cut=30.):
     """
     generats a strains graph based on map
 
@@ -182,7 +179,7 @@ def map_strain_graph(map_strains, progress: float = 1.,
     return image
 
 
-def avgpt(points: Union[list, np.array], index: int) -> float:
+def avgpt(points, index):
     """
     get the average between current point and the next one
     :param points: list of points

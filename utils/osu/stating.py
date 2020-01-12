@@ -1,5 +1,4 @@
 import math
-from typing import Union
 
 import arrow
 import oppadc as oppa
@@ -8,7 +7,6 @@ import requests
 from utils import DATE_FORM
 from .apiTools import get_leaderboard, get_user, get_user_map_best, get_user_best, get_replay
 from .graphing import map_strain_graph
-from .play_object import Play
 from .utils import speed_multiplier, mod_int, CalculateMods
 from ..errors import BadMapFile, BadLink, NoLeaderBoard, BadId
 from ..osu import OSU_API, OsuConsts
@@ -16,7 +14,7 @@ from ..utils import dict_string_to_nums, Dict, Log
 
 
 class MapStats:
-    def __init__(self, map_id: Union[str, int], mods: list, link_type: str = "id"):
+    def __init__(self, map_id, mods, link_type="id"):
         """
         get stats on map // map api
 
@@ -72,11 +70,11 @@ class MapStats:
         self.version = bmp.version
         self.bpm_min = min(bpm_list) * speed
         self.bpm_max = max(bpm_list) * speed
-        self.total_length = (length - bmp.hitobjects[0].starttime) / 1000 / speed
-        self.max_combo = None
+        self.total_length = (length - bmp.hitobjects[0].starttime) / 1000. / speed
+        self.max_combo = 0
         self.creator = bmp.creator
         self.creator_id = map_creator["user_id"]
-        self.map_creator = Dict(map_creator)
+        self.map_creator = Dict(map_creator)  # todo make user object
         self.base_cs = bmp.cs
         self.base_ar = bmp.ar
         self.base_od = bmp.od
@@ -95,9 +93,9 @@ class MapStats:
 
         if link_type == "id":
             self.approved = 0
-            self.submit_date = arrow
-            self.approved_date = arrow
-            self.last_update = arrow
+            self.submit_date = None
+            self.approved_date = None
+            self.last_update = None
             self.beatmap_id = 0
             self.beatmapset_id = 0
             self.source = ""
@@ -109,8 +107,8 @@ class MapStats:
             self.rating = 0.0
             self.playcount = 0
             self.passcount = 0
-            self.download_unavailable = 0
-            self.audio_unavailable = 0
+            self.download_unavailable = False
+            self.audio_unavailable = False
 
             mods_applied = mod_int(mods)
             map_web = OSU_API.get("/get_beatmaps", {"b": map_id, "mods": mods_applied}).json()
@@ -122,6 +120,8 @@ class MapStats:
             self.submit_date = arrow.get(self.submit_date, DATE_FORM)
             self.approved_date = arrow.get(self.approved_date, DATE_FORM)
             self.last_update = arrow.get(self.last_update, DATE_FORM)
+            self.download_unavailable = bool(self.download_unavailable)
+            self.audio_unavailable = bool(self.audio_unavailable)
 
         try:
             self.leaderboard = get_leaderboard(map_id)
@@ -137,7 +137,7 @@ class MapStats:
         self.beatmap = bmp
 
 
-def stat_play(play: Play):
+def stat_play(play):
     """
     gets statistics on osu play and graph on play
 
@@ -260,7 +260,7 @@ def stat_play(play: Play):
     return recent
 
 
-def calculate_strains(mode_type: int, hit_objects: list, speed_multiplier: float) -> list:
+def calculate_strains(mode_type, hit_objects, speed_multiplier):
     """
     get strains of map at all times
 
@@ -294,7 +294,7 @@ def calculate_strains(mode_type: int, hit_objects: list, speed_multiplier: float
     return strains
 
 
-def get_strains(beatmap: oppa.OsuMap, mods: Union[list, set], mode: str = "") -> dict:
+def get_strains(beatmap, mods, mode=""):
     """
     get all stains in map
 
@@ -312,7 +312,7 @@ def get_strains(beatmap: oppa.OsuMap, mods: Union[list, set], mode: str = "") ->
     speed_strains = calculate_strains(0, beatmap.hitobjects, speed)
 
     star_strains = list()
-    max_strain = 0
+    max_strain = 0.
     strain_step = OsuConsts.STRAIN_STEP.value * speed
     strain_offset = math.floor(beatmap.hitobjects[0].starttime / strain_step) \
                     * strain_step - strain_step

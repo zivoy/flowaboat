@@ -1,7 +1,5 @@
 import asyncio
 import json
-from socket import socket
-from typing import Optional, Union
 
 import discord
 
@@ -13,9 +11,9 @@ from .utils import Dict, sanitize, Log
 
 class Broadcaster:
     def __init__(self, connection_socket):
-        self.socket: socket = connection_socket
+        self.socket = connection_socket
 
-    def send(self, message: discord.Message, port=12345):
+    def send(self, message, port=12345):
         guild = Dict({"id": None, "name": None}) if message.guild is None else message.guild
         channel = Dict({"id": message.channel.id, "name": "DM"}) \
             if isinstance(message.channel, discord.DMChannel) else message.channel
@@ -56,7 +54,7 @@ class DiscordInteractive:
     run a command on the main async loop
     useful for discord interaction channel
     """
-    loop: Optional[asyncio.AbstractEventLoop] = None
+    loop = None
 
     def interact(self, command, *args, **kwargs):
         future = asyncio.run_coroutine_threadsafe(self.__executor(command, *args, **kwargs), self.loop)
@@ -107,7 +105,7 @@ def command_help(command):
     return discord.Embed(title="ERROR", description="Command not found")
 
 
-async def help_me(message_obj: discord.Message, command: str):
+async def help_me(message_obj, command):
     """
     get help on command and post embed
 
@@ -117,8 +115,7 @@ async def help_me(message_obj: discord.Message, command: str):
     await getattr(commands, "help")().call({"message_obj": message_obj, "args": ["", command]})
 
 
-def fetch_emote(emote_name: str, guild: Union[None, discord.Guild], client: discord.Client) \
-        -> Union[bool, discord.Emoji]:
+def fetch_emote(emote_name, guild, client):
     """
     find an emote from its name in all servers the bot is part of
 
@@ -138,7 +135,7 @@ def fetch_emote(emote_name: str, guild: Union[None, discord.Guild], client: disc
     return valid[0]
 
 
-def get_user(args: list, ign: Optional[str], platfrom: str) -> str:
+def get_user(args, ign, platfrom):
     """
     extracts the users ign from input list or from the value provided
 

@@ -1,12 +1,11 @@
 from time import sleep
-from typing import Union
 
 import arrow
 import requests
 
 
 class Api:
-    def __init__(self, base_url: str, max_requests_per_minute: int = 60, params: dict = None):
+    def __init__(self, base_url, max_requests_per_minute=60, params=None):
         """
         expansion on the requests api that allows to limit requests and store base url as object
 
@@ -36,7 +35,7 @@ class Api:
         make get requests to api
 
         :param url: expands on base url
-        :param params: parameter dictionary
+        :param params: expands on parameter dictionary
         :return: requests response
         """
         self.clear_queue()
@@ -97,7 +96,7 @@ class Dict(dict):
         del self.__dict__[key]
 
 
-def sanitize(text: str) -> str:
+def sanitize(text):
     """
     remove all spacial characters from text
 
@@ -143,7 +142,7 @@ class Log:
         print(msg)
 
 
-def dict_string_to_nums(dictionary: dict) -> dict:
+def dict_string_to_nums(dictionary):
     """
     turns all strings that are numbers into numbers inside a dict
 
@@ -160,7 +159,7 @@ def dict_string_to_nums(dictionary: dict) -> dict:
     return dictionary
 
 
-def format_nums(number: Union[float, int], decimals: int) -> Union[int, float]:
+def format_nums(number, decimals):
     """
     rounds to a number of decimals and if possible makes  a integer from float
 
