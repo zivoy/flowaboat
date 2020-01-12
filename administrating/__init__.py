@@ -1,6 +1,6 @@
 from os import listdir
 
-from utils import sanitize
+from utils.utils import sanitize
 
 List = list()
 

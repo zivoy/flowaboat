@@ -1,7 +1,11 @@
 import discord
 
-import osu_utils
-from utils import Log, help_me, Users, DiscordInteractive
+from utils.config import Users
+from utils.discord import help_me, DiscordInteractive
+from utils.osu.graphing import graph_bpm
+from utils.osu.stating import MapStats
+from utils.osu.utils import get_map_link, parse_mods_string
+from utils.utils import Log
 
 interact = DiscordInteractive().interact
 
@@ -28,10 +32,10 @@ class Command:
         mods = []
         for i in args:
             if i.startswith("+"):
-                mods = osu_utils.parse_mods_string(i[1:])
+                mods = parse_mods_string(i[1:])
 
         if len(args) > 1 and not args[1].startswith("+"):
-            map_link, map_type = osu_utils.get_map_link(args[1])
+            map_link, map_type = get_map_link(args[1])
             Users().update_last_message(message.author.id, map_link, map_type, mods, 1, 1, user_data["osu_ign"], None)
         else:
             map_link, map_type = user_data["last_beatmap"]["map"]
@@ -43,7 +47,8 @@ class Command:
             await help_me(message, "map")
             return
 
-        bpm_graph = osu_utils.graph_bpm(map_link, mods, map_type)
+        map_obj = MapStats(map_link, mods, map_type)
+        bpm_graph = graph_bpm(map_obj)
 
         Log.log("Posting Graph")
         interact(message.channel.send, file=discord.File(bpm_graph, "BPM_Graph.png"))

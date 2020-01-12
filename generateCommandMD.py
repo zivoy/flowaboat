@@ -1,6 +1,7 @@
 import administrating
 import commands
-from utils import Config, sanitize
+from utils.config import Config
+from utils.utils import sanitize
 
 
 def generate(server=0):

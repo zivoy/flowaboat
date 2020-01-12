@@ -1,7 +1,13 @@
 import discord
 
-import osu_utils
-from utils import Log, help_me, UserNonexistent, get_user, DIGITS, Users, DiscordInteractive
+from utils import DIGITS
+from utils.config import Users
+from utils.discord import help_me, get_user, DiscordInteractive
+from utils.errors import UserNonexistent, NoPlays
+from utils.osu.apiTools import get_recent
+from utils.osu.embedding import embed_play
+from utils.osu.stating import stat_play
+from utils.utils import Log
 
 interact = DiscordInteractive().interact
 
@@ -49,14 +55,14 @@ class Command:
             index = int(index.captures(1)[0])
 
         try:
-            recent_play = osu_utils.get_recent(user, index)
-        except osu_utils.NoPlays as err:
+            recent_play = get_recent(user, index)
+        except NoPlays as err:
             interact(message.channel.send, f"`{err}`")
             Log.log(err)
             return
 
         try:
-            play_data = osu_utils.stat_play(recent_play)
+            play_data = stat_play(recent_play)
         except Exception as err:
             interact(message.channel.send, err)
             Log.error(err)
@@ -66,7 +72,7 @@ class Command:
                                     recent_play.enabled_mods, play_data.completion, recent_play.accuracy, user,
                                     play_data.replay)
 
-        embed = osu_utils.embed_play(play_data, client)
+        embed = embed_play(play_data, client)
         graph = discord.File(play_data.strain_bar, "strains_bar.png")
 
         interact(message.channel.send, file=graph, embed=embed)

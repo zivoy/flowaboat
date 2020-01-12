@@ -1,5 +1,6 @@
-import osu_utils
-from utils import Log, help_me, DiscordInteractive
+from utils.discord import help_me, DiscordInteractive
+from utils.osu.utils import CalculateMods
+from utils.utils import Log
 
 interact = DiscordInteractive().interact
 
@@ -36,7 +37,7 @@ class Command:
 
         mods = args[2].upper() if len(args) > 2 else ""
 
-        new_hp, mod_list = osu_utils.CalculateMods(mods).hp(hp)
+        new_hp, mod_list = CalculateMods(mods).hp(hp)
 
         output = ""
 

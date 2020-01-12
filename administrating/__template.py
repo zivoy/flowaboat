@@ -11,7 +11,7 @@ class Watcher:
         'action': "bot action"
     }]
 
-    def trigger(self, message_obj, client):
+    def trigger(self, message_obj, client, commandsLoop):
         # trigger function will get a message object and a client object as input
         # and must return something in the format of bool, payload
         # the bool is if the function triggered and the payload will be used in the function

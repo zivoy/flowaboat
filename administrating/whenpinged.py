@@ -1,6 +1,10 @@
 import discord
 
 from commands import flowaboat
+import asyncio
+from utils.discord import DiscordInteractive
+
+interact = DiscordInteractive().interact
 
 
 class Watcher:
@@ -16,8 +20,8 @@ class Watcher:
         'action': "returns flowaboat page"
     }]
 
-    def trigger(self, message_obj: discord.Message, client: discord.Client):
-        return message_obj.content in [f"<@!{client.user.id}>", client.user.mention], ""
+    def trigger(self, message_obj: discord.Message, client: discord.Client, commandsLoop):
+        return message_obj.content in [f"<@!{client.user.id}>", client.user.mention], commandsLoop
 
-    async def action(self, message_obj, _):
-        await flowaboat().call({"message_obj": message_obj})
+    async def action(self, message_obj, payload):
+        asyncio.run_coroutine_threadsafe(flowaboat().call({"message_obj": message_obj}), payload)

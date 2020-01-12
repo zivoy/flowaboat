@@ -1,8 +1,11 @@
 import json
 
-from utils import Log, DiscordInteractive
+from utils.discord import DiscordInteractive
+from utils.utils import Log
 
 interact = DiscordInteractive().interact
+
+muda_file = "./config/mudaSafe"
 
 
 class Command:
@@ -20,13 +23,13 @@ class Command:
         message = package["message_obj"]
         server = message.guild.id
         channel = message.channel.id
-        with open("./mudaSafe", "r") as serverList:  # will change
+        with open(muda_file, "r") as serverList:  # will change
             try:
                 allServers = json.load(serverList)
             except:
                 allServers = dict()
             allServers[server] = str(channel)
-        with open("./mudaSafe", "w") as serverList:
+        with open(muda_file, "w") as serverList:
             json.dump(allServers, serverList, indent="  ", sort_keys=True)
         msg = "<#{0}> is now the default channel for {1}".format(channel, server)
         Log.log(msg)

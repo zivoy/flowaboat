@@ -1,6 +1,7 @@
 import discord
 
-from utils import Config, DiscordInteractive
+from utils.config import Config
+from utils.discord import DiscordInteractive
 
 interact = DiscordInteractive().interact
 

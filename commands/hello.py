@@ -1,4 +1,5 @@
-from utils import Log, DiscordInteractive
+from utils.discord import DiscordInteractive
+from utils.utils import Log
 
 interact = DiscordInteractive().interact
 

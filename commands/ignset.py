@@ -1,4 +1,6 @@
-from utils import Log, sanitize, help_me, Users, DiscordInteractive
+from utils.config import Users
+from utils.discord import help_me, DiscordInteractive
+from utils.utils import Log, sanitize
 
 interact = DiscordInteractive().interact
 

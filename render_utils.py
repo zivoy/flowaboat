@@ -1,14 +1,15 @@
 """
 Module for rendering replays
 """
+# todo move into module
 import subprocess
 
 import gizeh
 import moviepy.editor as mpy
 import numpy as np
 import pandas as pd
-
 from osu_utils import speed_multiplier, CalculateMods
+
 # speed_multiplier = CalculateMods=None
 from replay_parser import get_action_at_time, SliderCurve, index_at_value
 

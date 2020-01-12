@@ -1,7 +1,7 @@
 import json
 import os
 
-from utils import Log
+from utils.utils import Log
 
 mudaWatchlist = dict()
 
@@ -38,7 +38,7 @@ class Watcher:
         'action': warn.format("userID", "mudaHomeChannelID", "!" * 84)
     }]
 
-    def trigger(self, message_obj, _):
+    def trigger(self, message_obj, _, d):
         string, sender, server, channel = str(message_obj.content), str(message_obj.author.id), \
                                           str(message_obj.guild.id), str(message_obj.channel.id)
 

@@ -6,11 +6,13 @@ from typing import Optional
 
 import discord
 
+from utils.config import Config, Users
+from utils.utils import sanitize, Log
 import commands
-from utils import sanitize, Log, Config, Users, help_me, Broadcaster, DiscordInteractive
-
 import administrating
 import generateCommandMD
+from utils.discord import Broadcaster, DiscordInteractive
+from utils.discord import help_me
 
 # Config().load()
 # Users().load()
@@ -69,7 +71,7 @@ async def on_message(message):
 
     elif Config.administer:
         for adm in administrating.List:
-            trig_bool, payload = adm.trigger(message, client)
+            trig_bool, payload = adm.trigger(message, client, commandsLoop)
             if trig_bool:
                 await adm.action(message, payload)
 

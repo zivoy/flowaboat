@@ -1,11 +1,12 @@
-from socket import socket, AF_INET, SOCK_DGRAM
 import datetime
-from typing import Optional
-from threading import Thread
-import pickle
+import json
 import os.path
+import pickle
+from socket import socket, AF_INET, SOCK_DGRAM
+from typing import Optional
 
-from utils import Log, help_me, json, Broadcaster, DiscordInteractive
+from utils.discord import help_me, Broadcaster, DiscordInteractive
+from utils.utils import Log
 
 interact = DiscordInteractive().interact
 
@@ -67,15 +68,15 @@ class Command:
             return
 
         if args[1].lower() == "list":
-            #todo
+            # todo
             return
 
         if args[1].lower() == "edit":
-            #todo
+            # todo
             return
 
         if args[1].lower() == "del":
-            #todo
+            # todo
             return
 
     def pingServer(self, server, channel):
@@ -117,6 +118,7 @@ class Command:
             uInput = listner.receive()
             if Broadcaster.is_by_author(message, uInput):
                 interact(message.channel.send, "bye")
+                break
 
 
 class Event:

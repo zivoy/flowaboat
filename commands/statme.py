@@ -4,7 +4,9 @@ import discord
 from arrow import get
 from skimage import io
 
-from utils import Log, SEPARATOR, DiscordInteractive
+from utils import SEPARATOR
+from utils.discord import DiscordInteractive
+from utils.utils import Log
 
 interact = DiscordInteractive().interact
 
@@ -70,16 +72,20 @@ class Command:
         avgInt = list(map(int, map(round, average)))
         color = "0x{0:02x}{1:02x}{2:02x}".format(*avgInt)
 
-        embed = discord.Embed().from_dict({
-            "color": int(color, 16),
-            "thumbnail": {
-                "url": str(user.avatar_url)
-            },
-            "footer": {
-                "text": f"On Discord since {get(user.created_at).humanize()} "
-                        f"{SEPARATOR} Joined on {get(user.created_at).format('dddd[,] MMMM Do YYYY [@] h:mm:ss A [UTC]')}"
-            }
-        })
+        embed = discord.Embed().from_dict(
+            {
+                "color": int(color, 16),
+                "thumbnail":
+                    {
+                        "url": str(user.avatar_url)
+                    },
+                "footer":
+                    {
+                        "text": f"On Discord since {get(user.created_at).humanize()} "
+                                f"{SEPARATOR} Joined on "
+                                f"{get(user.created_at).format('dddd[,] MMMM Do YYYY [@] h:mm:ss A [UTC]')}"
+                    }
+            })
         embed.add_field(name="ID", value=user.id, inline=True)
 
         stat_names = {

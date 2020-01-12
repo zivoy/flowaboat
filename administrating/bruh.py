@@ -1,4 +1,5 @@
-from utils import Log, fetch_emote
+from utils.discord import fetch_emote
+from utils.utils import Log
 
 
 class Watcher:
@@ -14,7 +15,7 @@ class Watcher:
         'action': "reacts with bruh"
     }]
 
-    def trigger(self, message_obj, client):
+    def trigger(self, message_obj, client, _):
         string = str(message_obj.content)
 
         if string.lower() == "/bruh":

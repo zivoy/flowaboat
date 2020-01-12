@@ -1,4 +1,6 @@
-from utils import Log, Config, help_me, command_help, DiscordInteractive
+from utils.config import Config
+from utils.discord import DiscordInteractive, help_me, command_help
+from utils.utils import Log
 
 interact = DiscordInteractive().interact
 
