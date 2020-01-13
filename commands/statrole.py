@@ -80,8 +80,8 @@ class Command:
         for i in entries:
             if i.target.id == role_obj.id:
                 embed.add_field(inline=True, name="Last Updated:",
-                                value=f"{get(i.created_at).format('dddd[,] MMMM Do YYYY [@] h:mm:ss A [UTC]')} " \
-                                      f"{SEPARATOR} " \
+                                value=f"{get(i.created_at).format('dddd[,] MMMM Do YYYY [@] h:mm:ss A [UTC]')} "
+                                      f"{SEPARATOR} "
                                       f"{get(i.created_at).humanize()}")
                 break
 

@@ -32,7 +32,7 @@ class Config(JasonFile):
         encPassword: str
 
 
-class Users():
+class Users(JasonFile):
     users: dict
 
     def add_user(self, uuid: str = ..., osu_ign: str = ..., steam_ign: str = ...) -> NoReturn: ...
