@@ -2,7 +2,7 @@ from utils.config import Users
 from utils.discord import help_me, DiscordInteractive
 from utils.utils import Log, sanitize
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:

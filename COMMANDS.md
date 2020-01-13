@@ -14,6 +14,7 @@
 - [o!schedule](#oschedule)
 - [o!set-muda](#oset-muda)
 - [o!statme](#ostatme)
+- [o!statrole](#ostatrole)
 - [o!top](#otop)
 ### Administrative functions
 - [badmuda](#badmuda)
@@ -344,6 +345,32 @@ Returns your information and stats.
 o!info tmanti
 ```
 Returns tmanti's stats.
+
+
+## o!statrole
+Show data on your user
+
+**Required variables**: `1`
+
+**Usage**: `o!statrole <role identifier>`
+
+#### Synonyms:
+
+`o!role`
+
+### Examples:
+
+```
+o!role guild master
+```
+Returns information in guild master role.
+
+
+
+```
+o!statrole 415349826578808842
+```
+Returns information on role.
 
 
 ## o!top

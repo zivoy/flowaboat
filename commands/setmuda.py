@@ -3,7 +3,7 @@ import json
 from utils.discord import DiscordInteractive
 from utils.utils import Log
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 muda_file = "./config/mudaSafe"
 

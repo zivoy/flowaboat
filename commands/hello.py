@@ -1,7 +1,7 @@
 from utils.discord import DiscordInteractive
 from utils.utils import Log
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:

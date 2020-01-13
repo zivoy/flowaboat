@@ -7,8 +7,9 @@ from skimage import io
 from utils import SEPARATOR
 from utils.discord import DiscordInteractive
 from utils.utils import Log
+from utils.errors import UserNonexistent
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:
@@ -45,14 +46,18 @@ class Command:
                 for i in client.users:
                     if i.name.lower() == name.lower():
                         user = i
-                        username = i.id
                         break
-                if username is None:
+                else:
                     for i in message.guild.members:
                         if i.nick.lower() == name.lower():
                             user = i
-                            username = i.id
                             break
+                    else:
+                        unknown_user = f"[{name}] user not found"
+                        Log.error(unknown_user)
+                        interact(message.channel.send, f"> {unknown_user}")
+                        raise UserNonexistent(name)
+
         if username:
             user = client.get_user(username)
             if user is None:
@@ -61,7 +66,7 @@ class Command:
                     unknown_user = f"[{name}] user not found"
                     Log.error(unknown_user)
                     interact(message.channel.send, f"> {unknown_user}")
-                    return
+                    raise UserNonexistent(name)
 
         logo = user.avatar_url_as(format="png", static_format='png', size=64)
         picture = interact(logo.read)

@@ -2,7 +2,7 @@ from utils.config import Config
 from utils.discord import DiscordInteractive, help_me, command_help
 from utils.utils import Log
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:

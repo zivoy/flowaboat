@@ -9,7 +9,7 @@ from utils.errors import UserNonexistent
 from utils.osu.utils import get_rank_emoji
 from utils.utils import Log
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:

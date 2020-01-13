@@ -7,7 +7,7 @@ from utils.osu.stating import MapStats
 from utils.osu.utils import get_map_link, parse_mods_string
 from utils.utils import Log
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:

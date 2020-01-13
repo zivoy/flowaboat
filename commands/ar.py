@@ -2,7 +2,7 @@ from utils.discord import help_me, DiscordInteractive
 from utils.osu.utils import CalculateMods
 from utils.utils import Log
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:

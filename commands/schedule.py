@@ -8,7 +8,7 @@ from typing import Optional
 from utils.discord import help_me, Broadcaster, DiscordInteractive
 from utils.utils import Log
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 pickle_file = "./config/schedule.pickle"
 

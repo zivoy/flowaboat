@@ -4,7 +4,7 @@ from commands import flowaboat
 import asyncio
 from utils.discord import DiscordInteractive
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Watcher:

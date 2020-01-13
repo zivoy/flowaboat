@@ -8,6 +8,9 @@ class JasonFile:
 
     def close_dir(self, obj: JasonFile = ..., info: dict = ...) -> NoReturn: ...
 
+    def load(self): ...
+
+    def save(self): ...
 
 class Config(JasonFile):
     prefix: str

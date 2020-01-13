@@ -56,8 +56,9 @@ class DiscordInteractive:
     """
     loop = None
 
-    def interact(self, command, *args, **kwargs):
-        future = asyncio.run_coroutine_threadsafe(self.__executor(command, *args, **kwargs), self.loop)
+    @classmethod
+    def interact(cls, command, *args, **kwargs):
+        future = asyncio.run_coroutine_threadsafe(cls.__executor(command, *args, **kwargs), cls.loop)
         return future.result(600)
 
     @staticmethod

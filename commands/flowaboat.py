@@ -3,7 +3,7 @@ import discord
 from utils.config import Config
 from utils.discord import DiscordInteractive
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:

@@ -9,7 +9,7 @@ from utils.osu.embedding import embed_play
 from utils.osu.stating import stat_play
 from utils.utils import Log
 
-interact = DiscordInteractive().interact
+interact = DiscordInteractive.interact
 
 
 class Command:
