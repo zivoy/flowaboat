@@ -8,6 +8,7 @@ import arrow
 
 from utils.discord import help_me, Broadcaster, DiscordInteractive, Question
 from utils.utils import Log
+import discord
 
 interact = DiscordInteractive.interact
 
@@ -94,25 +95,23 @@ class Command:
         repeat_after_days = None
         end_on = None
         repeats = False
-        interact(message.channel.send, "Say stop anytime to cancel")
+        m=discord.Embed(description="Say stop anytime to cancel")
+        orig = interact(message.channel.send, "\u200b", embed=m)
 
         liss = socket(AF_INET, SOCK_DGRAM)
         liss.bind(('', 12345))
         listner = Broadcaster(liss)
-        quiz = Question(listner, message)
-        messages = list()
+        quiz = Question(listner, orig, message)
 
-        reocur, mes = quiz.multiple_choice("Is the new event a:", ["one time event", "recurring event"])
-        messages.extend(mes)
+        reocur = quiz.multiple_choice("Is the new event a:", ["one time event", "recurring event"])
         if isinstance(reocur, bool) and not reocur:
-            return False, messages
+            return None
 
         if reocur:
-            repeat_after_days, mes = quiz.get_real_number(
+            repeat_after_days = quiz.get_real_number(
                 "What is the period of the repeating event in days", is_positive=True, minimum=1)
-            messages.extend(mes)
             if isinstance(repeat_after_days, bool) and not repeat_after_days:
-                return False, messages
+                return None
 
 
         new_event = Event(description, time_of_event, repeat_after_days, end_on)

@@ -72,106 +72,121 @@ class DiscordInteractive:
 
 
 class Question:
-    def __init__(self, listener, original_message):
+    def __init__(self, listener, original_message, sender):
         self.original = original_message
-        self.message_channel = original_message.channel
+        self.sender = sender
         self.listener = listener
 
     @staticmethod
     def stop_check(user_input):
         return user_input["content"].lower() in ["cancel", "stop"]
 
+    async def _delete_messages(self, messages):
+        for i in messages:
+            mess = await self.original.channel.fetch_message(i)
+            await mess.delete()
+
+    def delete_messages(self, messages):
+        DiscordInteractive.interact(self._delete_messages, messages)
+
     def multiple_choice(self, question, option_list):
         options = question+"\n>>> "
         options += "\n".join([f"`{i+1}` {j}" for i, j in enumerate(option_list)])
         messages = list()
 
-        m = DiscordInteractive.interact(self.message_channel.send, options)
-        messages.append(m.id)
+        DiscordInteractive.interact(self.original.edit, content=options)
         while True:
             uInput = self.listener.receive()
-            if Broadcaster.is_by_author(self.original, uInput):
+            if Broadcaster.is_by_author(self.sender, uInput):
                 # Log.log("input is", uInput)
                 messages.append(uInput["message_id"])
+                DiscordInteractive.interact(self.original.edit, embed=None)
                 if uInput["content"].isnumeric():
                     num = int(uInput["content"])
                     if 1 <= num <= len(option_list)+1:
-                        return num - 1, messages
+                        self.delete_messages(messages)
+                        return num - 1
                     else:
-                        DiscordInteractive.interact(self.message_channel.send,
-                                                    f"Please choose between `1` and `{len(option_list)+1}`")
+                        badin = discord.Embed(title="BAD INPUT",
+                                              description=f"Please choose between `1` and `{len(option_list)+1}`")
+                        DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
                 elif self.stop_check(uInput):
-                    return False, messages
+                    self.delete_messages(messages)
+                    return False
                 else:
-                    m-DiscordInteractive.interact(self.message_channel.send, "Please choose an integer")
-                    messages.append(m)
+                    badin = discord.Embed(title="BAD INPUT",
+                                          description="Please choose an integer")
+                    DiscordInteractive.interact(self.original.edit, embed=badin)
                     continue
 
     def get_real_number(self, question, is_integer=False, is_positive=False, minimum=None, maximum=None):
         messages = list()
 
-        m = DiscordInteractive.interact(self.message_channel.send, question)
-        messages.append(m.id)
+        DiscordInteractive.interact(self.original.edit, content=question)
         while True:
             uInput = self.listener.receive()
-            if Broadcaster.is_by_author(self.original, uInput):
+            if Broadcaster.is_by_author(self.sender, uInput):
                 # Log.log("input is", uInput)
                 messages.append(uInput["message_id"])
+                DiscordInteractive.interact(self.original.edit, embed=None)
                 if uInput["content"].replace(".", "", 1).isnumeric():
                     num = float(uInput["content"])
 
                     if is_integer and not num.is_integer():
-                        m = DiscordInteractive.interact(self.message_channel.send, "Please choose an integer")
-                        messages.append(m)
+                        badin = discord.Embed(title="BAD INPUT", description="Please choose an integer")
+                        DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
                     if is_positive and not num >= 0:
-                        m = DiscordInteractive.interact(self.message_channel.send, "Please choose a positive number")
-                        messages.append(m)
+                        badin = discord.Embed(title="BAD INPUT", description="Please choose a positive number")
+                        DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
                     if minimum is not None and num <= minimum:
-                        m = DiscordInteractive.interact(self.message_channel.send, f"The minimum number is {minimum}")
-                        messages.append(m)
+                        badin = discord.Embed(title="OUT OF BOUNDS", description=f"The minimum number is {minimum}")
+                        DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
                     if maximum is not None and maximum <= num:
-                        m = DiscordInteractive.interact(self.message_channel.send, f"The maximum number is {maximum}")
-                        messages.append(m)
+                        badin = discord.Embed(title="OUT OF BOUNDS", description=f"The maximum number is {maximum}")
+                        DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
 
-                    return num, messages
+                    self.delete_messages(messages)
+                    return num
                 elif self.stop_check(uInput):
-                    return False, messages
+                    self.delete_messages(messages)
+                    return False
                 else:
-                    m = DiscordInteractive.interact(self.message_channel.send, "Please choose a number")
-                    messages.append(m)
+                    badin = discord.Embed(title="BAD INPUT", description="Please choose a number")
+                    DiscordInteractive.interact(self.original.edit, embed=badin)
                     continue
 
     def get_string(self, question, confirm=False):
         messages = list()
 
-        m = DiscordInteractive.interact(self.message_channel.send, question)
-        messages.append(m.id)
+        DiscordInteractive.interact(self.original.edit, content=question)
         while True:
             uInput = self.listener.receive()
-            if Broadcaster.is_by_author(self.original, uInput):
+            if Broadcaster.is_by_author(self.sender, uInput):
                 # Log.log("input is", uInput)
                 messages.append(uInput["message_id"])
                 message = uInput["content"]
 
                 if self.stop_check(uInput):
-                    return False, messages
+                    self.delete_messages(messages)
+                    return False
 
                 if confirm:
-                    con, m=self.multiple_choice(
-                        f"Your message is \n```\n{message}\n```\nDo you confirm?",["Yes", "No"])
-                    messages.extend(m)
+                    con = self.multiple_choice(
+                        f"Your message is \n```\n{message}\n```\nDo you confirm?", ["Yes", "No"])
                     if isinstance(con, bool) and not con:
-                        return False, messages
+                        self.delete_messages(messages)
+                        return False
                     elif con:
-                        m = DiscordInteractive.interact(self.message_channel.send, question)
-                        messages.extend(m)
+                        DiscordInteractive.interact(self.original.edit, content=question)
                         continue
-                return message, messages
+
+                self.delete_messages(messages)
+                return message
 
 
 def command_help(command):
