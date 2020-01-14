@@ -108,6 +108,36 @@ class Question:
                     messages.append(m)
                     continue
 
+    def get_real_number(self, question, is_integer=False, is_positive=False):
+        messages = list()
+
+        m = DiscordInteractive.interact(self.message_channel.send, question)
+        messages.append(m.id)
+        while True:
+            uInput = self.listener.receive()
+            if Broadcaster.is_by_author(self.original, uInput):
+                # Log.log("input is", uInput)
+                messages.append(uInput["message_id"])
+                if uInput["content"].replace(".", "", 1).isnumeric():
+                    num = float(uInput["content"])
+
+                    if is_integer and not num.is_integer():
+                        m = DiscordInteractive.interact(self.message_channel.send, "Please choose an integer")
+                        messages.append(m)
+                        continue
+                    if is_positive and not num >= 0:
+                        m = DiscordInteractive.interact(self.message_channel.send, "Please choose a positive number")
+                        messages.append(m)
+                        continue
+
+                    return num, messages
+                elif self.stop_check(uInput):
+                    return False, messages
+                else:
+                    m = DiscordInteractive.interact(self.message_channel.send, "Please choose a number")
+                    messages.append(m)
+                    continue
+
     def get_string(self, question, confirm=False):
         messages = list()
 
