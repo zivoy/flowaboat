@@ -281,7 +281,7 @@ Possible Commands:
 
 **Required variables**: `1`
 
-**Usage**: `o!schedule <command>`
+**Usage**: `o!schedule <command> [any data required]`
 
 #### Synonyms:
 

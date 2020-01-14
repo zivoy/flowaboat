@@ -46,7 +46,8 @@ class Question:
     message_channel: discord.TextChannel
     listener: Broadcaster
     def multiple_choice(self, question: str, option_list: List[str]) -> Tuple[Union[bool, int], List[int]]: ...
-    def get_real_number(self, question: str = ..., is_integer: bool = ..., is_positive: bool = ...)\
+    def get_real_number(self, question: str = ..., is_integer: bool = ..., is_positive: bool = ...,
+                        minimum: Optional[Union[int,float]] = ..., maximum: Optional[Union[int,float]] = ...)\
             -> Tuple[Union[bool, float, int], List[int]]: ...
     @staticmethod
     def stop_check(user_input: _Message) -> bool: ...

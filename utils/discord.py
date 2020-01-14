@@ -108,7 +108,7 @@ class Question:
                     messages.append(m)
                     continue
 
-    def get_real_number(self, question, is_integer=False, is_positive=False):
+    def get_real_number(self, question, is_integer=False, is_positive=False, minimum=None, maximum=None):
         messages = list()
 
         m = DiscordInteractive.interact(self.message_channel.send, question)
@@ -127,6 +127,14 @@ class Question:
                         continue
                     if is_positive and not num >= 0:
                         m = DiscordInteractive.interact(self.message_channel.send, "Please choose a positive number")
+                        messages.append(m)
+                        continue
+                    if minimum is not None and num <= minimum:
+                        m = DiscordInteractive.interact(self.message_channel.send, f"The minimum number is {minimum}")
+                        messages.append(m)
+                        continue
+                    if maximum is not None and maximum <= num:
+                        m = DiscordInteractive.interact(self.message_channel.send, f"The maximum number is {maximum}")
                         messages.append(m)
                         continue
 

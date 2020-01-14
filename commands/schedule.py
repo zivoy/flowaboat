@@ -109,7 +109,7 @@ class Command:
 
         if reocur:
             repeat_after_days, mes = quiz.get_real_number(
-                "What is the period of the repeating event in days", is_positive=True)
+                "What is the period of the repeating event in days", is_positive=True, minimum=1)
             messages.extend(mes)
             if isinstance(repeat_after_days, bool) and not repeat_after_days:
                 return False, messages
