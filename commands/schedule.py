@@ -3,10 +3,10 @@ import json
 import os.path
 import pickle
 from socket import socket, AF_INET, SOCK_DGRAM
-from typing import Optional
+from typing import Optional, Union
 import arrow
 
-from utils.discord import help_me, Broadcaster, DiscordInteractive
+from utils.discord import help_me, Broadcaster, DiscordInteractive, Question
 from utils.utils import Log
 
 interact = DiscordInteractive.interact
@@ -40,7 +40,7 @@ class Command:
                   "\n\tdel  -- Deletes event" \
                   "\n\tedit -- Walks you through the process of editing an event\n```"
     argsRequired = 1
-    usage = "<command>"
+    usage = "<command> [any data required]"
     examples = [{
         'run': "sched init",
         'result': "Sets the current channel as ping channel."
@@ -88,77 +88,53 @@ class Command:
             json.dump(srvs, serverList, indent="  ", sort_keys=True)
 
     @staticmethod
-    def newEvent(message, description=None, time_of_event=None, repeat_after_days=None, end_on=None):
+    def newEvent(message):
+        description = None
+        time_of_event = None
+        repeat_after_days = None
+        end_on = None
         repeats = False
         interact(message.channel.send, "Say stop anytime to cancel")
 
         liss = socket(AF_INET, SOCK_DGRAM)
         liss.bind(('', 12345))
         listner = Broadcaster(liss)
+        quiz = Question(listner, message)
+        messages = list()
 
-        if repeat_after_days is None:
-            interact(message.channel.send, "Is the new event a:\n>>> `(1)` one time event\n`(2)` recurring event")
-            while True:
-                uInput = listner.receive()
-                Log.log("input is", uInput)
-                if Broadcaster.is_by_author(message, uInput):
-                    if uInput["content"].isnumeric():
-                        num = int(uInput["content"])
-                        if num == 1:
-                            break
-                        elif num == 2:
-                            repeats = True
-                            break
-                        else:
-                            interact(message.channel.send, "`1` or `2`")
-                            continue
-                    elif stop_check(uInput):
-                        return
+        reocur, mes = quiz.multiple_choice("Is the new event a:", ["one time event", "recurring event"])
+        messages.extend(mes)
+        if isinstance(reocur, bool) and not reocur:
+            return False, messages
 
-            if repeats:
-                interact(message.channel.send, "What is the period of the repeating event in days")
-                while True:
-                    uInput = listner.receive()
-                    if Broadcaster.is_by_author(message, uInput):
-                        if uInput["content"].isnumeric():
-                            repeat_after_days = int(uInput["content"])
-                        elif stop_check(uInput):
-                            return
-                        else:
-                            interact(message.channel.send, "Please choose a number")
-                            continue
-
-                interact(message.channel.send, "What is the last")
-                while True:
-                    uInput = listner.receive()
-                    if Broadcaster.is_by_author(message, uInput):
-                        if uInput["content"].isnumeric():
-                            repeat_after_days = int(uInput["content"])
-                        elif stop_check(uInput):
-                            return
-                        else:
-                            interact(message.channel.send, "Please choose a number")
-                            continue
-
-        new_event = Event()
+        if reocur:
+            repeat_after_days, mes = quiz.get_real_number(
+                "What is the period of the repeating event in days", is_positive=True)
+            messages.extend(mes)
+            if isinstance(repeat_after_days, bool) and not repeat_after_days:
+                return False, messages
 
 
-def stop_check(user_input):
-    return user_input["content"].lower() in ["cancel", "stop"]
+        new_event = Event(description, time_of_event, repeat_after_days, end_on)
 
 
-def get_date(*, string=None, timedate=None, timezone=None):
-    if string is None and timedate is None and timezone is None:
+def get_date(*, unix=None, timedate=None, timezone=None):
+    if unix is None and timedate is None and timezone is None:
         return None
-    if string is not None and timedate is None and timezone is None:
-        timedate = '2015/12/1 19:00:00'
-        timezone = "US/Eastern"
-    arrow.get(timedate, 'YYYY/M/D HH:mm').replace(tzinfo=timezone)
+    if unix is not None and timedate is None and timezone is None:
+        if len(str(unix)) > 10:
+            unix = int(str(unix)[:10])
+        if isinstance(unix, str):
+            unix = int(unix)
+        date = arrow.get(unix)
+    else:
+        date = arrow.get(timedate, 'YYYY/M/D HH:mm').replace(tzinfo=timezone)
+    return date
 
 
 class Event:
     def __init__(self, description: str, time_of_event: datetime.datetime,
-                 repeat_after_days: Optional[int] = None, end_on: Optional[datetime.datetime] = None,
+                 repeat_after_days: Optional[Union[int, float]] = None, end_on: Optional[datetime.datetime] = None,
                  initial_time: Optional[datetime.datetime] = None):
         self.description: str = description
         self.time_of_event: datetime.datetime = time_of_event

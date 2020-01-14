@@ -40,8 +40,8 @@ async def on_message(message):
         Users().load()
         Users().add_user(message.author.id)
 
-        mess = message.content.split(" ")
-        mess[0] = mess[0][len(Config.prefix):]
+        mess = message.content[len(Config.prefix):]
+        mess = mess.split(" ")
         command = mess[0]
 
         package = {

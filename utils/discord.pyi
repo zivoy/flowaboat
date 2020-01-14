@@ -1,6 +1,6 @@
 import asyncio
 import socket
-from typing import Optional, Union, NoReturn, TypedDict
+from typing import Optional, Union, NoReturn, TypedDict, List, Tuple
 
 import discord
 
@@ -28,7 +28,7 @@ class Broadcaster:
     def receive(self, bytes_to_receive: int = ...) -> _Message: ...
 
     @staticmethod
-    def is_by_author(original: discord.Message, new: _Message) -> bool: ...
+    def is_by_author(original: Union[discord.Message, _Message], new: _Message) -> bool: ...
 
 
 class DiscordInteractive:
@@ -40,15 +40,19 @@ class DiscordInteractive:
     @staticmethod
     def __executor(command, *args, **kwargs): ...
 
+class Question:
+    def __init__(self, listener: Broadcaster, original_message: discord.Message): ...
+    original: discord.Message
+    message_channel: discord.TextChannel
+    listener: Broadcaster
+    def multiple_choice(self, question: str, option_list: List[str]) -> Tuple[Union[bool, int], List[int]] : ...
+    def get_real_number(self, question: str = ..., is_integer: bool = ..., is_positive: bool = ...): ...
+    @staticmethod
+    def stop_check(user_input: _Message) -> bool: ...
+
 
 def command_help(command: str) -> discord.Embed: ...
-
-
-def help_me(message_obj: discord.Message, command: str): ...
-
-
+async def help_me(message_obj: discord.Message, command: str): ...
 def fetch_emote(emote_name: str, guild: Optional[discord.Guild], client: discord.Client) \
         -> Union[bool, discord.Emoji]: ...
-
-
 def get_user(args: list, ign: Optional[str], platfrom: str) -> str: ...

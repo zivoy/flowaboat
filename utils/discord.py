@@ -43,9 +43,14 @@ class Broadcaster:
 
     @staticmethod
     def is_by_author(original, new):
-        guild = None if original.guild is None else original.guild.id
-        channel = original.channel.id
-        name = original.author.id
+        if isinstance(original, discord.Message):
+            guild = None if original.guild is None else original.guild.id
+            channel = original.channel.id
+            name = original.author.id
+        else:
+            guild= original["guild"]["id"]
+            channel = original["channel"]["id"]
+            name = original["sender"]["id"]
         return new["guild"]["id"] == guild and channel == new["channel"]["id"] and new["sender"]["id"] == name
 
 
@@ -64,6 +69,71 @@ class DiscordInteractive:
     @staticmethod
     async def __executor(command, *args, **kwargs):
         return await command(*args, **kwargs)
+
+
+class Question:
+    def __init__(self, listener, original_message):
+        self.original = original_message
+        self.message_channel = original_message.channel
+        self.listener = listener
+
+    @staticmethod
+    def stop_check(user_input):
+        return user_input["content"].lower() in ["cancel", "stop"]
+
+    def multiple_choice(self, question, option_list):
+        options = question+"\n>>> "
+        options += "\n".join([f"`{i+1}` {j}" for i, j in enumerate(option_list)])
+        messages = list()
+
+        m = DiscordInteractive.interact(self.message_channel.send, options)
+        messages.append(m.id)
+        while True:
+            uInput = self.listener.receive()
+            if Broadcaster.is_by_author(self.original, uInput):
+                # Log.log("input is", uInput)
+                messages.append(uInput["message_id"])
+                if uInput["content"].isnumeric():
+                    num = int(uInput["content"])
+                    if 1 <= num <= len(option_list)+1:
+                        return num - 1, messages
+                    else:
+                        DiscordInteractive.interact(self.message_channel.send,
+                                                    f"Please choose between `1` and `{len(option_list)+1}`")
+                        continue
+                elif self.stop_check(uInput):
+                    return False, messages
+                else:
+                    m-DiscordInteractive.interact(self.message_channel.send, "Please choose an integer")
+                    messages.append(m)
+                    continue
+
+    def get_string(self, question, confirm=False):
+        messages = list()
+
+        m = DiscordInteractive.interact(self.message_channel.send, question)
+        messages.append(m.id)
+        while True:
+            uInput = self.listener.receive()
+            if Broadcaster.is_by_author(self.original, uInput):
+                # Log.log("input is", uInput)
+                messages.append(uInput["message_id"])
+                message = uInput["content"]
+
+                if self.stop_check(uInput):
+                    return False, messages
+
+                if confirm:
+                    con, m=self.multiple_choice(
+                        f"Your message is \n```\n{message}\n```\nDo you confirm?",["Yes", "No"])
+                    messages.extend(m)
+                    if isinstance(con, bool) and not con:
+                        return False, messages
+                    elif con:
+                        m = DiscordInteractive.interact(self.message_channel.send, question)
+                        messages.extend(m)
+                        continue
+                return message, messages
 
 
 def command_help(command):
