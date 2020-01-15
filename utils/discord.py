@@ -6,8 +6,10 @@ import discord
 import commands
 from .config import Config, Users
 from .errors import UserNonexistent
-from .utils import Dict, sanitize, Log
+from .utils import Dict, sanitize, Log, validate_date
 import requests
+import regex
+from io import BytesIO
 
 
 class Broadcaster:
@@ -89,6 +91,8 @@ class Question:
 
     def delete_messages(self, messages):
         DiscordInteractive.interact(self._delete_messages, messages)
+        for i, _ in enumerate(messages):
+            del messages[i]
 
     def multiple_choice(self, question, option_list):
         options = question+"\n>>> "
@@ -106,6 +110,7 @@ class Question:
                     num = int(uInput["content"])
                     if 1 <= num <= len(option_list)+1:
                         self.delete_messages(messages)
+                        DiscordInteractive.interact(self.original.edit, embed=None)
                         return num - 1
                     else:
                         badin = discord.Embed(title="BAD INPUT",
@@ -131,18 +136,18 @@ class Question:
                 # Log.log("input is", uInput)
                 messages.append(uInput["message_id"])
                 DiscordInteractive.interact(self.original.edit, embed=None)
-                if uInput["content"].replace(".", "", 1).isnumeric():
+                if uInput["content"].replace(".", "", 1).replace("-", "", 1).replace("+", "", 1).isnumeric():
                     num = float(uInput["content"])
 
                     if is_integer and not num.is_integer():
                         badin = discord.Embed(title="BAD INPUT", description="Please choose an integer")
                         DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
-                    if is_positive and not num >= 0:
+                    if is_positive and not num > 0:
                         badin = discord.Embed(title="BAD INPUT", description="Please choose a positive number")
                         DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
-                    if minimum is not None and num <= minimum:
+                    if minimum is not None and num < minimum:
                         badin = discord.Embed(title="OUT OF BOUNDS", description=f"The minimum number is {minimum}")
                         DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
@@ -152,6 +157,7 @@ class Question:
                         continue
 
                     self.delete_messages(messages)
+                    DiscordInteractive.interact(self.original.edit, embed=None)
                     return num
                 elif self.stop_check(uInput):
                     self.delete_messages(messages)
@@ -177,23 +183,81 @@ class Question:
                     return False
 
                 if confirm:
+                    self.delete_messages(messages)
                     con = self.multiple_choice(
                         f"Your message is \n```\n{message}\n```\nDo you confirm?", ["Yes", "No"])
                     if isinstance(con, bool) and not con:
                         self.delete_messages(messages)
                         return False
-                    elif con:
+                    if con == 0:
+                        return message
+                    else:
                         DiscordInteractive.interact(self.original.edit, content=question)
-                        self.delete_messages(messages)
-                        messages = list()
                         continue
 
                 self.delete_messages(messages)
+                DiscordInteractive.interact(self.original.edit, embed=None)
                 return message
 
-    def get_date(self, question):
+    def get_date(self, question, required=True, tzinfo=None):
         image = requests.get("http://c.tadst.com/gfx/tzmap/map.1578751200.png", allow_redirects=True).content
-        map_file = discord.File(image, "timezonemap.png")
+        map_file = discord.File(BytesIO(image), "timezonemap.png")
+        date_form = regex.compile(r"^(?:\d\d\d\d)([- \/.])(?:0?[1-9]|1[012])\1(?:0[1-9]|[12][0-9]|3[01])$")
+
+        if not required:
+            sub = self.multiple_choice(question+"\n\n This is not required", ["Submit a date", "Leave blank"])
+            if sub:
+                return None, tzinfo
+
+        if tzinfo is None:
+            DiscordInteractive.interact(self.original.edit, embed=None)
+            mep = DiscordInteractive.interact(self.original.channel.send, file=map_file)
+            tzinfo = self.get_real_number("What is your time zone?\npick from the image", True, False, -11, 12)
+            if isinstance(tzinfo, bool) and not tzinfo:
+                return False
+            tzinfo = -tzinfo
+            DiscordInteractive.interact(mep.delete)
+
+        while True:
+            date_str = self.get_string(question+"\n\nInput the date in the format:\n> year/month/day")
+            if isinstance(date_str, bool) and not date_str:
+                return False, None
+            badin = discord.Embed(title="BAD DATE", description="Input should be like 2015/04/16")
+            if date_form.search(date_str):
+                seperator = date_form.search(date_str).groups(1)[0]
+                date_frms = ["YYYY{0}M{0}D",
+                             "YYYY{0}M{0}DD",
+                             "YYYY{0}MM{0}D",
+                             "YYYY{0}MM{0}DD"]
+                for i in date_frms:
+                    date_frm = i.format(seperator)
+                    date = validate_date(date_str, date_frm, tzinfo=f"gmt{tzinfo}")
+                    if date:
+                        break
+                else:
+                    DiscordInteractive.interact(self.original.edit, embed=badin)
+                    continue
+                break
+            else:
+                DiscordInteractive.interact(self.original.edit, embed=badin)
+                continue
+
+        while True:
+            DiscordInteractive.interact(self.original.edit, embed=None)
+            time_str = self.get_string(question + "\n\nInput the time in 24 hour format:\n> hours:minuets")
+            if isinstance(time_str, bool) and not time_str:
+                return False, None
+            time = regex.search(r"^([01]?\d|2[0-3]):([0-5]\d)$", time_str)
+            if time:
+                date = date.shift(hours=int(time.group(1)[0]), minutes=int(time.groups(2)[0]))
+                break
+            else:
+                badin = discord.Embed(title="BAD TIME", description="Input should be like 13:30")
+                DiscordInteractive.interact(self.original.edit, embed=badin)
+                continue
+
+        DiscordInteractive.interact(self.original.edit, embed=None)
+        return date, tzinfo
 
 
 def command_help(command):

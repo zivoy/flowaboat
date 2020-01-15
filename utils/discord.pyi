@@ -1,7 +1,8 @@
 import asyncio
 import socket
-from typing import Optional, Union, NoReturn, TypedDict, List
+from typing import Optional, Union, NoReturn, TypedDict, List, Tuple
 
+import arrow
 import discord
 
 
@@ -55,6 +56,9 @@ class Question:
 
     async def _delete_messages(self, messages: List[int]) -> NoReturn: ...
     def delete_messages(self, messages: List[int]) -> NoReturn: ...
+    def get_date(self, question: str, required: bool = ..., tzinfo: Optional[int] = ...) \
+            -> Tuple[arrow.Arrow, Optional[int]] : ...
+
 
 
 

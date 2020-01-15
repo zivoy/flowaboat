@@ -171,3 +171,10 @@ def format_nums(number, decimals):
         return int(f"{number:.0f}")
 
     return float(f"{number:.{decimals}f}")
+
+
+def validate_date(date_text, date_format, **kwargs):
+    try:
+        return arrow.get(date_text, date_format, **kwargs)
+    except ValueError:
+        return False
