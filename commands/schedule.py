@@ -89,19 +89,22 @@ class Command:
             json.dump(srvs, serverList, indent="  ", sort_keys=True)
 
     @staticmethod
-    def newEvent(message):
-        description = None
+    def newEvent(message: discord.Message):
         time_of_event = None
         repeat_after_days = None
         end_on = None
         repeats = False
         m=discord.Embed(description="Say stop anytime to cancel")
-        orig = interact(message.channel.send, "\u200b", embed=m)
+        orig: discord.Message = interact(message.channel.send, "\u200b", embed=m)
 
         liss = socket(AF_INET, SOCK_DGRAM)
         liss.bind(('', 12345))
         listner = Broadcaster(liss)
         quiz = Question(listner, orig, message)
+
+        description = quiz.get_string("What is the message of the event?", confirm=True)
+        if isinstance(description, bool) and not description:
+            return None
 
         reocur = quiz.multiple_choice("Is the new event a:", ["one time event", "recurring event"])
         if isinstance(reocur, bool) and not reocur:
@@ -113,8 +116,9 @@ class Command:
             if isinstance(repeat_after_days, bool) and not repeat_after_days:
                 return None
 
-
-        new_event = Event(description, time_of_event, repeat_after_days, end_on)
+        interact(orig.delete)
+        #new_event = Event(description, time_of_event, repeat_after_days, end_on)
+        interact(message.channel.send, "creating event")
 
 
 def get_date(*, unix=None, timedate=None, timezone=None):

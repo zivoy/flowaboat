@@ -7,6 +7,7 @@ import commands
 from .config import Config, Users
 from .errors import UserNonexistent
 from .utils import Dict, sanitize, Log
+import requests
 
 
 class Broadcaster:
@@ -183,10 +184,16 @@ class Question:
                         return False
                     elif con:
                         DiscordInteractive.interact(self.original.edit, content=question)
+                        self.delete_messages(messages)
+                        messages = list()
                         continue
 
                 self.delete_messages(messages)
                 return message
+
+    def get_date(self, question):
+        image = requests.get("http://c.tadst.com/gfx/tzmap/map.1578751200.png", allow_redirects=True).content
+        map_file = discord.File(image, "timezonemap.png")
 
 
 def command_help(command):
