@@ -1,15 +1,15 @@
 import asyncio
 import json
+from io import BytesIO
 
 import discord
+import regex
+import requests
 
 import commands
 from .config import Config, Users
 from .errors import UserNonexistent
 from .utils import Dict, sanitize, Log, validate_date
-import requests
-import regex
-from io import BytesIO
 
 
 class Broadcaster:
@@ -51,7 +51,7 @@ class Broadcaster:
             channel = original.channel.id
             name = original.author.id
         else:
-            guild= original["guild"]["id"]
+            guild = original["guild"]["id"]
             channel = original["channel"]["id"]
             name = original["sender"]["id"]
         return new["guild"]["id"] == guild and channel == new["channel"]["id"] and new["sender"]["id"] == name
@@ -95,8 +95,8 @@ class Question:
             del messages[i]
 
     def multiple_choice(self, question, option_list):
-        options = question+"\n>>> "
-        options += "\n".join([f"`{i+1}` {j}" for i, j in enumerate(option_list)])
+        options = question + "\n>>> "
+        options += "\n".join([f"`{i + 1}` {j}" for i, j in enumerate(option_list)])
         messages = list()
 
         DiscordInteractive.interact(self.original.edit, content=options)
@@ -108,13 +108,13 @@ class Question:
                 DiscordInteractive.interact(self.original.edit, embed=None)
                 if uInput["content"].isnumeric():
                     num = int(uInput["content"])
-                    if 1 <= num <= len(option_list)+1:
+                    if 1 <= num <= len(option_list) + 1:
                         self.delete_messages(messages)
                         DiscordInteractive.interact(self.original.edit, embed=None)
                         return num - 1
                     else:
                         badin = discord.Embed(title="BAD INPUT",
-                                              description=f"Please choose between `1` and `{len(option_list)+1}`")
+                                              description=f"Please choose between `1` and `{len(option_list) + 1}`")
                         DiscordInteractive.interact(self.original.edit, embed=badin)
                         continue
                 elif self.stop_check(uInput):
@@ -205,7 +205,7 @@ class Question:
         date_form = regex.compile(r"^(?:\d\d\d\d)([- \/.])(?:0?[1-9]|1[012])\1(?:0[1-9]|[12][0-9]|3[01])$")
 
         if not required:
-            sub = self.multiple_choice(question+"\n\n This is not required", ["Submit a date", "Leave blank"])
+            sub = self.multiple_choice(question + "\n\n This is not required", ["Submit a date", "Leave blank"])
             if sub:
                 return None, tzinfo
 
@@ -215,23 +215,22 @@ class Question:
             tzinfo = self.get_real_number("What is your time zone?\npick from the image", True, False, -11, 12)
             if isinstance(tzinfo, bool) and not tzinfo:
                 return False
-            tzinfo = -tzinfo
             DiscordInteractive.interact(mep.delete)
 
         while True:
-            date_str = self.get_string(question+"\n\nInput the date in the format:\n> year/month/day")
+            date_str = self.get_string(question + "\n\nInput the date in the format:\n> year/month/day")
             if isinstance(date_str, bool) and not date_str:
                 return False, None
             badin = discord.Embed(title="BAD DATE", description="Input should be like 2015/04/16")
             if date_form.search(date_str):
-                seperator = date_form.search(date_str).groups(1)[0]
+                seperator = date_form.search(date_str).group(1)
                 date_frms = ["YYYY{0}M{0}D",
-                             "YYYY{0}M{0}DD",
                              "YYYY{0}MM{0}D",
+                             "YYYY{0}M{0}DD",
                              "YYYY{0}MM{0}DD"]
                 for i in date_frms:
                     date_frm = i.format(seperator)
-                    date = validate_date(date_str, date_frm, tzinfo=f"gmt{tzinfo}")
+                    date = validate_date(date_str, date_frm, tzinfo=f"gmt{-tzinfo}")
                     if date:
                         break
                 else:
@@ -249,7 +248,7 @@ class Question:
                 return False, None
             time = regex.search(r"^([01]?\d|2[0-3]):([0-5]\d)$", time_str)
             if time:
-                date = date.shift(hours=int(time.group(1)[0]), minutes=int(time.groups(2)[0]))
+                date = date.shift(hours=int(time.group(1)), minutes=int(time.group(2)))
                 break
             else:
                 badin = discord.Embed(title="BAD TIME", description="Input should be like 13:30")

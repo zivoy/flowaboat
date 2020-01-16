@@ -57,7 +57,7 @@ class Watcher:
 
                 if channel in mudaWatchlist[server]:
                     length = len(self.lengthMes.format(message_obj.author.name, message_obj.channel.name))
-                    return True, [mudaWatchlist[server][channel], allServers[server], "!" * int(length * 1.05)]
+                    return True, [mudaWatchlist[server][channel], allServers[server], "!" * int(length * 1.5)]
 
                 return False, ""
         return False, ""

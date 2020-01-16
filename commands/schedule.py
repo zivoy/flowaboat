@@ -9,7 +9,7 @@ import arrow
 from utils.discord import help_me, Broadcaster, DiscordInteractive, Question
 from utils.utils import Log
 import discord
-from utils import DATE_FORM
+from utils import DATE_FORM, SEPARATOR
 
 interact = DiscordInteractive.interact
 
@@ -69,7 +69,6 @@ class Command:
         if args[1].lower() == "new":
             event = self.newEvent(message)
             if event is None:
-                interact(message.delete)
                 interact(message.channel.send, "Canceled")
 
             events.append(event)
@@ -109,41 +108,56 @@ class Command:
 
         description = quiz.get_string("What is the message of the event?", confirm=True)
         if isinstance(description, bool) and not description:
+            interact(orig.delete)
             return None
 
         time_of_event, timezone = quiz.get_date("What is the time of this event?", True)
         if isinstance(time_of_event, bool) and not time_of_event:
+            interact(orig.delete)
             return None
-        time_of_event_date_time = time_of_event.datetime
+        time_of_event_date_time = time_of_event.to("utc").datetime
 
         reocur = quiz.multiple_choice("Is the new event a:", ["one time event", "recurring event"])
         if isinstance(reocur, bool) and not reocur:
+            interact(orig.delete)
             return None
 
         if reocur:
             repeat_after_days = quiz.get_real_number(
                 "What is the period of the repeating event in days", is_positive=True, minimum=1)
             if isinstance(repeat_after_days, bool) and not repeat_after_days:
+                interact(orig.delete)
                 return None
 
             end_on, _ = quiz.get_date("When does this event end?", False, timezone)
             if isinstance(end_on, bool) and not end_on:
+                interact(orig.delete)
                 return None
 
         if end_on is not None:
-            end_on_date_time = end_on.datetime
+            end_on_date_time = end_on.to("utc").datetime
 
         interact(orig.delete)
         new_event = Event(description, time_of_event_date_time, repeat_after_days, end_on_date_time)
+
         event_str = f"Creating event\n```\n{description}\n```\n"
-        event_str += f"Will happen {time_of_event.humanize()} ({time_of_event.format(DATE_FORM)})\n"
+        event_str += f"Will happen {time_of_event.humanize()} ({time_of_event.format(DATE_FORM)} " \
+                     f"UTC{'+' if not timezone < 0 else ''}{timezone})"
+        if time_of_event.isoformat() != time_of_event.to("utc").isoformat():
+            event_str += f" {SEPARATOR} ({time_of_event.to('utc').format(DATE_FORM)} UTC)"
+        event_str += "\n"
         if repeat_after_days is not None:
             event_str += f"And will repeat every {repeat_after_days} day{'s' if repeat_after_days>1 else ''}\n"
         if end_on is not None:
-            event_str += f"it will end {end_on.humanize()} ({end_on.format(DATE_FORM)})"
-        else:
+            event_str += f"it will end {end_on.humanize()} ({end_on.format(DATE_FORM)} " \
+                         f"UTC{'+' if timezone >= 0 else ''}{timezone}))"
+            if end_on.isoformat() != end_on.to("utc").isoformat():
+                event_str += f" {SEPARATOR} ({end_on.to('utc').format(DATE_FORM)} UTC)"
+            event_str += "\n"
+        if end_on is None and repeat_after_days is not None:
             event_str += "It will never end unless deleted"
         interact(message.channel.send, event_str)
+        del quiz, liss, listner, message, orig
         return new_event
 
 
