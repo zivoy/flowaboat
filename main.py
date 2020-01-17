@@ -14,6 +14,7 @@ import administrating
 import generateCommandMD
 from utils.discord import Broadcaster, DiscordInteractive
 from utils.discord import help_me
+import utils.discord as util_discord
 
 # Config().load()
 # Users().load()
@@ -30,7 +31,8 @@ commandsLoop: Optional[asyncio.AbstractEventLoop] = None
 @client.event
 async def on_message(message):
     Log.log(f"{message.author.name}@{message.channel}: {message.content}")
-
+    DiscordInteractive.client = client
+    DiscordInteractive.loop = asyncio.get_event_loop()
     if message.author == client.user:
         return
 
@@ -92,6 +94,7 @@ async def on_ready():
     Log.log(client.user.name)
     Log.log(client.user.id)
     Log.log('------')
+    DiscordInteractive.client = client
     DiscordInteractive.loop = asyncio.get_event_loop()  # message loop
     commandsLoop = asyncio.new_event_loop()
     workerThread = Thread(target=start_background_loop, args=(commandsLoop,), daemon=True)

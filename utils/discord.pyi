@@ -34,6 +34,7 @@ class Broadcaster:
 
 class DiscordInteractive:
     loop: Optional[asyncio.AbstractEventLoop]
+    client: Optional[discord.Client]
 
     @classmethod
     def interact(cls, command, *args, **kwargs): ...

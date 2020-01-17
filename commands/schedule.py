@@ -9,11 +9,17 @@ import arrow
 from utils.discord import help_me, Broadcaster, DiscordInteractive, Question
 from utils.utils import Log
 import discord
+from discord.ext import tasks
 from utils import DATE_FORM, SEPARATOR
 
 interact = DiscordInteractive.interact
 
 pickle_file = "./config/schedule.pickle"
+
+ping_channels = "./config/schedule-ping.json"
+if not os.path.isfile(ping_channels):
+    with open(ping_channels, "w") as t:
+        json.dump(dict(), t)
 
 
 def load_events():
@@ -21,7 +27,16 @@ def load_events():
     if not os.path.isfile('filename.txt'):
         save_events()
     with open(pickle_file, "rb") as pkl:
-        events = pickle.load(pkl).sort()
+        events_temp = pickle.load(pkl).sort()
+        if events_temp is None:
+            events_temp = list()
+        for i in events_temp:  # todo make nicer use sets
+            for j in events.copy():
+                if not i != j:
+                    break
+            else:
+                events.append(i)
+        #events = list(set(events).union(events_temp))
 
 
 def save_events():
@@ -31,6 +46,44 @@ def save_events():
 
 events = list()
 load_events()
+
+
+@tasks.loop(seconds=30.0)
+async def check_events():
+    new_events = list()
+    tmp = events.copy()
+    for j, i in list(enumerate(events))[::-1]:
+        if i.still_occurs(arrow.utcnow()):
+            continue  # still waiting
+        else:
+            nxt = i.make_next()
+            if nxt is not None:
+                new_events.append(nxt)
+            # happening
+            await execute_event(i)
+            del events[j]
+    events.extend(new_events)
+    if tmp != events:
+        save_events()
+
+
+async def execute_event(event):
+    ping_id = ping_server(event.guild)
+    channel = DiscordInteractive.client.get_guild(event.guild).get_channel(ping_id)
+    await channel.send(event.description)
+    Log.log("event executed")
+
+
+def ping_server(server, channel=None):
+    with open(ping_channels, "r") as serverList:
+        srvs = json.load(serverList)
+    if channel is None:
+        if str(server) in srvs:
+            return srvs[str(server)]
+        return None
+    with open(ping_channels, "w") as serverList:
+        srvs[str(server)] = channel
+        json.dump(srvs, serverList, indent="  ", sort_keys=True)
 
 
 class Command:
@@ -55,6 +108,7 @@ class Command:
 
     async def call(self, package):
         message, args, user_data = package["message_obj"], package["args"], package["user_obj"]
+        DiscordInteractive.client = package["client"]
 
         if len(args) < 2:
             Log.error("No command provided")
@@ -62,16 +116,22 @@ class Command:
             return
 
         if args[1].lower() == "init":
-            self.pingServer(message.guild.id, message.channel.id)
+            ping_server(message.guild.id, message.channel.id)
             interact(message.channel.send, f"{message.channel} is now the pin ping channel for {message.guild.name}")
             return
 
         if args[1].lower() == "new":
-            event = self.newEvent(message)
+            if ping_server(message.guild.id) is None:
+                interact(message.channel.send, "Please set a default ping channel")
+                return
+
+            event = self.new_event(message)
             if event is None:
                 interact(message.channel.send, "Canceled")
 
+            load_events()
             events.append(event)
+            save_events()
             return
 
         if args[1].lower() == "list":
@@ -87,18 +147,11 @@ class Command:
             return
 
     @staticmethod
-    def pingServer(server, channel):
-        with open("./serverSchedule.json", "wr") as serverList:
-            srvs = json.load(serverList)
-            srvs["pingPlace"][server] = channel
-            json.dump(srvs, serverList, indent="  ", sort_keys=True)
-
-    @staticmethod
-    def newEvent(message: discord.Message):
+    def new_event(message: discord.Message):
         repeat_after_days = None
         end_on = None
         end_on_date_time = None
-        m=discord.Embed(description="Say stop anytime to cancel")
+        m = discord.Embed(description="Say stop anytime to cancel")
         orig: discord.Message = interact(message.channel.send, "\u200b", embed=m)
 
         liss = socket(AF_INET, SOCK_DGRAM)
@@ -138,7 +191,8 @@ class Command:
             end_on_date_time = end_on.to("utc").datetime
 
         interact(orig.delete)
-        new_event = Event(description, time_of_event_date_time, repeat_after_days, end_on_date_time)
+        new_event = Event(description, time_of_event_date_time, message.guild.id,
+                          repeat_after_days, end_on_date_time)
 
         event_str = f"Creating event\n```\n{description}\n```\n"
         event_str += f"Will happen {time_of_event.humanize()} ({time_of_event.format(DATE_FORM)} " \
@@ -153,8 +207,7 @@ class Command:
                          f"UTC{'+' if timezone >= 0 else ''}{timezone}))"
             if end_on.isoformat() != end_on.to("utc").isoformat():
                 event_str += f" {SEPARATOR} ({end_on.to('utc').format(DATE_FORM)} UTC)"
-            event_str += "\n"
-        if end_on is None and repeat_after_days is not None:
+        elif repeat_after_days is not None:
             event_str += "It will never end unless deleted"
         interact(message.channel.send, event_str)
         del quiz, liss, listner, message, orig
@@ -162,10 +215,11 @@ class Command:
 
 
 class Event:
-    def __init__(self, description: str, time_of_event: datetime.datetime,
+    def __init__(self, description: str, time_of_event: datetime.datetime, guild: int,
                  repeat_after_days: Optional[Union[int, float]] = None, end_on: Optional[datetime.datetime] = None,
                  initial_time: Optional[datetime.datetime] = None):
         self.description: str = description
+        self.guild = guild
         self.time_of_event: datetime.datetime = time_of_event
         self.repeat_after_days: Optional[int] = repeat_after_days
         self.end_on: Optional[datetime.datetime] = end_on
@@ -180,7 +234,7 @@ class Event:
     def make_next(self):
         if self.repeat_after_days is not None:
             new_date = self.time_of_event + datetime.timedelta(days=self.repeat_after_days)
-            next_event = Event(self.description, new_date, self.repeat_after_days,
+            next_event = Event(self.description, new_date, self.guild, self.repeat_after_days,
                                self.end_on, self.initial_time)
             if self.end_on is not None:
                 if new_date <= self.end_on:
@@ -193,4 +247,7 @@ class Event:
         return self.time_of_event < other.time_of_event
 
     def __ne__(self, other):
-        return self.time_of_event != other.time_of_event
+        return self.time_of_event != other.time_of_event and self.description != other.description
+
+
+check_events.start()

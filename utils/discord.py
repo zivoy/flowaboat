@@ -63,6 +63,7 @@ class DiscordInteractive:
     useful for discord interaction channel
     """
     loop = None
+    client = None
 
     @classmethod
     def interact(cls, command, *args, **kwargs):
@@ -354,3 +355,6 @@ def get_user(args, ign, platfrom):
                 raise UserNonexistent
 
     return name
+
+
+CLIENT = None
