@@ -31,8 +31,10 @@ commandsLoop: Optional[asyncio.AbstractEventLoop] = None
 @client.event
 async def on_message(message):
     Log.log(f"{message.author.name}@{message.channel}: {message.content}")
-    DiscordInteractive.client = client
-    DiscordInteractive.loop = asyncio.get_event_loop()
+    if DiscordInteractive.client != client:
+        DiscordInteractive.client = client
+    if DiscordInteractive.loop != asyncio.get_event_loop():
+        DiscordInteractive.loop = asyncio.get_event_loop()
     if message.author == client.user:
         return
 

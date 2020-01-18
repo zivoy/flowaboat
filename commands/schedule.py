@@ -50,6 +50,7 @@ load_events()
 
 @tasks.loop(seconds=30.0)
 async def check_events():
+    global events
     new_events = list()
     tmp = events.copy()
     for j, i in list(enumerate(events))[::-1]:
@@ -93,7 +94,7 @@ class Command:
                   "\n\tnew  -- Walks you through setting up a new event." \
                   "\n\tlist -- Lists all events." \
                   "\n\tdel  -- Deletes event" \
-                  "\n\tedit -- Walks you through the process of editing an event\n```"
+                  "\n\tedit -- Walks you through the process of editing an event -- todo\n```"
     argsRequired = 1
     usage = "<command> [any data required]"
     examples = [{
@@ -107,6 +108,7 @@ class Command:
     synonyms = ["sched", "event"]
 
     async def call(self, package):
+        global events
         message, args, user_data = package["message_obj"], package["args"], package["user_obj"]
         DiscordInteractive.client = package["client"]
 
@@ -120,7 +122,7 @@ class Command:
             interact(message.channel.send, f"{message.channel} is now the pin ping channel for {message.guild.name}")
             return
 
-        if args[1].lower() == "new":
+        if args[1].lower() in ["new", "add"]:
             if ping_server(message.guild.id) is None:
                 interact(message.channel.send, "Please set a default ping channel")
                 return
@@ -135,16 +137,44 @@ class Command:
             return
 
         if args[1].lower() == "list":
-            # todo
+            load_events()
+            events_str = "```\n"
+            for i in events:
+                events_str += f"{arrow.get(i.time_of_event).humanize()} - {i.description}"
+                if i.initial_time != i.time_of_event:
+                    events_str += f" {SEPARATOR} since {i.initial_time}"
+                events_str+="\n"
+            events_str += "```"
+            interact(message.channel.send, events_str)
             return
 
-        if args[1].lower() == "edit":
-            # todo
-            return
+        # if args[1].lower() == "edit":
+        #     load_events()
+        #     inx = self.pick_event(message)
+        #     edit here
+        #     save_events()
+        #     return
 
         if args[1].lower() == "del":
-            # todo
+            load_events()
+            inx = self.pick_event(message)
+            del events[inx]
+            save_events()
             return
+
+    @staticmethod
+    def pick_event(message):
+        orig = interact(message.channel.send, "\u200b")
+        liss = socket(AF_INET, SOCK_DGRAM)
+        liss.bind(('', 12345))
+        listner = Broadcaster(liss)
+        quiz = Question(listner, orig, message)
+        options = [f"created on {arrow.get(i.initial_time).format(DATE_FORM)} - `{i.description}`" for i in events]
+        idx = quiz.multiple_choice("Pick an event", options)
+        liss.close()
+        interact(orig.delete)
+        del quiz, liss, listner, message, orig
+        return idx
 
     @staticmethod
     def new_event(message: discord.Message):
@@ -152,7 +182,7 @@ class Command:
         end_on = None
         end_on_date_time = None
         m = discord.Embed(description="Say stop anytime to cancel")
-        orig: discord.Message = interact(message.channel.send, "\u200b", embed=m)
+        orig: discord.Message = interact(message.channel.send, embed=m)
 
         liss = socket(AF_INET, SOCK_DGRAM)
         liss.bind(('', 12345))
@@ -210,6 +240,7 @@ class Command:
         elif repeat_after_days is not None:
             event_str += "It will never end unless deleted"
         interact(message.channel.send, event_str)
+        liss.close()
         del quiz, liss, listner, message, orig
         return new_event
 
@@ -229,7 +260,7 @@ class Event:
             self.initial_time = initial_time
 
     def still_occurs(self, date: datetime.datetime):
-        return date > self.time_of_event
+        return date < self.time_of_event
 
     def make_next(self):
         if self.repeat_after_days is not None:

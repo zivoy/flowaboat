@@ -85,8 +85,9 @@ class Command:
                                       f"{get(i.created_at).humanize()}")
                 break
 
-        embed.add_field(inline=False, name="Owners:",
-                        value=", ".join([i.mention for i in role_obj.members]))
+        if role_obj.members:
+            embed.add_field(inline=False, name="Owners:",
+                            value=", ".join([i.mention for i in role_obj.members]))
 
         perms = {"add_reactions": "Add reactions",
                  "administrator": "Administrator",
