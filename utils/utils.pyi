@@ -1,6 +1,6 @@
 from typing import Union, Optional, NoReturn, List
-import arrow
 
+import arrow
 import requests
 
 
@@ -35,4 +35,4 @@ def dict_string_to_nums(dictionary: dict) -> dict: ...
 
 def format_nums(number: Union[float, int], decimals: int) -> Union[int, float]: ...
 
-def validate_date(date_text: str, date_format: str, **kwargs) -> Union[bool,arrow.Arrow]:
+def validate_date(date_text: str, date_format: str, **kwargs) -> Union[bool,arrow.Arrow]: ...

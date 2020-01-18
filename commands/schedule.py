@@ -23,11 +23,10 @@ if not os.path.isfile(ping_channels):
 
 
 class Event:
-    def __init__(self, description: str, time_of_event: datetime.datetime, guild: int,
+    def __init__(self, description: str, time_of_event: datetime.datetime,
                  repeat_after_days: Optional[Union[int, float]] = None, end_on: Optional[datetime.datetime] = None,
                  initial_time: Optional[datetime.datetime] = None):
         self.description: str = description
-        self.guild = guild
         self.time_of_event: datetime.datetime = time_of_event
         self.repeat_after_days: Optional[int] = repeat_after_days
         self.end_on: Optional[datetime.datetime] = end_on
@@ -42,7 +41,7 @@ class Event:
     def make_next(self):
         if self.repeat_after_days is not None:
             new_date = self.time_of_event + datetime.timedelta(days=self.repeat_after_days)
-            next_event = Event(self.description, new_date, self.guild, self.repeat_after_days,
+            next_event = Event(self.description, new_date, self.repeat_after_days,
                                self.end_on, self.initial_time)
             if self.end_on is not None:
                 if new_date <= self.end_on:
@@ -54,6 +53,9 @@ class Event:
     def __ne__(self, other):
         return self.time_of_event != other.time_of_event and self.description != other.description
 
+    def __hash__(self):
+        return hash((self.description, self.time_of_event, self.repeat_after_days, self.end_on, self.initial_time))
+
 
 def load_events():
     global events
@@ -62,14 +64,13 @@ def load_events():
     with open(pickle_file, "rb") as pkl:
         events_temp = pickle.load(pkl)
         if events_temp is None:
-            events_temp = list()
-        for i in events_temp:  # todo make nicer use sets
-            for j in events.copy():
-                if not i != j:
-                    break
-            else:
-                events.append(i)
-        #events = list(set(events).union(events_temp))
+            events_temp = dict()
+        for server in events_temp:
+            if server not in events:
+                events[server] = dict()
+            for i in events_temp[server]:
+                events[server][i] = events_temp[server][i]
+        # events = list(set(events).union(events_temp))
 
 
 def save_events():
@@ -77,7 +78,7 @@ def save_events():
         pickle.dump(events, pkl)
 
 
-events = list()
+events = dict()
 load_events()
 
 
@@ -85,28 +86,34 @@ load_events()
 async def check_events():
     global events
     load_events()
-    new_events = list()
-    tmp = events.copy()
-    for j, i in list(enumerate(events))[::-1]:
-        if i.still_occurs(arrow.utcnow()):
-            continue  # still waiting
-        else:
-            nxt = i.make_next()
+    change = False
+    for server in events:
+        for i in events[server].copy():
+            evnt = events[server][i]
+            if evnt.still_occurs(arrow.utcnow()):
+                continue  # still waiting
+            nxt = evnt.make_next()
             if nxt is not None:
-                new_events.append(nxt)
+                events[server][hash(nxt)] = nxt
+                change = True
             # happening
-            await execute_event(i)
-            del events[j]
-    events.extend(new_events)
-    if tmp != events:
+            happened = await execute_event(evnt, server)
+            if happened:
+                del events[server][i]
+                change = True
+    if change:
         save_events()
 
 
-async def execute_event(event):
-    ping_id = ping_server(event.guild)
-    channel = DiscordInteractive.client.get_guild(event.guild).get_channel(ping_id)
+async def execute_event(event, guild_id):
+    ping_id = ping_server(guild_id)
+    if DiscordInteractive.client is None:
+        Log.error("No client cant execute event")
+        return False
+    channel = DiscordInteractive.client.get_guild(guild_id).get_channel(ping_id)
     await channel.send(event.description)
     Log.log("event executed")
+    return True
 
 
 def ping_server(server, channel=None):
@@ -146,6 +153,9 @@ class Command:
         message, args, user_data = package["message_obj"], package["args"], package["user_obj"]
         DiscordInteractive.client = package["client"]
 
+        if message.guild.id not in events:
+            events[message.guild.id] = dict()
+
         if len(args) < 2:
             Log.error("No command provided")
             await help_me(message, self.command)
@@ -166,18 +176,21 @@ class Command:
                 interact(message.channel.send, "Canceled")
 
             load_events()
-            events.append(event)
+            events[message.guild.id][hash(event)] = event
             save_events()
             return
 
         if args[1].lower() == "list":
             load_events()
+            if not events[message.guild.id]:
+                interact(message.channel.send, "No events in this server")
+                return
             events_str = "```\n"
-            for i in events:
+            for i in events[message.guild.id].values():
                 events_str += f"{arrow.get(i.time_of_event).humanize()} - {i.description}"
                 if i.initial_time != i.time_of_event:
                     events_str += f" {SEPARATOR} since {i.initial_time}"
-                events_str+="\n"
+                events_str += "\n"
             events_str += "```"
             interact(message.channel.send, events_str)
             return
@@ -191,27 +204,35 @@ class Command:
 
         if args[1].lower() == "del":
             load_events()
+            if not events[message.guild.id]:
+                interact(message.channel.send, "No events in this server")
+                return
             inx = self.pick_event(message)
-            del events[inx]
+            del events[message.guild.id][inx]
             save_events()
-            interact(message.channel.send, "event deleted")
+            interact(message.channel.send, "Event deleted")
             return
 
         await help_me(message, self.command)
 
     @staticmethod
     def pick_event(message):
+        if message.guild.id not in events or not events[message.guild.id]:
+            return None
         orig = interact(message.channel.send, "\u200b")
         liss = socket(AF_INET, SOCK_DGRAM)
         liss.bind(('', 12345))
         listner = Broadcaster(liss)
         quiz = Question(listner, orig, message)
-        options = [f"created on {arrow.get(i.initial_time).format(DATE_FORM)} - `{i.description}`" for i in events]
+        evn = events[message.guild.id]
+        hashs = list(evn.keys())
+        options = [f"created on {arrow.get(evn[i].initial_time).format(DATE_FORM)} - "
+                   f"`{evn[i].description}`" for i in hashs]
         idx = quiz.multiple_choice("Pick an event", options)
         liss.close()
         interact(orig.delete)
         del quiz, liss, listner, message, orig
-        return idx
+        return hashs[idx]
 
     @staticmethod
     def new_event(message: discord.Message):
@@ -258,8 +279,7 @@ class Command:
             end_on_date_time = end_on.to("utc").datetime
 
         interact(orig.delete)
-        new_event = Event(description, time_of_event_date_time, message.guild.id,
-                          repeat_after_days, end_on_date_time)
+        new_event = Event(description, time_of_event_date_time, repeat_after_days, end_on_date_time)
 
         event_str = f"Creating event\n```\n{description}\n```\n"
         event_str += f"Will happen {time_of_event.humanize()} ({time_of_event.format(DATE_FORM)} " \
