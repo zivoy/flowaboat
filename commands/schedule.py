@@ -149,7 +149,7 @@ class Command:
             return
 
         # if args[1].lower() == "edit":
-        #     load_events()
+        #     load_events() todo
         #     inx = self.pick_event(message)
         #     edit here
         #     save_events()
@@ -161,6 +161,8 @@ class Command:
             del events[inx]
             save_events()
             return
+
+        await help_me(message, self.command)
 
     @staticmethod
     def pick_event(message):
