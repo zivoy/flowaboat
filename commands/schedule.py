@@ -22,12 +22,45 @@ if not os.path.isfile(ping_channels):
         json.dump(dict(), t)
 
 
+class Event:
+    def __init__(self, description: str, time_of_event: datetime.datetime, guild: int,
+                 repeat_after_days: Optional[Union[int, float]] = None, end_on: Optional[datetime.datetime] = None,
+                 initial_time: Optional[datetime.datetime] = None):
+        self.description: str = description
+        self.guild = guild
+        self.time_of_event: datetime.datetime = time_of_event
+        self.repeat_after_days: Optional[int] = repeat_after_days
+        self.end_on: Optional[datetime.datetime] = end_on
+        if initial_time is None:
+            self.initial_time = time_of_event
+        else:
+            self.initial_time = initial_time
+
+    def still_occurs(self, date: datetime.datetime):
+        return date < self.time_of_event
+
+    def make_next(self):
+        if self.repeat_after_days is not None:
+            new_date = self.time_of_event + datetime.timedelta(days=self.repeat_after_days)
+            next_event = Event(self.description, new_date, self.guild, self.repeat_after_days,
+                               self.end_on, self.initial_time)
+            if self.end_on is not None:
+                if new_date <= self.end_on:
+                    return next_event
+                return None
+            return next_event
+        return None
+
+    def __ne__(self, other):
+        return self.time_of_event != other.time_of_event and self.description != other.description
+
+
 def load_events():
     global events
     if not os.path.isfile(pickle_file):
         save_events()
     with open(pickle_file, "rb") as pkl:
-        events_temp = pickle.load(pkl).sort()
+        events_temp = pickle.load(pkl)
         if events_temp is None:
             events_temp = list()
         for i in events_temp:  # todo make nicer use sets
@@ -51,6 +84,7 @@ load_events()
 @tasks.loop(seconds=30.0)
 async def check_events():
     global events
+    load_events()
     new_events = list()
     tmp = events.copy()
     for j, i in list(enumerate(events))[::-1]:
@@ -105,7 +139,7 @@ class Command:
             'run': "event new",
             'result': "Walks you through setting up a new event"
         }]
-    synonyms = ["sched", "event"]
+    synonyms = ["sched", "events?"]
 
     async def call(self, package):
         global events
@@ -160,6 +194,7 @@ class Command:
             inx = self.pick_event(message)
             del events[inx]
             save_events()
+            interact(message.channel.send, "event deleted")
             return
 
         await help_me(message, self.command)
@@ -245,42 +280,6 @@ class Command:
         liss.close()
         del quiz, liss, listner, message, orig
         return new_event
-
-
-class Event:
-    def __init__(self, description: str, time_of_event: datetime.datetime, guild: int,
-                 repeat_after_days: Optional[Union[int, float]] = None, end_on: Optional[datetime.datetime] = None,
-                 initial_time: Optional[datetime.datetime] = None):
-        self.description: str = description
-        self.guild = guild
-        self.time_of_event: datetime.datetime = time_of_event
-        self.repeat_after_days: Optional[int] = repeat_after_days
-        self.end_on: Optional[datetime.datetime] = end_on
-        if initial_time is None:
-            self.initial_time = time_of_event
-        else:
-            self.initial_time = initial_time
-
-    def still_occurs(self, date: datetime.datetime):
-        return date < self.time_of_event
-
-    def make_next(self):
-        if self.repeat_after_days is not None:
-            new_date = self.time_of_event + datetime.timedelta(days=self.repeat_after_days)
-            next_event = Event(self.description, new_date, self.guild, self.repeat_after_days,
-                               self.end_on, self.initial_time)
-            if self.end_on is not None:
-                if new_date <= self.end_on:
-                    return next_event
-                return None
-            return next_event
-        return None
-
-    def __lt__(self, other):
-        return self.time_of_event < other.time_of_event
-
-    def __ne__(self, other):
-        return self.time_of_event != other.time_of_event and self.description != other.description
 
 
 check_events.start()

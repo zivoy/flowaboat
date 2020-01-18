@@ -276,7 +276,7 @@ Possible Commands:
 	new  -- Walks you through setting up a new event.
 	list -- Lists all events.
 	del  -- Deletes event
-	edit -- Walks you through the process of editing an event
+	edit -- Walks you through the process of editing an event -- todo
 ```
 
 **Required variables**: `1`
@@ -285,7 +285,7 @@ Possible Commands:
 
 #### Synonyms:
 
-`o!sched`, `o!event`
+`o!sched`, `o!events?`
 
 ### Examples:
 
