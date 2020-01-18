@@ -24,7 +24,7 @@ if not os.path.isfile(ping_channels):
 
 def load_events():
     global events
-    if not os.path.isfile('filename.txt'):
+    if not os.path.isfile(pickle_file):
         save_events()
     with open(pickle_file, "rb") as pkl:
         events_temp = pickle.load(pkl).sort()
@@ -119,7 +119,7 @@ class Command:
 
         if args[1].lower() == "init":
             ping_server(message.guild.id, message.channel.id)
-            interact(message.channel.send, f"{message.channel} is now the pin ping channel for {message.guild.name}")
+            interact(message.channel.send, f"{message.channel} is now the alert channel for {message.guild.name}")
             return
 
         if args[1].lower() in ["new", "add"]:
