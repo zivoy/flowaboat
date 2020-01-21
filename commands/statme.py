@@ -49,7 +49,7 @@ class Command:
                         break
                 else:
                     for i in message.guild.members:
-                        if i.nick.lower() == name.lower():
+                        if i.nick is not None and i.nick.lower() == name.lower():
                             user = i
                             break
                     else:

@@ -166,7 +166,7 @@ class Command:
             interact(message.channel.send, f"{message.channel} is now the alert channel for {message.guild.name}")
             return
 
-        if args[1].lower() in ["new", "add"]:
+        if args[1].lower() in ["new", "add"]:  # todo make it so you can add event in one command
             if ping_server(message.guild.id) is None:
                 interact(message.channel.send, "Please set a default ping channel")
                 return

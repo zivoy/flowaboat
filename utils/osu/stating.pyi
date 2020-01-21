@@ -110,7 +110,7 @@ class _StatPlayTypes(TypedDict):
     replay: Optional[str]
     completion: float
     strain_bar: BytesIO
-    map_obj: oppadc.OsuMap
+    map_obj: MapStats
     score_id: Optional[int]
     ur: Optional[float]
 
