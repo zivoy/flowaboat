@@ -174,7 +174,7 @@ Sets your username for platform.
 
 #### Synonyms:
 
-`o!set-ign`, `o!set `, `o!ign `
+`o!set-?ign`, `o!set`, `o!ign`, `o!ignset`
 
 ### Examples:
 
@@ -276,6 +276,7 @@ Possible Commands:
 	new  -- Walks you through setting up a new event.
 	list -- Lists all events.
 	del  -- Deletes event
+	skip -- Skips event once
 	edit -- Walks you through the process of editing an event -- todo
 ```
 

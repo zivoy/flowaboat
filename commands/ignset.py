@@ -18,7 +18,7 @@ class Command:
             "run": "set steam flyingpigoftheapocalypse",
             "result": "Sets your steam username to flyingpigoftheapocalypse."
         }]
-    synonyms = ["set-ign", "set ", "ign "]
+    synonyms = ["set-?ign", "set", "ign", "ignset"]
 
     async def call(self, package):
         message, args, user_obj = package["message_obj"], package["args"], package["user_obj"]

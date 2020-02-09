@@ -11,4 +11,4 @@ for i in listdir("./commands"):
     if not i.startswith("__") and not i.startswith(".") and i.endswith(".py"):
         comm = i[:-3]
         exec(f"from .{comm} import Command as {sanitize(comm)}")
-        List[eval(comm).command] = [compile(i) for i in eval(comm).synonyms]
+        List[eval(comm).command] = [compile(f"^{i}$") for i in eval(comm).synonyms]

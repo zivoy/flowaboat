@@ -56,6 +56,15 @@ class Event:
     def __hash__(self):
         return hash((self.description, self.time_of_event, self.repeat_after_days, self.end_on, self.initial_time))
 
+    def __str__(self):
+        string = f"{arrow.get(self.time_of_event).humanize()} - {self.description}"
+        if self.initial_time != self.time_of_event:
+            string += f" {SEPARATOR} since {self.initial_time}"
+        if self.repeat_after_days is not None:
+            string += f" every {self.repeat_after_days} days"
+        if self.end_on is not None:
+            string += f" for another {arrow.get(self.end_on).humanize(only_distance=True)}"
+
 
 def load_events():
     global events
@@ -135,6 +144,7 @@ class Command:
                   "\n\tnew  -- Walks you through setting up a new event." \
                   "\n\tlist -- Lists all events." \
                   "\n\tdel  -- Deletes event" \
+                  "\n\tskip -- Skips event once" \
                   "\n\tedit -- Walks you through the process of editing an event -- todo\n```"
     argsRequired = 1
     usage = "<command> [any data required]"
@@ -187,10 +197,8 @@ class Command:
                 return
             events_str = "```\n"
             for i in events[message.guild.id].values():
-                events_str += f"{arrow.get(i.time_of_event).humanize()} - {i.description}"
-                if i.initial_time != i.time_of_event:
-                    events_str += f" {SEPARATOR} since {i.initial_time}"
-                events_str += "\n"
+                events_str += f"> {str(i)}"
+                events_str += "\n\n"
             events_str += "```"
             interact(message.channel.send, events_str)
             return
@@ -201,6 +209,25 @@ class Command:
         #     edit here
         #     save_events()
         #     return
+
+        if args[1].lower() == "skip":
+            load_events()
+            if not events[message.guild.id]:
+                interact(message.channel.send, "No events in this server")
+                return
+            inx = self.pick_event(message)
+            nxt = events[message.guild.id][inx].make_next()
+            change = False
+            if nxt is not None:
+                events[message.guild.id][hash(nxt)] = nxt
+                change = True
+            del events[message.guild.id][inx]
+            interact(message.channel.send, "Event skipped")
+            if change:
+                save_events()
+            return
+
+        await help_me(message, self.command)
 
         if args[1].lower() == "del":
             load_events()

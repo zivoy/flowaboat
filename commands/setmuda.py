@@ -23,14 +23,15 @@ class Command:
         message = package["message_obj"]
         server = message.guild.id
         channel = message.channel.id
+        servername = server if message.guild.id is None else message.guild.name
         with open(muda_file, "r") as serverList:  # will change
             try:
                 allServers = json.load(serverList)
             except:
                 allServers = dict()
-            allServers[server] = str(channel)
+            allServers[str(server)] = str(channel)
         with open(muda_file, "w") as serverList:
             json.dump(allServers, serverList, indent="  ", sort_keys=True)
-        msg = "<#{0}> is now the default channel for {1}".format(channel, server)
+        msg = "<#{0}> is now the default channel for {1}".format(channel, servername)
         Log.log(msg)
         interact(message.channel.send, msg)

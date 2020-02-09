@@ -68,8 +68,8 @@ async def on_message(message):
                     break
 
             if not found:
-                await help_me(message, "help")
-                Log.log(f"{command} is not a valid command")
+                comm = getattr(commands, "help")()
+                Log.log(f"{command} is not a valid command")  # todo change to show list of available commands
 
         if comm is not None:
             asyncio.run_coroutine_threadsafe(comm.call(package), commandsLoop)

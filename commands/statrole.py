@@ -31,7 +31,7 @@ class Command:
 
         if len(args) < 2:
             Log.error("No Role provided")
-            await help_me(message, "statrole")
+            await help_me(message, self.command)
             return
 
         role = " ".join(args[1:])
@@ -39,8 +39,6 @@ class Command:
         role_id = None
         if role.startswith("<@&") and role.endswith(">"):
             role_id = int(role[3:-1])
-        elif role.startswith("<@") and role.endswith(">"):
-            role_id = int(role[2:-1])
         elif role.isnumeric():
             role_id = int(role)
         else:
@@ -89,36 +87,37 @@ class Command:
             embed.add_field(inline=False, name="Owners:",
                             value=", ".join([i.mention for i in role_obj.members]))
 
-        perms = {"add_reactions": "Add reactions",
-                 "administrator": "Administrator",
-                 "attach_files": "Attach files",
-                 "ban_members": "Ban members",
-                 "change_nickname": "Change nickname",
-                 "connect": "Connect",
-                 "create_instant_invite": "Create instant invite",
-                 "deafen_members": "Deafen members",
-                 "embed_links": "Embed links",
-                 "external_emojis": "External emojis",
-                 "kick_members": "Kick members",
-                 "manage_channels": "Manage channels",
-                 "manage_emojis": "Manage emojis",
-                 "manage_guild": "Manage guild",
-                 "manage_messages": "Manage messages",
-                 "manage_nicknames": "Manage nicknames",
-                 "manage_roles": "manage roles",
-                 "manage_webhooks": "Manage webhooks",
-                 "mention_everyone": "Mention everyone",
-                 "move_members": "Move members",
-                 "mute_members": "Mute members",
-                 "priority_speaker": "Priority speaker",
-                 "read_message_history": "Read message history",
-                 "read_messages": "Read messages",
-                 "send_messages": "Send messages",
-                 "send_tts_messages": "Send tts messages",
-                 "speak": "Speak",
-                 "stream": "Stream",
-                 "use_voice_activation": "Use voice activation",
-                 "view_audit_log": "View audit log"
+        perms = {'create_instant_invite': "Create instant invite",
+                 'kick_members': "Kick members",
+                 'ban_members': "Ban members",
+                 'administrator': "Administrator",
+                 'manage_channels': "Manage channels",
+                 'manage_guild': "Manage guild",
+                 'add_reactions': "Add reactions",
+                 'view_audit_log': "View audit log",
+                 'priority_speaker': "Priority speaker",
+                 'stream': "Stream",
+                 'read_messages': "Read messages",
+                 'send_messages': "Send messages",
+                 'send_tts_messages': "Send text-to-speech messages",
+                 'manage_messages': "Manage messages",
+                 'embed_links': "Embed links",
+                 'attach_files': "Attach files",
+                 'read_message_history': "Read message history",
+                 'mention_everyone': "Mention everyone",
+                 'external_emojis': "External emojis",
+                 'view_guild_insights': "View guild insights",
+                 'connect': "Connect",
+                 'speak': "Speak",
+                 'mute_members': "Mute members",
+                 'deafen_members': "Deafen members",
+                 'move_members': "Move members",
+                 'use_voice_activation': "Use voice activation",
+                 'change_nickname': "Change nickname",
+                 'manage_nicknames': "Manage nicknames",
+                 'manage_roles': "Manage roles",
+                 'manage_webhooks': "Manage webhooks",
+                 'manage_emojis': "Manage emojis"
                  }
 
         embed.add_field(inline=False, name="Permissions:",

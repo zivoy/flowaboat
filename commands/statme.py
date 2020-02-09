@@ -133,9 +133,15 @@ class Command:
                 embed.add_field(name=f"Roles [{len(roles)}]",
                                 value=", ".join([f"<@&{i}>" for i in rls][::-1]), inline=True)
 
-            if member.activity is not None and member.activity.state:
+            if isinstance(member.activity, discord.activity.CustomActivity) and (member.activity.state or member.activity.emoji is not None):
+                string = ""
+                if member.activity.emoji is not None:
+                    string += f"{member.activity.emoji} "
+                if member.activity.name is not None:
+                    string += member.activity.name
                 embed.add_field(name="Message",
-                                value=member.activity.state, inline=True)
+                                value=string, inline=True)
+            # todo: add support for Game, Spotify and Stream activitys
 
         if not embed.author:
             embed.set_author(name=str(user), icon_url=str(user.avatar_url))
