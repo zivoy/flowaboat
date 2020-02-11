@@ -2,6 +2,8 @@ from time import sleep
 
 import arrow
 import requests
+import os
+import pickle
 
 
 class Api:
@@ -178,3 +180,32 @@ def validate_date(date_text, date_format, **kwargs):
         return arrow.get(date_text, date_format, **kwargs)
     except ValueError:
         return False
+
+
+class PickeledServerDict:
+    def __init__(self, file, dictionary=None):
+        if dictionary is None:
+            self.dictionary = dict()
+        self.file = file
+
+    def load(self):
+        if not os.path.isfile(self.file):
+            self.save()
+        with open(self.file, "rb") as pkl:
+            if pkl.read() == b"":
+                self.save()
+                self.load()
+                return
+            pkl.seek(0)
+            temp_dict = pickle.load(pkl)
+            if temp_dict is None:
+                temp_dict = dict()
+            for server in temp_dict:
+                if server not in self.dictionary:
+                    self.dictionary[server] = dict()
+                for i in temp_dict[server]:
+                    self.dictionary[server][i] = temp_dict[server][i]
+
+    def save(self):
+        with open(self.file, "wb") as pkl:
+            pickle.dump(self.dictionary, pkl)

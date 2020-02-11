@@ -8,6 +8,7 @@
 - [o!help](#ohelp)
 - [o!hp](#ohp)
 - [o!ign-set](#oign-set)
+- [o!math](#omath)
 - [o!od](#ood)
 - [o!osu](#oosu)
 - [o!recent](#orecent)
@@ -189,6 +190,33 @@ Sets your osu! username to nathan on osu.
 o!set steam flyingpigoftheapocalypse
 ```
 Sets your steam username to flyingpigoftheapocalypse.
+
+
+## o!math
+do math with the sympy library
+commands:
+	- solve
+	- parse
+	- latex
+	- parseLatex
+	- expand
+	- simplify
+	- sub
+
+**Required variables**: `1`
+
+**Usage**: `o!math <command> [arguments]`
+
+#### Synonyms:
+
+`o!sympy`
+
+### Example:
+
+```
+o!math parse x=12y
+```
+an image of x=12y and the ability to use in future commands
 
 
 ## o!od

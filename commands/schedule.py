@@ -1,13 +1,12 @@
 import datetime
 import json
 import os.path
-import pickle
 from socket import socket, AF_INET, SOCK_DGRAM
 from typing import Optional, Union
 import arrow
 
 from utils.discord import help_me, Broadcaster, DiscordInteractive, Question
-from utils.utils import Log
+from utils.utils import Log, PickeledServerDict
 import discord
 from discord.ext import tasks
 from utils import DATE_FORM, SEPARATOR
@@ -64,54 +63,38 @@ class Event:
             string += f" every {self.repeat_after_days} days"
         if self.end_on is not None:
             string += f" for another {arrow.get(self.end_on).humanize(only_distance=True)}"
+        return string
 
 
-def load_events():
-    global events
-    if not os.path.isfile(pickle_file):
-        save_events()
-    with open(pickle_file, "rb") as pkl:
-        events_temp = pickle.load(pkl)
-        if events_temp is None:
-            events_temp = dict()
-        for server in events_temp:
-            if server not in events:
-                events[server] = dict()
-            for i in events_temp[server]:
-                events[server][i] = events_temp[server][i]
-        # events = list(set(events).union(events_temp))
-
-
-def save_events():
-    with open(pickle_file, "wb") as pkl:
-        pickle.dump(events, pkl)
-
-
-events = dict()
-load_events()
+eventsq: PickeledServerDict = PickeledServerDict(pickle_file)
+eventsq.load()
 
 
 @tasks.loop(seconds=30.0)
 async def check_events():
-    global events
-    load_events()
+    global eventsq
+    eventsq.load()
     change = False
-    for server in events:
-        for i in events[server].copy():
-            evnt = events[server][i]
+    for server in eventsq.dictionary:
+        for i in eventsq.dictionary[server].copy():
+            evnt = eventsq.dictionary[server][i]
+            if evnt is None:
+                del eventsq.dictionary[server][i]
+                change = True
+                continue
             if evnt.still_occurs(arrow.utcnow()):
                 continue  # still waiting
             nxt = evnt.make_next()
             if nxt is not None:
-                events[server][hash(nxt)] = nxt
+                eventsq.dictionary[server][hash(nxt)] = nxt
                 change = True
             # happening
             happened = await execute_event(evnt, server)
             if happened:
-                del events[server][i]
+                del eventsq.dictionary[server][i]
                 change = True
     if change:
-        save_events()
+        eventsq.save()
 
 
 async def execute_event(event, guild_id):
@@ -159,12 +142,12 @@ class Command:
     synonyms = ["sched", "events?"]
 
     async def call(self, package):
-        global events
+        global eventsq
         message, args, user_data = package["message_obj"], package["args"], package["user_obj"]
         DiscordInteractive.client = package["client"]
 
-        if message.guild.id not in events:
-            events[message.guild.id] = dict()
+        if message.guild.id not in eventsq.dictionary:
+            eventsq.dictionary[message.guild.id] = dict()
 
         if len(args) < 2:
             Log.error("No command provided")
@@ -185,18 +168,18 @@ class Command:
             if event is None:
                 interact(message.channel.send, "Canceled")
 
-            load_events()
-            events[message.guild.id][hash(event)] = event
-            save_events()
+            eventsq.load()
+            eventsq.dictionary[message.guild.id][hash(event)] = event
+            eventsq.save()
             return
 
         if args[1].lower() == "list":
-            load_events()
-            if not events[message.guild.id]:
+            eventsq.load()
+            if not eventsq.dictionary[message.guild.id]:
                 interact(message.channel.send, "No events in this server")
                 return
             events_str = "```\n"
-            for i in events[message.guild.id].values():
+            for i in eventsq.dictionary[message.guild.id].values():
                 events_str += f"> {str(i)}"
                 events_str += "\n\n"
             events_str += "```"
@@ -211,32 +194,30 @@ class Command:
         #     return
 
         if args[1].lower() == "skip":
-            load_events()
-            if not events[message.guild.id]:
+            eventsq.load()
+            if not eventsq.dictionary[message.guild.id]:
                 interact(message.channel.send, "No events in this server")
                 return
             inx = self.pick_event(message)
-            nxt = events[message.guild.id][inx].make_next()
+            nxt = eventsq.dictionary[message.guild.id][inx].make_next()
             change = False
             if nxt is not None:
-                events[message.guild.id][hash(nxt)] = nxt
+                eventsq.dictionary[message.guild.id][hash(nxt)] = nxt
                 change = True
-            del events[message.guild.id][inx]
+            del eventsq.dictionary[message.guild.id][inx]
             interact(message.channel.send, "Event skipped")
             if change:
-                save_events()
+                eventsq.save()
             return
 
-        await help_me(message, self.command)
-
         if args[1].lower() == "del":
-            load_events()
-            if not events[message.guild.id]:
+            eventsq.load()
+            if not eventsq.dictionary[message.guild.id]:
                 interact(message.channel.send, "No events in this server")
                 return
             inx = self.pick_event(message)
-            del events[message.guild.id][inx]
-            save_events()
+            del eventsq.dictionary[message.guild.id][inx]
+            eventsq.save()
             interact(message.channel.send, "Event deleted")
             return
 
@@ -244,14 +225,14 @@ class Command:
 
     @staticmethod
     def pick_event(message):
-        if message.guild.id not in events or not events[message.guild.id]:
+        if message.guild.id not in eventsq.dictionary or not eventsq.dictionary[message.guild.id]:
             return None
         orig = interact(message.channel.send, "\u200b")
         liss = socket(AF_INET, SOCK_DGRAM)
         liss.bind(('', 12345))
         listner = Broadcaster(liss)
         quiz = Question(listner, orig, message)
-        evn = events[message.guild.id]
+        evn = eventsq.dictionary[message.guild.id]
         hashs = list(evn.keys())
         options = [f"created on {arrow.get(evn[i].initial_time).format(DATE_FORM)} - "
                    f"`{evn[i].description}`" for i in hashs]
