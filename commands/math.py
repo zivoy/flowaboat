@@ -15,11 +15,11 @@ interact = DiscordInteractive.interact
 mathUsers = PickeledServerDict("./config/usermath.pickle")
 mathUsers.load()
 
-commands = ["solve", "parse", "latex", "parselatex", "expand", "simplify", "sub", "get", "getlatex"]
+commands = ["solve", "parse", "p","latex", "parselatex", "expand", "simplify", "sub", "get", "getlatex"]
 
 
 class Command:
-    command = "math"  # command name must be the same as the file name but can have spacial characters
+    command = "math"
     description = "do math with the sympy library\n" \
                   "commands:\n" \
                   "\t- solve\n" \
@@ -35,7 +35,7 @@ class Command:
         'run': "math parse x=12y",
         'result': "an image of x=12y and the ability to use in future commands"
     }]
-    synonyms = ["sympy"]
+    synonyms = ["sympy", "m"]
 
     async def call(self, package):
         message, args = package["message_obj"], package["args"]
@@ -59,7 +59,7 @@ class Command:
         math = None
 
         notneeded = [r"\left", r"\right", r"\big", r"\Big", r"\bigg", r"\Bigg", r"\middle", r"\,", r"\:", r"\;"]
-        if args[1].lower() in ["parse", "get"]:
+        if args[1].lower() in ["parse", "get", "p"]:
             if len(args) < 3:
                 Log.error("No math provided")
                 interact(message.channel.send, "Please provide a math equation sympy allowed")
@@ -67,7 +67,7 @@ class Command:
             if ans:
                 for i in notneeded:
                     ans = ans.replace(i, "")
-                ans = str(parse_latex(ans))
+                ans = str(parse_latex_equation(ans))
                 math_text = math_text.replace(r"\ans", ans).replace(":ans:", ans)
             math = parse_string_equation(math_text)
             mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
@@ -82,13 +82,12 @@ class Command:
                 math_text = math_text.replace(r"\ans", ans).replace(":ans:", ans)
             for i in notneeded:
                 math_text = math_text.replace(i, "")
-            math = parse_latex(math_text)
+            math = parse_latex_equation(math_text)
+            # math = replace_exp(math)
             mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
 
-        mathUsers.save()
-
         if math is None and message.author.id in mathUsers.dictionary[message.guild.id]:
-            math = parse_latex(mathUsers.dictionary[message.guild.id][message.author.id])
+            math = parse_latex_equation(mathUsers.dictionary[message.guild.id][message.author.id])
         elif math is not None:
             pass
         else:
@@ -102,6 +101,33 @@ class Command:
             interact(message.channel.send, f"```\n{sympy.latex(math)}\n```")
             return
 
+        if args[1].lower() == "solve":
+            if len(args) < 3:
+                Log.error("No variable provided")
+                interact(message.channel.send, "Please provide a variable to solve for")
+                return
+            if args[2] not in str(math):
+                Log.error("Invalid Variable")
+                interact(message.channel.send, "Please provide a valid variable")
+                return
+            symbol = sympy.symbols(args[2])
+            solutions = sympy.solve(math, symbol)
+            if len(solutions) == 1:
+                math = sympy.Eq(symbol, solutions[0])
+            else:
+                eqs = [sympy.Eq(symbol, i) for i in solutions]
+                math = sympy.Matrix(eqs)
+            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+
+        if args[1].lower() == "expand":
+            math = sympy.expand(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+
+        if args[1].lower() == "simplify":
+            math = sympy.simplify(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+
+        mathUsers.save()
         image = render_latex(math)
         byteImgIO = BytesIO()
         image.save(byteImgIO, "PNG")
@@ -126,8 +152,15 @@ def render_latex(text, euler=False, dpi=200, border=3):
     return img
 
 
+def parse_latex_equation(string):
+    if "=" in string:
+        return sympy.Eq(*map(parse_latex_equation, string.split("=", 1)))
+    return parse_latex(string)
+
+
 def parse_string_equation(string):
     eq = r"\equalssign"
+    string = string.replace("^", "**")
     string = string.replace("=<", f"{eq}<").replace("=>", f"{eq}>").replace("<=", f"<{eq}").replace(">=", f">{eq}")
     if "=" in string:
         string = string.replace(eq, "=")

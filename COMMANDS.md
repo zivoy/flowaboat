@@ -209,7 +209,7 @@ commands:
 
 #### Synonyms:
 
-`o!sympy`
+`o!sympy`, `o!m`
 
 ### Example:
 
