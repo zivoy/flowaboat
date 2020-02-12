@@ -15,7 +15,7 @@ interact = DiscordInteractive.interact
 mathUsers = PickeledServerDict("./config/usermath.pickle")
 mathUsers.load()
 
-commands = ["solve", "parse", "p","latex", "parselatex", "expand", "simplify", "sub", "get", "getlatex","show"]
+commands = ["solve", "parse", "p","latex", "parselatex", "expand", "simplify", "sub", "get", "getlatex","show","approx", "n"]
 
 
 class Command:
@@ -145,12 +145,14 @@ class Command:
                     return
                 subs[variable] = value
 
-            math = math.evalf(subs=subs)
+            math = math.subs(list(subs.items()))
             mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
 
-        if args[1].lower() == "approx":
+        if args[1].lower() in ["approx", "n"]:
             math = sympy.N(math)
             mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+            interact(message.channel.send, f"```\n{variable}\n```")
+            return
 
         mathUsers.save()
         image = render_latex(math)
