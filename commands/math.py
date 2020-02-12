@@ -146,8 +146,9 @@ class Command:
         if args[1].lower() in ["approx", "n"]:
             math = sympy.N(math)
             mathUsers.dictionary[message.guild.id][message.author.id] = str(math)
-            interact(message.channel.send, f"```\n{variable}\n```")
-            return
+            if not any([i in str(math) for i in "()"]):
+                interact(message.channel.send, f"```\n{math}\n```")
+                return
 
         mathUsers.save()
         image = render_latex(math)
