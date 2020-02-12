@@ -15,7 +15,7 @@ interact = DiscordInteractive.interact
 mathUsers = PickeledServerDict("./config/usermath.pickle")
 mathUsers.load()
 
-commands = ["solve", "parse", "p","latex", "parselatex", "expand", "simplify", "sub", "get", "getlatex","show","approx", "n"]
+commands = ["solve", "parse", "p","latex", "parselatex", "expand", "simplify", "sub", "get", "getlatex","show","approx","n"]
 
 
 class Command:
@@ -31,7 +31,8 @@ class Command:
                   "\t- sub\n" \
                   "\t- show\n" \
                   "\t- approx\n" \
-                  "\t- derive"
+                  "\t- derive\n" \
+                  "\t- plot"
     argsRequired = 1
     usage = "<command> [arguments]"
     examples = [{
@@ -61,19 +62,15 @@ class Command:
 
         math: sympy.Expr = None
 
-        notneeded = [r"\left", r"\right", r"\big", r"\Big", r"\bigg", r"\Bigg", r"\middle", r"\,", r"\:", r"\;"]
         if args[1].lower() in ["parse", "get", "p"]:
             if len(args) < 3:
                 Log.error("No math provided")
                 interact(message.channel.send, "Please provide a math equation sympy allowed")
                 return
             if ans:
-                for i in notneeded:
-                    ans = ans.replace(i, "")
-                ans = str(parse_latex_equation(ans))
                 math_text = math_text.replace(r"\ans", ans).replace(":ans:", ans)
             math = parse_string_equation(math_text)
-            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = str(math)
 
         if args[1].lower() in ["parselatex", "getlatex"]:
             if len(args) < 3:
@@ -81,16 +78,14 @@ class Command:
                 interact(message.channel.send, "Please provide a latex equation")
                 return
             if ans:
-                ans = f" {ans} "
+                ans = f" {sympy.latex(parse_string_equation(ans))} "
                 math_text = math_text.replace(r"\ans", ans).replace(":ans:", ans)
-            for i in notneeded:
-                math_text = math_text.replace(i, "")
             math = parse_latex_equation(math_text)
             # math = replace_exp(math)
-            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = str(math)
 
         if math is None and message.author.id in mathUsers.dictionary[message.guild.id]:
-            math = parse_latex_equation(mathUsers.dictionary[message.guild.id][message.author.id])
+            math = parse_string_equation(mathUsers.dictionary[message.guild.id][message.author.id])
         elif math is not None:
             pass
         else:
@@ -120,15 +115,15 @@ class Command:
             else:
                 eqs = [sympy.Eq(symbol, i) for i in solutions]
                 math = sympy.Matrix(eqs)
-            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = str(math)
 
         if args[1].lower() == "expand":
             math = sympy.expand(math)
-            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = str(math)
 
         if args[1].lower() == "simplify":
             math = sympy.simplify(math)
-            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = str(math)
 
         if args[1].lower() == "sub":
             if len(args) < 3:
@@ -146,11 +141,11 @@ class Command:
                 subs[variable] = value
 
             math = math.subs(list(subs.items()))
-            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = str(math)
 
         if args[1].lower() in ["approx", "n"]:
             math = sympy.N(math)
-            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = str(math)
             interact(message.channel.send, f"```\n{variable}\n```")
             return
 
@@ -180,8 +175,11 @@ def render_latex(text, euler=False, dpi=200, border=3):
 
 
 def parse_latex_equation(string):
-    if "=" in string:
-        return sympy.Eq(*map(parse_latex_equation, string.split("=", 1)))
+    notneeded = [r"\left", r"\right", r"\big", r"\Big", r"\bigg", r"\Bigg", r"\middle", r"\,", r"\:", r"\;"]
+    for i in notneeded:
+        string = string.replace(i, "")
+    """if "=" in string:
+        return sympy.Eq(*map(parse_latex_equation, string.split("=", 1)))"""
     return parse_latex(string)
 
 
