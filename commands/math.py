@@ -15,7 +15,7 @@ interact = DiscordInteractive.interact
 mathUsers = PickeledServerDict("./config/usermath.pickle")
 mathUsers.load()
 
-commands = ["solve", "parse", "p","latex", "parselatex", "expand", "simplify", "sub", "get", "getlatex"]
+commands = ["solve", "parse", "p","latex", "parselatex", "expand", "simplify", "sub", "get", "getlatex","show"]
 
 
 class Command:
@@ -28,7 +28,10 @@ class Command:
                   "\t- parseLatex\n" \
                   "\t- expand\n" \
                   "\t- simplify\n" \
-                  "\t- sub"
+                  "\t- sub\n" \
+                  "\t- show\n" \
+                  "\t- approx\n" \
+                  "\t- derive"
     argsRequired = 1
     usage = "<command> [arguments]"
     examples = [{
@@ -56,7 +59,7 @@ class Command:
                 (r"\ans" in math_text or ":ans:" in math_text):
             ans = mathUsers.dictionary[message.guild.id][message.author.id]
 
-        math = None
+        math: sympy.Expr = None
 
         notneeded = [r"\left", r"\right", r"\big", r"\Big", r"\bigg", r"\Bigg", r"\middle", r"\,", r"\:", r"\;"]
         if args[1].lower() in ["parse", "get", "p"]:
@@ -106,7 +109,7 @@ class Command:
                 Log.error("No variable provided")
                 interact(message.channel.send, "Please provide a variable to solve for")
                 return
-            if args[2] not in str(math):
+            if args[2] not in math.free_symbols:
                 Log.error("Invalid Variable")
                 interact(message.channel.send, "Please provide a valid variable")
                 return
@@ -125,6 +128,28 @@ class Command:
 
         if args[1].lower() == "simplify":
             math = sympy.simplify(math)
+            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+
+        if args[1].lower() == "sub":
+            if len(args) < 3:
+                Log.error("No variable(s) provided")
+                interact(message.channel.send, "Please provide a variable to solve for")
+                return
+            subs = dict()
+            for i in regex.finditer(r"([A-z]+) ?= ?([^ ,]+)", math_text):
+                variable = parse_string_equation(i.group(1))
+                value = parse_string_equation(i.group(2))
+                if variable not in math.free_symbols:
+                    Log.error("Invalid Variable")
+                    interact(message.channel.send, f"Please provide a valid variable, not {variable}")
+                    return
+                subs[variable] = value
+
+            math = math.evalf(subs=subs)
+            mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
+
+        if args[1].lower() == "approx":
+            math = sympy.N(math)
             mathUsers.dictionary[message.guild.id][message.author.id] = sympy.latex(math)
 
         mathUsers.save()
