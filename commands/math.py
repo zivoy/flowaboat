@@ -109,11 +109,11 @@ class Command:
                 Log.error("No variable provided")
                 interact(message.channel.send, "Please provide a variable to solve for")
                 return
-            if args[2] not in math.free_symbols:
+            symbol = sympy.symbols(args[2])
+            if symbol not in math.free_symbols:
                 Log.error("Invalid Variable")
                 interact(message.channel.send, "Please provide a valid variable")
                 return
-            symbol = sympy.symbols(args[2])
             solutions = sympy.solve(math, symbol)
             if len(solutions) == 1:
                 math = sympy.Eq(symbol, solutions[0])
