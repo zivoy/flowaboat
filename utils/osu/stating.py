@@ -243,7 +243,7 @@ def stat_play(play):
     recent.acc = pp.accuracy
     recent.acc_fc = pp_fc.accuracy
 
-    if recent.performance_points is None:
+    if recent.performance_points is None or recent.performance_points == 0:
         recent.performance_points = pp.total_pp
 
     recent.replay = None

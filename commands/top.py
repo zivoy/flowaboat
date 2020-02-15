@@ -26,7 +26,7 @@ class Command:
             "run": "top5 vaxei",
             "result": "Returns Vaxei's #5 top play."
         }]
-    synonyms = [r"top\d+", "rb", "recentbest", "ob", "oldbest"]
+    synonyms = [r"top\d+", r"rb\d+", r"recentbest\d+", r"ob\d+", r"oldbest\d+"]
 
     async def call(self, package):
         message, args, user_data, client = package["message_obj"], package["args"], \
@@ -45,13 +45,13 @@ class Command:
 
         index = DIGITS.match(args[0])
 
-        rb = True if args[0] == "rb" or args[0] == "recentbest" else False
-        ob = True if args[0] == "ob" or args[0] == "oldbest" else False
+        rb = True if any([i in args[0] for i in ["rb", "recentbest"]]) else False
+        ob = True if any([i in args[0] for i in ["ob", "oldbest"]]) else False
 
         if index is None:
             index = 1
         else:
-            index = int(index.captures(1)[0])
+            index = int(index.group(1))
 
         try:
             top_play = get_top(user, index, rb, ob)

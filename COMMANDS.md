@@ -202,6 +202,10 @@ commands:
 	- expand
 	- simplify
 	- sub
+	- show
+	- approx
+	- derive
+	- plot
 
 **Required variables**: `1`
 
@@ -411,7 +415,7 @@ Show a specific top play.
 
 #### Synonyms:
 
-`o!top\d+`, `o!rb`, `o!recentbest`, `o!ob`, `o!oldbest`
+`o!top\d+`, `o!rb\d+`, `o!recentbest\d+`, `o!ob\d+`, `o!oldbest\d+`
 
 ### Examples:
 
