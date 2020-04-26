@@ -6,7 +6,9 @@ logs
 *.err
 
 # config and credentials
-config/
+!config/
+config/*
+!config/lol.list
 
 #python cache
 __pycache__/

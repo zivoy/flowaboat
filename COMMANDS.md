@@ -12,6 +12,7 @@
 - [o!od](#ood)
 - [o!osu](#oosu)
 - [o!recent](#orecent)
+- [o!saylol](#osaylol)
 - [o!schedule](#oschedule)
 - [o!set-muda](#oset-muda)
 - [o!statme](#ostatme)
@@ -298,6 +299,27 @@ Returns respektive's most recent score.
 o!recentpass
 ```
 Returns your most recent pass.
+
+
+## o!saylol
+the famous saylol command of redstoner
+https://git.redstoner.com/modules/tree/src/main/java/com/redstoner/modules/saylol
+https://web.archive.org/web/20190620184102/https://redstoner.com/forums/threads/4505-list-of-lols
+
+**Required variables**: `0`
+
+**Usage**: `o!saylol `
+
+#### Synonyms:
+
+`o!kek`, `o!lol`
+
+### Example:
+
+```
+o!lol
+```
+a random lol
 
 
 ## o!schedule
