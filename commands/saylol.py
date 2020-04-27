@@ -1,5 +1,7 @@
 from time import time
+
 from random import choice
+
 from utils.discord import DiscordInteractive
 from utils.utils import Log
 
@@ -35,6 +37,9 @@ class Command:
         message_obj = package["message_obj"]
         string, sender, server, channel = str(message_obj.content), str(message_obj.author.id), \
                                           str(message_obj.guild.id), str(message_obj.channel.id)
+        if server is None:
+            server = "DM"
+
         if server not in users:
             users[server] = dict()
 
@@ -48,7 +53,12 @@ class Command:
 
         users[server][sender] = {"time": time(), "warned": False}
 
-        interact(message_obj.channel.send, choice(lols))
+        interact(message_obj.channel.send, "```css\n[lol] {0}: {1}\n```".format(message_obj.author.name, choice(lols)
+                                                                                .replace("\\", "\\\\")
+                                                                                .replace("_", "\\_")
+                                                                                .replace("*", "\\*")
+                                                                                .replace("`", "\\`")
+                                                                                .replace("|", "\\|")))
 
     def warnTime(self, user, message):
         lastLol = user["time"]
