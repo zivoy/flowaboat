@@ -53,12 +53,16 @@ class Command:
 
         users[server][sender] = {"time": time(), "warned": False}
 
-        interact(message_obj.channel.send, "```css\n[lol] {0}: {1}\n```".format(message_obj.author.name, choice(lols)
-                                                                                .replace("\\", "\\\\")
-                                                                                .replace("_", "\\_")
-                                                                                .replace("*", "\\*")
-                                                                                .replace("`", "\\`")
-                                                                                .replace("|", "\\|")))
+        name = message_obj.author.nick
+        if name is None:
+            name = message_obj.author.name
+
+        interact(message_obj.channel.send, "`[lol] {0}`: {1}".format(name, choice(lols)
+                                                                     .replace("\\", "\\\\")
+                                                                     .replace("_", "\\_")
+                                                                     .replace("*", "\\*")
+                                                                     .replace("`", "\\`")
+                                                                     .replace("|", "\\|")))
 
     def warnTime(self, user, message):
         lastLol = user["time"]
