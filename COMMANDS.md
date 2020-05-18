@@ -4,6 +4,7 @@
 - [o!bpm](#obpm)
 - [o!cs](#ocs)
 - [o!flowaboat](#oflowaboat)
+- [o!freeSteam](#ofreeSteam)
 - [o!hello](#ohello)
 - [o!help](#ohelp)
 - [o!hp](#ohp)
@@ -102,6 +103,21 @@ Show information about this bot.
 o!flowaboat
 ```
 Tells you about flowaboat.
+
+
+## o!freeSteam
+Notify of free steam games
+
+**Required variables**: `1`
+
+**Usage**: `o!freeSteam <pingrole>`
+
+### Example:
+
+```
+o!freeSteam pingrole
+```
+Sets the current channel as ping channel.
 
 
 ## o!hello
