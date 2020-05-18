@@ -5,7 +5,7 @@ from random import choice
 from utils.discord import DiscordInteractive
 from utils.utils import Log
 
-timeOut = 15  # in seconds
+timeOut = 0  # 15  # in seconds
 lolFile = "./config/lol.list"
 users = dict()
 lols = list()
