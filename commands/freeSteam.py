@@ -79,8 +79,8 @@ notified.load()
 
 @tasks.loop(hours=20)  # not making it 24 for some variety
 async def check_sales():
+    await notify_sales()
     removeOutstanding()
-    notify_sales()
 
 
 def removeOutstanding():
@@ -88,13 +88,17 @@ def removeOutstanding():
     notified.load()
     if "notified" not in notified.dictionary:
         notified.dictionary["notified"] = dict()
+    change = False
     for server in notified.dictionary["notified"]:
         for i in notified.dictionary["notified"][server]:
             if notified.dictionary["notified"][server][i].promoEnd < arrow.utcnow():
                 notified.dictionary["notified"][server].remove(i)
+                change = True
+    if change:
+        notified.save()
 
 
-def notify_sales():
+async def notify_sales():
     url = "https://steamdb.info/upcoming/free/"
     page = requests.get(url, headers={'user-agent': 'Mozilla/5.0 ()'})
     soup = BeautifulSoup(page.content, 'html.parser')
@@ -117,10 +121,10 @@ def notify_sales():
 
         available.append(r)
     keepable = [i for i in available if i.promoType == "keep"]
-    notify(keepable)
+    await notify(keepable)
 
 
-def notify(items):
+async def notify(items):
     global notified
     notified.load()
     change = False
@@ -135,7 +139,7 @@ def notify(items):
                 Log.error("No client cant notify users")
                 continue
             channel = DiscordInteractive.client.get_guild(int(server)).get_channel(ping_stats["channel"])
-            interact(channel.send, content=ping_stats["role"], embed=i.embed())
+            await channel.send(content=ping_stats["role"], embed=i.embed())
             notified.dictionary["notified"][server].add(i)
             change = True
     if change:
@@ -199,7 +203,7 @@ class Command:
         ping_server(message.guild.id, message.channel.id, role_obj.mention)
         interact(message.channel.send, f"{message.channel} is now the alert channel for {message.guild.name} "
                                        f"pinging {role_obj.name}")
-        await notify_sales()
+        interact(notify_sales)
 
 
 check_sales.start()
