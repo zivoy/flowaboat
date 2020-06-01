@@ -6,6 +6,7 @@ import discord
 import requests
 from bs4 import BeautifulSoup
 from discord.ext import tasks
+import regex
 
 from utils.discord import DiscordInteractive, help_me
 from utils.utils import Log, PickeledServerDict
@@ -90,8 +91,8 @@ def removeOutstanding():
         notified.dictionary["notified"] = dict()
     change = False
     for server in notified.dictionary["notified"]:
-        for i in notified.dictionary["notified"][server]:
-            if notified.dictionary["notified"][server][i].promoEnd < arrow.utcnow():
+        for i in notified.dictionary["notified"][server].copy():
+            if i.promoEnd < arrow.utcnow():
                 notified.dictionary["notified"][server].remove(i)
                 change = True
     if change:
@@ -167,11 +168,30 @@ class Command:
         'run': "freeSteam pingrole",
         'result': "Sets the current channel as ping channel."
     }]
-    synonyms = []
+    synonyms = ["free-?now"]
 
     async def call(self, package):
         message, args = package["message_obj"], package["args"]
         DiscordInteractive.client = package["client"]
+
+        if regex.match("free-?now", args[0]):
+            if str(message.guild.id) not in notified.dictionary["notified"]:
+                interact(message.channel.send, "Please first run `freeSteam <pingrole>` in the "
+                                               "channel you want pinging to happen")
+                return
+
+            removeOutstanding()
+            embed = discord.Embed(title="Games Available Now!", color=0x1b2838,
+                                  timestamp=arrow.utcnow().datetime)
+
+            embed.set_thumbnail(url="https://steamcommunity-a.akamaihd.net/public/shared/images/header/"
+                                    f"globalheader_logo.png?t={arrow.utcnow().timestamp}")
+
+            for i in sorted(notified.dictionary["notified"][str(message.guild.id)], key=lambda x: x.promoEnd):
+                embed.add_field(name=i.name, value=f"{i.getApp()}\noffer ends {i.promoEnd.humanize()}", inline=False)
+
+            interact(message.channel.send, embed=embed)
+            return
 
         if len(args) < 2:
             Log.error("No command provided")
