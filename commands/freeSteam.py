@@ -22,15 +22,19 @@ if not os.path.isfile(ping_channels):
 
 
 class steamItem:
-    def __init__(self, name, steamId, promoType, promoStart, promoEnd):
+    def __init__(self, name, steamId, promoType, promoStart, promoEnd, databaseUrl):
         self.name = name
-        self.steamId = steamId
+        self.steamId = str(steamId)
         self.promoType = promoType
         self.promoStart = promoStart
         self.promoEnd = promoEnd
+        self.databaseUrl= databaseUrl
 
     def getApp(self):
         return "https://store.steampowered.com/app/" + self.steamId
+
+    def getAppInfo(self):
+        return requests.get("https://store.steampowered.com/api/appdetails?appids="+self.steamId).json()[self.steamId]
 
     def getImgUrl(self, small=False):
         aug = ""
@@ -59,7 +63,16 @@ class steamItem:
                (self.promoEnd == other.promoEnd)
 
     def embed(self):
-        embed = discord.Embed(title="Free Game!", description=self.name,
+        gameData = self.getAppInfo()
+
+        title = "Free Game!"
+        desc = self.name
+
+        if gameData["success"]:
+            title = self.name
+            desc = gameData["data"]["short_description"]
+
+        embed = discord.Embed(title=title, description=desc,
                               url=self.getApp(), color=0x1b2838,
                               timestamp=arrow.utcnow().datetime)
 
@@ -68,8 +81,14 @@ class steamItem:
 
         embed.set_image(url=self.getImgUrl())
 
-        embed.add_field(name="Promotion Started", value=self.promoStart.humanize(), inline=True)
-        embed.add_field(name="Promotion ends", value=self.promoEnd.humanize(), inline=True)
+        if gameData["success"]:
+            embed.add_field(name="**Normally priced at**",
+                            value=gameData["data"]["price_overview"]["initial_formatted"], inline=True)
+        embed.set_author(name="SteamDB", icon_url="https://steamdb.info/static/logos/512px.png",
+                         url=f"https://steamdb.info{self.databaseUrl}")
+
+        embed.add_field(name="**Promotion Started**", value=self.promoStart.humanize(), inline=True)
+        embed.add_field(name="**Promotion ends**", value=self.promoEnd.humanize(), inline=True)
 
         return embed
 
@@ -111,6 +130,7 @@ async def notify_sales():
 
     for i in elements:
         steamid = i.attrs["data-appid"]
+        dbloc = i.findAll("a")[1].attrs["href"]
         tablePart = i.findAll("td")
         name = tablePart[1].text.replace("\n\n", "")
         promoType = tablePart[3].text.strip(" ").lower()
@@ -118,7 +138,7 @@ async def notify_sales():
         end = tablePart[5].attrs["data-sort"]
         start = arrow.get(start, "X")
         end = arrow.get(end, "X")
-        r = steamItem(name, steamid, promoType, start, end)
+        r = steamItem(name, steamid, promoType, start, end, dbloc)
 
         available.append(r)
     keepable = [i for i in available if i.promoType == "keep"]
