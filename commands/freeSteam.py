@@ -100,7 +100,7 @@ notified: PickeledServerDict = PickeledServerDict(pickle_file)
 notified.load()
 
 
-@tasks.loop(hours=20)  # not making it 24 for some variety
+@tasks.loop(hours=10)  # not making it 12 for some variety
 async def check_sales():
     await notify_sales()
     removeOutstanding()
