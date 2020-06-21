@@ -2,14 +2,17 @@ import json
 import os.path
 
 import arrow
+import cloudscraper
 import discord
+import regex
 import requests
 from bs4 import BeautifulSoup
 from discord.ext import tasks
-import regex
 
 from utils.discord import DiscordInteractive, help_me
 from utils.utils import Log, PickeledServerDict
+
+scraper = cloudscraper.create_scraper()
 
 interact = DiscordInteractive.interact
 
@@ -28,13 +31,13 @@ class steamItem:
         self.promoType = promoType
         self.promoStart = promoStart
         self.promoEnd = promoEnd
-        self.databaseUrl= databaseUrl
+        self.databaseUrl = databaseUrl
 
     def getApp(self):
         return "https://store.steampowered.com/app/" + self.steamId
 
     def getAppInfo(self):
-        return requests.get("https://store.steampowered.com/api/appdetails?appids="+self.steamId).json()[self.steamId]
+        return requests.get("https://store.steampowered.com/api/appdetails?appids=" + self.steamId).json()[self.steamId]
 
     def getImgUrl(self, small=False):
         aug = ""
@@ -120,7 +123,8 @@ def removeOutstanding():
 
 async def notify_sales():
     url = "https://steamdb.info/upcoming/free/"
-    page = requests.get(url, headers={'user-agent': 'Mozilla/5.0 ()'})
+    page = scraper.get(url)
+    # page = requests.get(url, headers={'user-agent': 'Mozilla/5.0 ()'})
     soup = BeautifulSoup(page.content, 'html.parser')
 
     table = soup.find("tbody")

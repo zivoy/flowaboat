@@ -12,6 +12,7 @@ bezier
 discord
 bs4
 requests
+cloudscraper
 aiohttp
 regex
 arrow
