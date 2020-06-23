@@ -1,6 +1,5 @@
-from time import time
-
 from random import choice
+from time import time
 
 from utils.discord import DiscordInteractive
 from utils.utils import Log
@@ -31,7 +30,7 @@ class Command:
         'run': "lol",
         'result': "a random lol"
     }]
-    synonyms = ["kek", "lol"]
+    synonyms = ["kek", "lol", "lel"]
 
     async def call(self, package):
         message_obj = package["message_obj"]
