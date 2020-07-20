@@ -12,8 +12,6 @@ from discord.ext import tasks
 from utils.discord import DiscordInteractive, help_me
 from utils.utils import Log, PickeledServerDict
 
-scraper = cloudscraper.create_scraper()
-
 interact = DiscordInteractive.interact
 
 pickle_file = "./config/notified.pickle"
@@ -123,7 +121,7 @@ def removeOutstanding():
 
 async def notify_sales():
     url = "https://steamdb.info/upcoming/free/"
-    page = scraper.get(url)
+    page = cloudscraper.create_scraper().get(url)
     # page = requests.get(url, headers={'user-agent': 'Mozilla/5.0 ()'})
     soup = BeautifulSoup(page.content, 'html.parser')
 
@@ -164,7 +162,13 @@ async def notify(items):
                 Log.error("No client cant notify users")
                 continue
             channel = DiscordInteractive.client.get_guild(int(server)).get_channel(ping_stats["channel"])
-            await channel.send(content=ping_stats["role"], embed=i.embed())
+            try:
+                await channel.send(content=ping_stats["role"], embed=i.embed())
+            except:
+                try:
+                    interact(channel.send, content=ping_stats["role"], embed=i.embed())
+                except:
+                    Log.error("could not notify")
             notified.dictionary["notified"][server].add(i)
             change = True
     if change:
@@ -192,7 +196,7 @@ class Command:
         'run': "freeSteam pingrole",
         'result': "Sets the current channel as ping channel."
     }]
-    synonyms = ["free-?now"]
+    synonyms = ["free-?now", "steamUpdate"]
 
     async def call(self, package):
         message, args = package["message_obj"], package["args"]
@@ -215,6 +219,10 @@ class Command:
                 embed.add_field(name=i.name, value=f"{i.getApp()}\noffer ends {i.promoEnd.humanize()}", inline=False)
 
             interact(message.channel.send, embed=embed)
+            return
+
+        if regex.match("steamUpdate", args[0]):
+            interact(notify_sales)
             return
 
         if len(args) < 2:
